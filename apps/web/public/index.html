@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0f172a" />
+    <title>Kerodex | Private-party car marketplace</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIINfQX8VgKq9RRG4wI7E9jhdT5q7wS0Bl2M="
+      crossorigin=""
+    />
+    <link rel="stylesheet" href="/styles.css?v=29" />
+  </head>
+  <body>
+    <div class="app-loader" id="appLoader" aria-live="polite">
+      <img src="/assets/kerodex-logo-transparent-light.png" alt="Kerodex" />
+      <span>Loading marketplace</span>
+    </div>
+
+    <header class="nav">
+      <a class="brand" href="/" aria-label="Kerodex home">
+        <img class="logo-light" src="/assets/kerodex-logo-transparent-dark.png" alt="Kerodex" />
+        <img class="logo-dark" src="/assets/kerodex-logo-transparent-light.png" alt="Kerodex" />
+      </a>
+      <form class="nav-search" id="navSearchForm" aria-label="Quick vehicle search">
+        <label>
+          <span>Where</span>
+          <input name="q" type="search" placeholder="Car, city, keyword" autocomplete="off" />
+        </label>
+        <label>
+          <span>Make</span>
+          <select name="make">
+            <option value="">Any make</option>
+            <option>Porsche</option>
+            <option>Toyota</option>
+            <option>Tesla</option>
+            <option>BMW</option>
+            <option>Rivian</option>
+            <option>Lexus</option>
+            <option>Ford</option>
+            <option>Audi</option>
+            <option>Honda</option>
+            <option>Subaru</option>
+            <option>Mercedes-Benz</option>
+            <option>Mazda</option>
+            <option>Hyundai</option>
+            <option>Jeep</option>
+            <option>Kia</option>
+            <option>Chevrolet</option>
+          </select>
+        </label>
+        <label>
+          <span>Budget</span>
+          <select name="maxPrice">
+            <option value="">Any price</option>
+            <option value="35000">Under $35k</option>
+            <option value="40000">Under $40k</option>
+            <option value="55000">Under $55k</option>
+          </select>
+        </label>
+        <button class="nav-search-button" type="submit" aria-label="Search">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M10.8 18.1a7.3 7.3 0 1 1 0-14.6 7.3 7.3 0 0 1 0 14.6Zm5.4-1.8 4.3 4.2" />
+          </svg>
+        </button>
+      </form>
+      <div class="nav-actions">
+        <a class="nav-pill" href="#trust">Why Kerodex</a>
+        <button class="nav-pill" type="button">Ask Kerodex</button>
+        <div class="profile-shell">
+          <button class="profile-toggle" id="profileToggle" type="button" aria-label="Open profile menu" aria-expanded="false">
+            <svg class="menu-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 7h16" />
+              <path d="M4 12h16" />
+              <path d="M4 17h16" />
+            </svg>
+            <svg class="user-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 12.6a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2ZM4.8 20.2a7.5 7.5 0 0 1 14.4 0" />
+            </svg>
+          </button>
+          <div class="profile-menu" id="profileMenu" hidden>
+            <div class="profile-menu-status" id="profileStatus">Guest account</div>
+            <button type="button" id="signInButton">Sign in</button>
+            <button type="button" id="createAccountButton">Create account</button>
+            <button type="button" id="listCarButton">List your car</button>
+            <button type="button" id="themeToggle">Toggle dark mode</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-media" aria-hidden="true"></div>
+        <div class="hero-content">
+          <p class="eyebrow">Private-party cars, verified sellers</p>
+          <h1>Find the right car from real owners near you.</h1>
+          <p class="hero-copy">
+            Search rich vehicle data, compare fair-value signals, browse by map, and message sellers with confidence.
+          </p>
+
+          <form class="search-panel" id="searchForm">
+            <label class="search-field is-wide">
+              <span>Where</span>
+              <input name="q" type="search" placeholder="Porsche Macan, Tacoma, Tesla..." autocomplete="off" />
+            </label>
+            <label class="search-field">
+              <span>Make</span>
+              <select name="make">
+                <option value="">Any make</option>
+                <option>Porsche</option>
+                <option>Toyota</option>
+                <option>Tesla</option>
+                <option>BMW</option>
+                <option>Rivian</option>
+                <option>Lexus</option>
+                <option>Ford</option>
+                <option>Audi</option>
+                <option>Honda</option>
+                <option>Subaru</option>
+                <option>Mercedes-Benz</option>
+                <option>Mazda</option>
+                <option>Hyundai</option>
+                <option>Jeep</option>
+                <option>Kia</option>
+                <option>Chevrolet</option>
+              </select>
+            </label>
+            <label class="search-field">
+              <span>Price</span>
+              <select name="maxPrice">
+                <option value="">Any price</option>
+                <option value="35000">Under $35k</option>
+                <option value="40000">Under $40k</option>
+                <option value="55000">Under $55k</option>
+              </select>
+            </label>
+            <label class="search-field">
+              <span>Mileage</span>
+              <select name="maxMileage">
+                <option value="">Any mileage</option>
+                <option value="25000">Under 25k</option>
+                <option value="40000">Under 40k</option>
+                <option value="50000">Under 50k</option>
+              </select>
+            </label>
+            <button class="search-button" type="submit" aria-label="Search">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M10.8 18.1a7.3 7.3 0 1 1 0-14.6 7.3 7.3 0 0 1 0 14.6Zm5.4-1.8 4.3 4.2" />
+              </svg>
+            </button>
+          </form>
+          <div class="search-categories" aria-label="Quick search categories">
+            <button class="active" type="button" data-filter-key="bodyType" data-filter-value="">
+              <span>All</span>
+            </button>
+            <button type="button" data-filter-key="fuelType" data-filter-value="Electric">
+              <span>EVs</span>
+            </button>
+            <button type="button" data-filter-key="make" data-filter-value="Toyota">
+              <span>Toyota</span>
+            </button>
+            <button type="button" data-filter-key="bodyType" data-filter-value="SUV">
+              <span>SUVs</span>
+            </button>
+            <button type="button" data-filter-key="bodyType" data-filter-value="Truck">
+              <span>Trucks</span>
+            </button>
+            <button type="button" data-filter-key="maxMileage" data-filter-value="25000">
+              <span>Low miles</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="stats-strip" id="trust" aria-label="Marketplace highlights">
+        <div><strong>94</strong><span>Top deal score</span></div>
+        <div><strong>12 min</strong><span>Fastest seller reply</span></div>
+        <div><strong>$3.1k</strong><span>Best fair-value gap</span></div>
+        <div><strong>Live</strong><span>Listing updates</span></div>
+      </section>
+
+      <section class="market-section" id="browse">
+        <div class="section-heading">
+          <p class="eyebrow">Browse collections</p>
+          <h2>Fresh private-party cars, grouped for quick scanning.</h2>
+        </div>
+        <div class="collection-stack" id="collectionStack"></div>
+      </section>
+
+      <section class="map-section" aria-label="Map browse">
+        <div class="section-heading map-heading">
+          <div>
+            <p class="eyebrow">Map-first browsing</p>
+            <h2>Explore private-party cars across the country.</h2>
+          </div>
+          <div class="map-summary">
+            <span id="mapCount">0</span>
+            <strong>cars on map</strong>
+          </div>
+        </div>
+        <div class="map-panel" aria-label="Map preview">
+          <div id="mapCanvas" aria-label="Interactive listings map"></div>
+          <div class="map-card">
+            <span>Interactive map</span>
+            <strong>Click a price to preview the car</strong>
+          </div>
+        </div>
+      </section>
+
+      <section class="market-section listings-section">
+        <div class="section-heading listings-heading">
+          <div>
+            <p class="eyebrow">All listings</p>
+            <h2>More cars from verified private sellers.</h2>
+          </div>
+          <span id="resultCount">0 cars</span>
+        </div>
+        <div class="section-tabs" aria-label="Listing views">
+          <button class="active" data-view="best">Best deals</button>
+          <button data-view="recent">Recently listed</button>
+          <button data-view="dropped">Price dropped</button>
+        </div>
+        <div class="skeleton-grid" id="skeletons">
+          <div></div><div></div><div></div>
+        </div>
+        <div class="listing-grid" id="listings"></div>
+      </section>
+
+      <section class="section two-up" id="sell">
+        <div>
+          <p class="eyebrow">Seller cockpit</p>
+          <h2>List once, improve continuously.</h2>
+          <p>
+            The seller dashboard will guide owners through VIN decode, photo upload, AI description drafts, pricing recommendations, fraud checks, messages, offers, and appointments.
+          </p>
+        </div>
+        <div class="dashboard-preview">
+          <div class="dash-row"><span>Views this week</span><strong>1,284</strong></div>
+          <div class="dash-row"><span>Favorites</span><strong>76</strong></div>
+          <div class="dash-row"><span>Open offers</span><strong>4</strong></div>
+          <div class="dash-row accent"><span>Recommended price</span><strong>$32,500</strong></div>
+        </div>
+      </section>
+    </main>
+
+    <div class="mobile-action-bar">
+      <button>Map</button>
+      <button class="primary">Search</button>
+      <button>Saved</button>
+    </div>
+
+    <div class="modal-backdrop" id="authModal" hidden>
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+        <button class="modal-close" data-close-modal aria-label="Close">Close</button>
+        <p class="eyebrow" id="authEyebrow">Welcome back</p>
+        <h2 id="authTitle">Sign in or create an account.</h2>
+        <div class="auth-toggle" aria-label="Authentication mode">
+          <button class="active" type="button" data-auth-mode="signin">Sign in</button>
+          <button type="button" data-auth-mode="create">Create account</button>
+        </div>
+        <div class="social-auth">
+          <button class="social-button" type="button" data-social-provider="google">
+            <svg class="auth-logo" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="#4285f4" d="M21.6 12.2c0-.7-.1-1.3-.2-1.9H12v3.6h5.4a4.6 4.6 0 0 1-2 3v2.4h3.2c1.9-1.7 3-4.2 3-7.1z"/>
+              <path fill="#34a853" d="M12 22c2.7 0 5-0.9 6.6-2.5l-3.2-2.4c-.9.6-2 .9-3.4.9-2.6 0-4.8-1.8-5.6-4.1H3.1v2.5A10 10 0 0 0 12 22z"/>
+              <path fill="#fbbc05" d="M6.4 13.9A6 6 0 0 1 6.1 12c0-.7.1-1.3.3-1.9V7.6H3.1A10 10 0 0 0 2 12c0 1.6.4 3.1 1.1 4.4l3.3-2.5z"/>
+              <path fill="#ea4335" d="M12 6c1.5 0 2.8.5 3.8 1.5l2.9-2.9A9.7 9.7 0 0 0 12 2a10 10 0 0 0-8.9 5.6l3.3 2.5C7.2 7.8 9.4 6 12 6z"/>
+            </svg>
+            Continue with Google
+          </button>
+          <button class="social-button" type="button" data-social-provider="apple">
+            <svg class="auth-logo apple-logo" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="currentColor" d="M16.6 13c0-2.2 1.8-3.3 1.9-3.4-1-1.5-2.6-1.7-3.2-1.7-1.4-.1-2.6.8-3.3.8s-1.8-.8-2.9-.8c-1.5 0-2.9.9-3.7 2.2-1.6 2.8-.4 7 1.1 9.3.8 1.1 1.7 2.4 2.9 2.3 1.1-.1 1.6-.8 3-.8s1.8.8 3 .8c1.2 0 2-1.1 2.8-2.2.9-1.3 1.2-2.5 1.2-2.6 0-.1-2.8-1.1-2.8-3.9zM14.4 6.4c.6-.8 1.1-1.9 1-3-.9 0-2 .6-2.7 1.4-.6.7-1.1 1.8-1 2.9 1 .1 2-.5 2.7-1.3z"/>
+            </svg>
+            Continue with Apple
+          </button>
+        </div>
+        <div class="divider"><span>or use email</span></div>
+        <form class="modal-form">
+          <label>
+            <span>Email</span>
+            <input id="authEmail" type="email" placeholder="you@example.com" />
+          </label>
+          <label>
+            <span>Password</span>
+            <input id="authPassword" type="password" placeholder="8+ characters" />
+          </label>
+          <button class="search-button" id="authSubmit" type="button">Sign in</button>
+          <p class="auth-message" id="authMessage" role="status"></p>
+        </form>
+      </section>
+    </div>
+
+    <div class="modal-backdrop" id="sellModal" hidden>
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="sellTitle">
+        <button class="modal-close" data-close-modal aria-label="Close">Close</button>
+        <p class="eyebrow">Seller flow</p>
+        <h2 id="sellTitle">Start a private-party listing.</h2>
+        <form class="modal-form">
+          <label>
+            <span>VIN</span>
+            <input placeholder="17-character VIN" maxlength="17" />
+          </label>
+          <label>
+            <span>ZIP code</span>
+            <input inputmode="numeric" placeholder="11201" />
+          </label>
+          <button class="search-button" type="button" data-close-modal>Start listing draft</button>
+        </form>
+      </section>
+    </div>
+
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+    <script src="/app.js?v=29"></script>
+  </body>
+</html>

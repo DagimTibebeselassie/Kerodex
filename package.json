@@ -1,0 +1,14 @@
+{
+  "name": "kerodex",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local-first private-party car marketplace prototype.",
+  "scripts": {
+    "dev": "node apps/api/server.js",
+    "start": "node apps/api/server.js",
+    "test": "node scripts/smoke-test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
