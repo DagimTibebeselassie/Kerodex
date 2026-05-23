@@ -45,4 +45,4 @@ jobs:
 
       - name: Ensure secrets are not committed
         run: |
-          ! grep -RIn --exclude-dir=.git --exclude=README.md --exclude=SECURITY.md "AWS_SECRET_ACCESS_KEY\|GOOGLE_CLIENT_SECRET\|APPLE_CLIENT_SECRET\|STRIPE_SECRET_KEY" .
+          ! grep -RIn --exclude-dir=.git --exclude-dir=.github --exclude=README.md --exclude=SECURITY.md "AWS_SECRET_ACCESS_KEY\|GOOGLE_CLIENT_SECRET\|APPLE_CLIENT_SECRET\|STRIPE_SECRET_KEY" .
