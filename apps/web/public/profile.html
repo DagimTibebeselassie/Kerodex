@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0f172a" />
+    <title>Kerodex | Profile</title>
+    <link rel="stylesheet" href="/styles.css?v=53" />
+  </head>
+  <body class="profile-page">
+    <header class="profile-topbar">
+      <a class="brand" href="/" aria-label="Kerodex home">
+        <img class="logo-light" src="/assets/kerodex-logo-transparent-dark.png" alt="Kerodex" />
+        <img class="logo-dark" src="/assets/kerodex-logo-transparent-light.png" alt="Kerodex" />
+      </a>
+      <div class="profile-top-actions">
+        <button class="seller-link" type="button">Become a seller</button>
+        <div class="profile-avatar">K</div>
+        <div class="profile-shell">
+        <button class="profile-toggle" id="profilePageMenuToggle" type="button" aria-label="Open profile menu" aria-expanded="false">
+          <svg class="menu-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 7h16" />
+            <path d="M4 12h16" />
+            <path d="M4 17h16" />
+          </svg>
+        </button>
+        <div class="profile-menu" id="profilePageMenu" hidden>
+          <a class="profile-menu-link plain" href="/">Home</a>
+          <button class="profile-menu-link" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14h16l-2-5H6l-2 5Zm2 0v4m12-4v4M7 18h.1M17 18h.1M8 9l1-3h6l1 3" /></svg>
+            <span>Become a seller</span>
+          </button>
+          <div class="profile-menu-divider"></div>
+          <a class="profile-menu-link" href="/search.html">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.8 18.1a7.3 7.3 0 1 1 0-14.6 7.3 7.3 0 0 1 0 14.6Zm5.4-1.8 4.3 4.2" /></svg>
+            <span>Browse cars</span>
+          </a>
+          <button class="profile-menu-link" type="button" id="profileThemeToggle">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a7 7 0 1 0 9 9 8 8 0 1 1-9-9Z" /></svg>
+            <span>Toggle dark mode</span>
+          </button>
+        </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="profile-layout">
+      <aside class="profile-sidebar" aria-label="Profile sections">
+        <h1>Profile</h1>
+        <a class="profile-tab active" href="#about">
+          <span class="profile-tab-avatar">K</span>
+          <strong>About me</strong>
+        </a>
+        <a class="profile-tab" href="#activity">
+          <span>Car</span>
+          <strong>Saved cars</strong>
+        </a>
+        <a class="profile-tab" href="#connections">
+          <span>ID</span>
+          <strong>Verification</strong>
+        </a>
+      </aside>
+
+      <section class="profile-main" id="about">
+        <div class="profile-heading">
+          <h2>About me</h2>
+          <button type="button">Edit</button>
+        </div>
+
+        <section class="profile-card">
+          <div class="profile-identity">
+            <label class="profile-photo-upload" for="profileImageInput">
+              <span class="profile-photo" id="profilePhoto">K</span>
+              <span class="profile-photo-action">Add photo</span>
+            </label>
+            <input id="profileImageInput" type="file" accept="image/*" hidden />
+            <span class="verified-badge">OK</span>
+            <h3 id="profileName">Kerodex User</h3>
+            <p id="profileLocation">Atlanta, GA</p>
+          </div>
+          <div class="profile-stats">
+            <div><strong>0</strong><span>Cars sold</span></div>
+            <div><strong>0</strong><span>Reviews</span></div>
+            <div><strong>2026</strong><span>Joined</span></div>
+          </div>
+        </section>
+
+        <div class="profile-facts">
+          <p><span>01</span> Private-party marketplace member</p>
+          <p><span>02</span> Interested in clean-title vehicles</p>
+          <p><span>03</span> Seller verification not started</p>
+          <p><span>04</span> Identity verification will appear here</p>
+        </div>
+
+        <section class="profile-interests">
+          <h2>My interests</h2>
+          <div>
+            <span>EVs</span>
+            <span>Toyota</span>
+            <span>No accidents</span>
+            <span>Great deals</span>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <script>
+      const storedTheme = localStorage.getItem("kerodex-theme");
+      if (storedTheme === "dark") document.body.classList.add("dark");
+      const storedUser = localStorage.getItem("kerodex-user");
+      if (storedUser) {
+        try {
+          const user = JSON.parse(storedUser);
+          document.querySelector("#profileName").textContent = user.name || user.email || "Kerodex User";
+        } catch {}
+      }
+      const menuToggle = document.querySelector("#profilePageMenuToggle");
+      const menu = document.querySelector("#profilePageMenu");
+      menuToggle.addEventListener("click", () => {
+        const isOpen = !menu.hidden;
+        menu.hidden = isOpen;
+        menuToggle.setAttribute("aria-expanded", String(!isOpen));
+      });
+      document.addEventListener("click", (event) => {
+        if (event.target.closest(".profile-shell")) return;
+        menu.hidden = true;
+        menuToggle.setAttribute("aria-expanded", "false");
+      });
+      document.querySelector("#profileThemeToggle").addEventListener("click", () => {
+        document.body.classList.toggle("dark");
+        localStorage.setItem("kerodex-theme", document.body.classList.contains("dark") ? "dark" : "light");
+      });
+      const imageInput = document.querySelector("#profileImageInput");
+      const profilePhoto = document.querySelector("#profilePhoto");
+      const storedProfilePhoto = localStorage.getItem("kerodex-profile-photo");
+      if (storedProfilePhoto) {
+        profilePhoto.textContent = "";
+        profilePhoto.style.backgroundImage = `url("${storedProfilePhoto}")`;
+        profilePhoto.classList.add("has-image");
+      }
+      imageInput.addEventListener("change", () => {
+        const file = imageInput.files && imageInput.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          profilePhoto.textContent = "";
+          profilePhoto.style.backgroundImage = `url("${reader.result}")`;
+          profilePhoto.classList.add("has-image");
+          try {
+            localStorage.setItem("kerodex-profile-photo", reader.result);
+          } catch {
+            document.querySelector(".profile-photo-action").textContent = "Image too large";
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    </script>
+  </body>
+</html>

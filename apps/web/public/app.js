@@ -18,9 +18,9 @@ const themeToggle = document.querySelector("#themeToggle");
 const signInButton = document.querySelector("#signInButton");
 const createAccountButton = document.querySelector("#createAccountButton");
 const listCarButton = document.querySelector("#listCarButton");
+const becomeSellerButton = document.querySelector("#becomeSellerButton");
 const profileToggle = document.querySelector("#profileToggle");
 const profileMenu = document.querySelector("#profileMenu");
-const profileStatus = document.querySelector("#profileStatus");
 const authModal = document.querySelector("#authModal");
 const sellModal = document.querySelector("#sellModal");
 const authEyebrow = document.querySelector("#authEyebrow");
@@ -30,6 +30,7 @@ const authPassword = document.querySelector("#authPassword");
 const authMessage = document.querySelector("#authMessage");
 const mapCountEl = document.querySelector("#mapCount");
 const mapPanel = document.querySelector(".map-panel");
+let mapPreviewCard;
 
 let leafletMap;
 let markerLayer;
@@ -39,6 +40,83 @@ let tileThemeName;
 let activeRequest;
 let searchTimer;
 const listingCache = new Map();
+
+function enhanceSelects(scope = document) {
+  scope.querySelectorAll("select").forEach((select) => {
+    if (select.dataset.enhancedSelect === "true") return;
+    select.dataset.enhancedSelect = "true";
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "choice-select";
+    const trigger = document.createElement("button");
+    trigger.className = "choice-select-trigger";
+    trigger.type = "button";
+    trigger.setAttribute("aria-haspopup", "listbox");
+    trigger.setAttribute("aria-expanded", "false");
+    const menu = document.createElement("div");
+    menu.className = "choice-select-menu";
+    menu.setAttribute("role", "listbox");
+    menu.hidden = true;
+
+    const positionMenu = () => {
+      const rect = trigger.getBoundingClientRect();
+      const menuWidth = Math.max(190, Math.min(260, rect.width + 56));
+      menu.style.width = `${menuWidth}px`;
+      menu.style.left = `${Math.min(Math.max(12, rect.left + window.scrollX), window.scrollX + window.innerWidth - menuWidth - 12)}px`;
+      menu.style.top = `${rect.bottom + window.scrollY + 8}px`;
+    };
+
+    const syncTrigger = () => {
+      const option = select.options[select.selectedIndex] || select.options[0];
+      trigger.textContent = option?.textContent || "";
+    };
+
+    Array.from(select.options).forEach((option) => {
+      const item = document.createElement("button");
+      item.type = "button";
+      item.className = "choice-select-option";
+      item.textContent = option.textContent;
+      item.setAttribute("role", "option");
+      item.addEventListener("click", () => {
+        select.value = option.value;
+        Array.from(select.options).forEach((candidate) => {
+          candidate.selected = candidate === option;
+        });
+        select.dispatchEvent(new Event("input", { bubbles: true }));
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+        syncTrigger();
+        menu.hidden = true;
+        trigger.setAttribute("aria-expanded", "false");
+      });
+      menu.appendChild(item);
+    });
+
+    trigger.addEventListener("click", (event) => {
+      event.stopPropagation();
+      document.querySelectorAll(".choice-select-menu").forEach((openMenu) => {
+        if (openMenu !== menu) openMenu.hidden = true;
+      });
+      menu.hidden = !menu.hidden ? true : false;
+      if (!menu.hidden) positionMenu();
+      trigger.setAttribute("aria-expanded", String(!menu.hidden));
+    });
+
+    select.addEventListener("change", syncTrigger);
+    select.insertAdjacentElement("afterend", wrapper);
+    wrapper.append(trigger);
+    document.body.appendChild(menu);
+    syncTrigger();
+  });
+}
+
+document.addEventListener("click", () => {
+  document.querySelectorAll(".choice-select-menu").forEach((menu) => {
+    menu.hidden = true;
+  });
+  document.querySelectorAll(".choice-select-trigger").forEach((trigger) => {
+    trigger.setAttribute("aria-expanded", "false");
+  });
+});
 
 const currency = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -90,14 +168,17 @@ function syncSearchForms(sourceForm) {
 function setFormField(key, value) {
   [form, navSearchForm].forEach((targetForm) => {
     const field = targetForm?.elements[key];
-    if (field) field.value = value;
+    if (field) {
+      field.value = value;
+      field.dispatchEvent(new Event("change", { bubbles: true }));
+    }
   });
 }
 
 function listingCard(listing) {
   const badges = listing.badges.map((badge) => `<span>${badge}</span>`).join("");
   return `
-    <article class="vehicle-card${state.selectedListingId === listing.id ? " is-selected" : ""}" data-listing-id="${listing.id}">
+    <article class="vehicle-card${state.selectedListingId === listing.id ? " is-selected" : ""}" data-listing-id="${listing.id}" tabindex="0">
       <img src="${listing.images[0]}" alt="${listing.title}" loading="lazy">
       <div class="vehicle-body">
         <div class="vehicle-title-row">
@@ -119,7 +200,7 @@ function listingCard(listing) {
 
 function miniListingCard(listing) {
   return `
-    <article class="mini-card" data-listing-id="${listing.id}">
+    <article class="mini-card" data-listing-id="${listing.id}" tabindex="0">
       <img src="${listing.images[0]}" alt="${listing.title}" loading="lazy">
       <div>
         <span>${listing.location}</span>
@@ -193,6 +274,29 @@ function popupHtml(listing) {
       <button type="button" data-popup-listing="${listing.id}">View listing</button>
     </div>
   `;
+}
+
+function mapPreviewHtml(listing) {
+  return `
+    <button class="map-preview-close" type="button" aria-label="Close preview">×</button>
+    <img src="${listing.images[0]}" alt="${listing.title}">
+    <div>
+      <strong>${listing.title}</strong>
+      <span>${currency.format(listing.price)} · ${listing.mileage.toLocaleString()} mi · ${listing.location}</span>
+      <small>${listing.seller.name} · ${listing.seller.responseTime}</small>
+    </div>
+  `;
+}
+
+function showMapPreview(listing) {
+  if (!mapPanel || !listing) return;
+  if (!mapPreviewCard) {
+    mapPreviewCard = document.createElement("article");
+    mapPreviewCard.className = "map-preview-card";
+    mapPanel.appendChild(mapPreviewCard);
+  }
+  mapPreviewCard.innerHTML = mapPreviewHtml(listing);
+  mapPreviewCard.hidden = false;
 }
 
 function ensureMap() {
@@ -300,10 +404,7 @@ function selectListing(listingId, options = {}) {
   refreshMarkerIcons();
 
   if (leafletMap && listing) {
-    L.popup()
-      .setLatLng([listing.lat, listing.lng])
-      .setContent(popupHtml(listing))
-      .openOn(leafletMap);
+    showMapPreview(listing);
     if (options.pan !== false) leafletMap.panTo([listing.lat, listing.lng]);
   }
 
@@ -326,12 +427,7 @@ function renderMap(listings) {
       keyboard: true,
       title: listing.title
     })
-      .bindPopup(popupHtml(listing), {
-        closeButton: true,
-        maxWidth: 280,
-        offset: L.point(0, -8)
-      })
-      .on("click", () => selectListing(listing.id, { scroll: true, pan: false }));
+      .on("click", () => selectListing(listing.id, { scroll: false, pan: false }));
 
     marker.addTo(markerLayer);
     markerByListingId.set(listing.id, marker);
@@ -445,19 +541,24 @@ document.querySelectorAll("[data-filter-key]").forEach((button) => {
 
 listingsEl.addEventListener("click", (event) => {
   const card = event.target.closest(".vehicle-card");
-  if (card) selectListing(card.dataset.listingId, { scroll: false });
+  if (card) window.location.href = `/listing.html?id=${encodeURIComponent(card.dataset.listingId)}`;
 });
 
 collectionStackEl.addEventListener("click", (event) => {
   const card = event.target.closest(".mini-card");
-  if (card) selectListing(card.dataset.listingId, { scroll: false });
+  if (card) window.location.href = `/listing.html?id=${encodeURIComponent(card.dataset.listingId)}`;
 });
 
 document.addEventListener("click", (event) => {
+  if (event.target.closest(".map-preview-close")) {
+    if (mapPreviewCard) mapPreviewCard.hidden = true;
+    return;
+  }
+
   const mapPin = event.target.closest("[data-map-listing]");
   if (mapPin) {
     event.preventDefault();
-    selectListing(mapPin.dataset.mapListing, { scroll: true, pan: false });
+    selectListing(mapPin.dataset.mapListing, { scroll: false, pan: false });
     return;
   }
 
@@ -517,9 +618,8 @@ function displayUserName(user) {
 function storeSession(session) {
   localStorage.setItem("kerodex-token", session.token);
   localStorage.setItem("kerodex-user", JSON.stringify(session.user));
-  profileStatus.textContent = displayUserName(session.user);
   signInButton.textContent = "Switch account";
-  createAccountButton.textContent = "Account settings";
+  createAccountButton.textContent = "Account";
   setAuthMessage(`Signed in as ${session.user.email}`, "success");
 }
 
@@ -559,6 +659,7 @@ async function socialAuth(provider) {
 signInButton.addEventListener("click", () => openModal(authModal, "signin"));
 createAccountButton.addEventListener("click", () => openModal(authModal, "create"));
 listCarButton.addEventListener("click", () => openModal(sellModal));
+becomeSellerButton?.addEventListener("click", () => openModal(sellModal));
 
 profileToggle?.addEventListener("click", () => {
   const isOpen = !profileMenu.hidden;
@@ -613,9 +714,8 @@ const storedUser = localStorage.getItem("kerodex-user");
 if (storedUser) {
   try {
     const user = JSON.parse(storedUser);
-    profileStatus.textContent = displayUserName(user);
     signInButton.textContent = "Switch account";
-    createAccountButton.textContent = "Account settings";
+    createAccountButton.textContent = "Account";
   } catch {}
 }
 
@@ -626,4 +726,5 @@ if ("EventSource" in window) {
   });
 }
 
+enhanceSelects();
 loadListings();

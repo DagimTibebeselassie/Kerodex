@@ -11,7 +11,7 @@
       integrity="sha256-p4NxAoJBhIINfQX8VgKq9RRG4wI7E9jhdT5q7wS0Bl2M="
       crossorigin=""
     />
-    <link rel="stylesheet" href="/styles.css?v=29" />
+    <link rel="stylesheet" href="/styles.css?v=53" />
   </head>
   <body class="results-body">
     <header class="results-topbar">
@@ -22,56 +22,7 @@
       <form class="results-search" id="resultsSearch">
         <label>
           <span>Where</span>
-          <input name="q" type="search" placeholder="Search cars, makes, cities" autocomplete="off" />
-        </label>
-        <label>
-          <span>Make</span>
-          <select name="make">
-            <option value="">Any make</option>
-            <option>Porsche</option>
-            <option>Toyota</option>
-            <option>Tesla</option>
-            <option>BMW</option>
-            <option>Rivian</option>
-            <option>Lexus</option>
-            <option>Ford</option>
-            <option>Audi</option>
-            <option>Honda</option>
-            <option>Subaru</option>
-            <option>Mercedes-Benz</option>
-            <option>Mazda</option>
-            <option>Hyundai</option>
-            <option>Jeep</option>
-            <option>Kia</option>
-            <option>Chevrolet</option>
-          </select>
-        </label>
-        <label>
-          <span>Price</span>
-          <select name="maxPrice">
-            <option value="">Any price</option>
-            <option value="35000">Under $35k</option>
-            <option value="40000">Under $40k</option>
-            <option value="55000">Under $55k</option>
-          </select>
-        </label>
-        <label>
-          <span>Mileage</span>
-          <select name="maxMileage">
-            <option value="">Any mileage</option>
-            <option value="25000">Under 25k</option>
-            <option value="40000">Under 40k</option>
-            <option value="50000">Under 50k</option>
-          </select>
-        </label>
-        <label>
-          <span>Age</span>
-          <select name="year">
-            <option value="">Any</option>
-            <option value="2024">2024+</option>
-            <option value="2022">2022+</option>
-            <option value="2020">2020+</option>
-          </select>
+          <input name="q" type="search" placeholder="Search city, ZIP, make, or model" autocomplete="off" />
         </label>
         <button class="nav-search-button" type="submit" aria-label="Search">
           <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -80,29 +31,51 @@
         </button>
       </form>
       <div class="results-actions">
-        <button class="nav-pill" type="button">Ask Kerodex</button>
-        <button class="profile-toggle" id="resultsTheme" type="button" aria-label="Toggle dark mode">
-          <svg class="menu-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M4 7h16" />
-            <path d="M4 12h16" />
-            <path d="M4 17h16" />
-          </svg>
-          <svg class="user-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 12.6a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2ZM4.8 20.2a7.5 7.5 0 0 1 14.4 0" />
-          </svg>
-        </button>
+        <button class="seller-link" type="button">Become a seller</button>
+        <div class="profile-shell">
+          <button class="profile-toggle" id="resultsProfileToggle" type="button" aria-label="Open profile menu" aria-expanded="false">
+            <svg class="menu-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 7h16" />
+              <path d="M4 12h16" />
+              <path d="M4 17h16" />
+            </svg>
+            <svg class="user-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 12.6a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2ZM4.8 20.2a7.5 7.5 0 0 1 14.4 0" />
+            </svg>
+          </button>
+          <div class="profile-menu results-menu" id="resultsProfileMenu" hidden>
+            <a class="profile-menu-link plain" href="/">Home</a>
+            <a class="profile-menu-link" href="/profile.html">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12.6a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2ZM4.8 20.2a7.5 7.5 0 0 1 14.4 0" /></svg>
+              <span>Profile</span>
+            </a>
+            <button class="profile-menu-link" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14h16l-2-5H6l-2 5Zm2 0v4m12-4v4M7 18h.1M17 18h.1M8 9l1-3h6l1 3" /></svg>
+              <span>Become a seller</span>
+            </button>
+            <button class="profile-menu-link" type="button" id="resultsTheme">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a7 7 0 1 0 9 9 8 8 0 1 1-9-9Z" /></svg>
+              <span>Toggle dark mode</span>
+            </button>
+          </div>
+        </div>
       </div>
     </header>
 
-    <div class="results-filterbar" aria-label="Search filters">
-      <button type="button">Price</button>
-      <button type="button">Vehicle type</button>
-      <button type="button">Make &amp; model</button>
-      <button type="button">Years</button>
-      <button type="button">Mileage</button>
-      <button type="button">Fuel type</button>
-      <button type="button">Clean title</button>
-      <button type="button">All filters</button>
+    <div class="results-filterbar" id="resultsFilterbar" aria-label="Search filters">
+      <button class="filter-icon" id="filterToggle" type="button" aria-label="Open filters" aria-expanded="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M8 17h12M4 17h2M6 5v4M16 5v4M8 15v4" /></svg>
+      </button>
+      <button type="button" data-filter-param="maxPrice">Price</button>
+      <button type="button" data-filter-param="bodyType">Vehicle type</button>
+      <button type="button" data-filter-param="make">Make &amp; model</button>
+      <button type="button" data-filter-param="year">Years</button>
+      <button type="button" data-filter-param="maxMileage">Mileage</button>
+      <button type="button" data-filter-param="fuelType">Fuel type</button>
+      <button type="button" data-filter-param="drivetrain">Drivetrain</button>
+      <button type="button" data-filter-param="cleanTitle">Clean title</button>
+      <button type="button" data-filter-param="noAccidents">No accidents</button>
+      <button type="button" data-filter-clear>All filters</button>
       <div class="view-toggle" aria-label="View mode">
         <button class="active" type="button" data-results-view="grid">Grid</button>
         <button type="button" data-results-view="map">Map</button>
@@ -113,6 +86,11 @@
       <section class="results-heading">
         <h1 id="resultsTitle">Cars available</h1>
         <p id="resultsSubtitle">Private-party listings matched to your search.</p>
+      </section>
+      <section class="results-trust-strip" aria-label="Private-party trust signals">
+        <div><strong>Verified owners</strong><span>ID and phone checks prepared for seller onboarding.</span></div>
+        <div><strong>Title confidence</strong><span>Clean-title, recall, and VIN signals stay attached to listings.</span></div>
+        <div><strong>Scam screening</strong><span>Messages, duplicate listings, and suspicious offers are ready for scoring.</span></div>
       </section>
       <section class="results-grid" id="resultsGrid" aria-live="polite"></section>
       <section class="results-map-view" id="resultsMapView" hidden>
@@ -128,6 +106,6 @@
       integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
       crossorigin=""
     ></script>
-    <script src="/search.js?v=29"></script>
+    <script src="/search.js?v=53"></script>
   </body>
 </html>

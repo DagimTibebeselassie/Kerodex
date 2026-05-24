@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0f172a" />
+    <title>Kerodex | Vehicle listing</title>
+    <link rel="stylesheet" href="/styles.css?v=53" />
+  </head>
+  <body class="listing-body">
+    <header class="listing-topbar">
+      <a class="brand" href="/" aria-label="Kerodex home">
+        <img class="logo-light" src="/assets/kerodex-logo-transparent-dark.png" alt="Kerodex" />
+        <img class="logo-dark" src="/assets/kerodex-logo-transparent-light.png" alt="Kerodex" />
+      </a>
+      <nav class="listing-steps" aria-label="Listing sections">
+        <a href="#payment">1. Payment</a>
+        <a href="#trade">2. Trade-in</a>
+        <a href="#accessories">3. Accessories</a>
+        <a href="#start">4. Start Purchase</a>
+      </nav>
+      <a class="listing-details-link" href="#details">View Vehicle Details</a>
+    </header>
+
+    <main>
+      <section class="listing-hero" id="details">
+        <div class="listing-copy">
+          <div class="listing-breadcrumb">
+            <a href="/search.html">All Vehicles</a>
+            <span id="listingVin">VIN pending</span>
+            <span id="listingMsrp">Total price pending</span>
+          </div>
+          <h1 id="listingTitle">Loading vehicle...</h1>
+          <div class="listing-price-panel">
+            <div>
+              <strong id="listingPrice">$--</strong>
+              <span>Private seller asking price</span>
+            </div>
+            <button type="button">Message seller</button>
+          </div>
+          <div class="listing-status-row">
+            <span>Owner verified</span>
+            <p id="listingAvailability">Available for private-party sale. Schedule a test drive or make an offer.</p>
+          </div>
+          <div class="listing-spec-list">
+            <div><i class="swatch exterior"></i><span><strong>Exterior</strong> <em id="listingExterior">Midnight Black</em></span></div>
+            <div><i class="swatch interior"></i><span><strong>Interior</strong> <em id="listingInterior">Graphite</em></span></div>
+            <div><i class="spec-icon">⛽</i><span id="listingFuel">Fuel type pending</span></div>
+            <div><i class="spec-icon">⚙</i><span id="listingPowertrain">Powertrain pending</span></div>
+            <div><i class="spec-icon">▱</i><span id="listingFeatures">Feature highlights pending</span></div>
+          </div>
+          <div class="listing-trust-logos">
+            <span>VIN checked</span>
+            <span>Fraud screened</span>
+            <span>Title signals ready</span>
+          </div>
+        </div>
+        <div class="listing-gallery">
+          <button class="listing-save" type="button" aria-label="Save listing">♡</button>
+          <img id="listingMainImage" alt="" />
+          <p>Images uploaded by the private seller.</p>
+          <div class="listing-gallery-nav">
+            <button type="button" id="galleryPrev" aria-label="Previous image">‹</button>
+            <strong id="galleryCount">1 of 1</strong>
+            <button type="button" id="galleryNext" aria-label="Next image">›</button>
+          </div>
+          <div class="listing-thumbs" id="listingThumbs"></div>
+        </div>
+      </section>
+
+      <section class="purchase-section" id="payment">
+        <div class="purchase-tabs">
+          <strong id="purchaseVehicleTitle">Vehicle</strong>
+          <a class="active" href="#payment">1. Payment</a>
+          <a href="#trade">2. Trade-in</a>
+          <a href="#accessories">3. Accessories</a>
+          <a href="#start">4. Start Purchase</a>
+          <a href="#details">View Vehicle Details</a>
+        </div>
+        <div class="purchase-layout">
+          <div class="purchase-flow">
+            <div class="purchase-mode">
+              <button class="active" type="button">Finance</button>
+              <button type="button">Cash</button>
+              <button type="button">Offer</button>
+              <button type="button">Not sure?</button>
+            </div>
+            <article class="purchase-panel">
+              <h2>Step 1. Estimate your payment</h2>
+              <p>Use this preview to compare estimated payments before messaging the seller. Actual terms depend on lender approval, title status, and final vehicle inspection.</p>
+              <fieldset>
+                <legend>Cash Down</legend>
+                <div class="slider-row">
+                  <input id="cashDownSlider" type="range" min="0" max="100000" step="500" value="0" />
+                  <input id="cashDownInput" type="number" min="0" step="500" value="0" />
+                </div>
+              </fieldset>
+              <fieldset>
+                <legend>Credit Score</legend>
+                <button type="button">780+ Excellent <span>⌄</span></button>
+              </fieldset>
+              <fieldset>
+                <legend>Payment Options (3)</legend>
+                <label><input type="radio" name="term" /> <strong id="payment36">$--</strong> /mo. <span>6.09% APR</span> <span>36 mos.</span></label>
+                <label><input type="radio" name="term" /> <strong id="payment48">$--</strong> /mo. <span>6.09% APR</span> <span>48 mos.</span></label>
+                <label><input type="radio" name="term" checked /> <strong id="payment60">$--</strong> /mo. <span>6.09% APR</span> <span>60 mos.</span></label>
+              </fieldset>
+            </article>
+            <article class="purchase-panel" id="trade">
+              <h2>Step 2. Find your vehicle trade-in value</h2>
+              <p>Use an instant valuation workflow later to estimate your current car and reduce the amount financed.</p>
+              <button type="button">Get a trade-in value</button>
+            </article>
+            <article class="purchase-panel" id="accessories">
+              <h2>Step 3. Personalize with accessories</h2>
+              <p>Add inspection, delivery, protection, or accessories before you make an offer.</p>
+              <button type="button">Select accessories</button>
+            </article>
+            <article class="purchase-panel start-panel" id="start">
+              <h2>Step 4. Start purchase</h2>
+              <p>Save time by sharing your estimate with the seller, then continue with secure messaging, identity checks, and offer tracking.</p>
+              <button type="button">Confirm availability</button>
+              <button type="button">Continue</button>
+            </article>
+          </div>
+          <aside class="finance-card" aria-label="Finance summary">
+            <div class="finance-card-head">
+              <span>Finance</span>
+              <button type="button" aria-label="Save listing">♡</button>
+            </div>
+            <h3>Offer Details</h3>
+            <div class="finance-highlight">
+              <strong id="monthlyPayment">$--</strong><span>mo*</span>
+              <strong>6.09%</strong><span>APR*</span>
+            </div>
+            <p><strong>60 mos.</strong> <strong id="downPayment">$-- down payment*</strong></p>
+            <div class="finance-actions">
+              <button type="button">Confirm availability</button>
+              <button type="button">Continue ›</button>
+            </div>
+            <dl>
+              <div><dt>Total asking price</dt><dd id="summaryPrice">$--</dd></div>
+              <div><dt>Kerodex seller fee</dt><dd>$0</dd></div>
+              <div><dt>Estimated inspection</dt><dd>Select</dd></div>
+              <div><dt>Taxes & fees</dt><dd id="summaryFees">$--</dd></div>
+              <div><dt>Total amount financed</dt><dd id="summaryFinanced">$--</dd></div>
+            </dl>
+          </aside>
+        </div>
+      </section>
+
+      <section class="similar-section">
+        <h2>More from Kerodex</h2>
+        <p id="similarSubtitle">Similar private-party vehicles from verified sellers.</p>
+        <div class="similar-track" id="similarTrack"></div>
+      </section>
+    </main>
+    <script src="/listing.js?v=53"></script>
+  </body>
+</html>
