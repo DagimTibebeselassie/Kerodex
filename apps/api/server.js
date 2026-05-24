@@ -136,8 +136,16 @@ function filterListings(params) {
   const make = normalize(params.get("make"));
   const bodyType = normalize(params.get("bodyType"));
   const fuelType = normalize(params.get("fuelType"));
+  const drivetrain = normalize(params.get("drivetrain"));
+  const model = normalize(params.get("model"));
+  const minPrice = Number(params.get("minPrice") || 0);
   const maxPrice = Number(params.get("maxPrice") || 0);
+  const minMileage = Number(params.get("minMileage") || 0);
   const maxMileage = Number(params.get("maxMileage") || 0);
+  const minYear = Number(params.get("minYear") || params.get("year") || 0);
+  const maxYear = Number(params.get("maxYear") || 0);
+  const cleanTitleOnly = params.get("cleanTitle") === "1";
+  const noAccidentsOnly = params.get("noAccidents") === "1";
 
   return listings
     .filter((listing) => {
@@ -154,10 +162,18 @@ function filterListings(params) {
       return (
         (!query || haystack.includes(query)) &&
         (!make || normalize(listing.make) === make) &&
+        (!model || normalize(listing.model) === model) &&
         (!bodyType || normalize(listing.bodyType) === bodyType) &&
         (!fuelType || normalize(listing.fuelType) === fuelType) &&
+        (!drivetrain || normalize(listing.drivetrain) === drivetrain || listing.features.some((feature) => normalize(feature).includes(drivetrain))) &&
+        (!minPrice || listing.price >= minPrice) &&
         (!maxPrice || listing.price <= maxPrice) &&
-        (!maxMileage || listing.mileage <= maxMileage)
+        (!minMileage || listing.mileage >= minMileage) &&
+        (!maxMileage || listing.mileage <= maxMileage) &&
+        (!minYear || listing.year >= minYear) &&
+        (!maxYear || listing.year <= maxYear) &&
+        (!cleanTitleOnly || listing.badges.some((badge) => normalize(badge).includes("clean title"))) &&
+        (!noAccidentsOnly || listing.badges.some((badge) => normalize(badge).includes("no accidents")))
       );
     })
     .sort((a, b) => b.dealScore - a.dealScore);
