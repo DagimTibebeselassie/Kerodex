@@ -6,7 +6,7 @@ Start with a modular monolith locally:
 
 - Static responsive web app.
 - Node API with REST endpoints.
-- In-memory seed data.
+- JSON-backed local seed store behind the API.
 - Server-sent events for live listing updates.
 - No cloud bill.
 

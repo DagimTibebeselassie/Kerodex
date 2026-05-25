@@ -2,7 +2,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const { URL } = require("url");
-const { listings, conversations } = require("./data");
+const store = require("./store");
 
 const PORT = Number(process.env.PORT || 4100);
 const PUBLIC_DIR = path.resolve(__dirname, "../web/public");
@@ -136,10 +136,19 @@ function filterListings(params) {
   const make = normalize(params.get("make"));
   const bodyType = normalize(params.get("bodyType"));
   const fuelType = normalize(params.get("fuelType"));
+  const drivetrain = normalize(params.get("drivetrain"));
+  const model = normalize(params.get("model"));
+  const minPrice = Number(params.get("minPrice") || 0);
   const maxPrice = Number(params.get("maxPrice") || 0);
+  const minMileage = Number(params.get("minMileage") || 0);
   const maxMileage = Number(params.get("maxMileage") || 0);
+  const minYear = Number(params.get("minYear") || params.get("year") || 0);
+  const maxYear = Number(params.get("maxYear") || 0);
+  const cleanTitleOnly = params.get("cleanTitle") === "1";
+  const noAccidentsOnly = params.get("noAccidents") === "1";
 
-  return listings
+  return store
+    .getListings()
     .filter((listing) => {
       const haystack = normalize([
         listing.title,
@@ -154,10 +163,18 @@ function filterListings(params) {
       return (
         (!query || haystack.includes(query)) &&
         (!make || normalize(listing.make) === make) &&
+        (!model || normalize(listing.model) === model) &&
         (!bodyType || normalize(listing.bodyType) === bodyType) &&
         (!fuelType || normalize(listing.fuelType) === fuelType) &&
+        (!drivetrain || normalize(listing.drivetrain) === drivetrain || listing.features.some((feature) => normalize(feature).includes(drivetrain))) &&
+        (!minPrice || listing.price >= minPrice) &&
         (!maxPrice || listing.price <= maxPrice) &&
-        (!maxMileage || listing.mileage <= maxMileage)
+        (!minMileage || listing.mileage >= minMileage) &&
+        (!maxMileage || listing.mileage <= maxMileage) &&
+        (!minYear || listing.year >= minYear) &&
+        (!maxYear || listing.year <= maxYear) &&
+        (!cleanTitleOnly || listing.badges.some((badge) => normalize(badge).includes("clean title"))) &&
+        (!noAccidentsOnly || listing.badges.some((badge) => normalize(badge).includes("no accidents")))
       );
     })
     .sort((a, b) => b.dealScore - a.dealScore);
@@ -205,6 +222,7 @@ function handleEvents(req, res) {
   });
 
   const send = () => {
+    const listings = store.getListings();
     const listing = listings[Math.floor(Math.random() * listings.length)];
     res.write(`event: listing.updated\n`);
     res.write(`data: ${JSON.stringify({ id: listing.id, updatedAt: new Date().toISOString() })}\n\n`);
@@ -348,13 +366,13 @@ const server = http.createServer((req, res) => {
 
   if (url.pathname.startsWith("/api/listings/")) {
     const id = url.pathname.split("/").pop();
-    const listing = listings.find((item) => item.id === id);
+    const listing = store.getListingById(id);
     sendJson(res, listing ? 200 : 404, listing || { error: "Listing not found" });
     return;
   }
 
   if (url.pathname === "/api/conversations") {
-    sendJson(res, 200, { conversations });
+    sendJson(res, 200, { conversations: store.getConversations() });
     return;
   }
 

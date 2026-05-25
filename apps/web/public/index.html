@@ -11,7 +11,7 @@
       integrity="sha256-p4NxAoJBhIINfQX8VgKq9RRG4wI7E9jhdT5q7wS0Bl2M="
       crossorigin=""
     />
-    <link rel="stylesheet" href="/styles.css?v=29" />
+    <link rel="stylesheet" href="/styles.css?v=53" />
   </head>
   <body>
     <div class="app-loader" id="appLoader" aria-live="polite">
@@ -27,7 +27,14 @@
       <form class="nav-search" id="navSearchForm" aria-label="Quick vehicle search">
         <label>
           <span>Where</span>
-          <input name="q" type="search" placeholder="Car, city, keyword" autocomplete="off" />
+          <select name="q">
+            <option value="">New York, NY, Los Angeles, CA</option>
+            <option>Atlanta, GA</option>
+            <option>Miami, FL</option>
+            <option>Denver, CO</option>
+            <option>Seattle, WA</option>
+            <option>Austin, TX</option>
+          </select>
         </label>
         <label>
           <span>Make</span>
@@ -54,7 +61,7 @@
         <label>
           <span>Budget</span>
           <select name="maxPrice">
-            <option value="">Any price</option>
+            <option value="">Under $50k</option>
             <option value="35000">Under $35k</option>
             <option value="40000">Under $40k</option>
             <option value="55000">Under $55k</option>
@@ -67,8 +74,7 @@
         </button>
       </form>
       <div class="nav-actions">
-        <a class="nav-pill" href="#trust">Why Kerodex</a>
-        <button class="nav-pill" type="button">Ask Kerodex</button>
+        <button class="seller-link" id="becomeSellerButton" type="button">Become a seller</button>
         <div class="profile-shell">
           <button class="profile-toggle" id="profileToggle" type="button" aria-label="Open profile menu" aria-expanded="false">
             <svg class="menu-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -81,11 +87,33 @@
             </svg>
           </button>
           <div class="profile-menu" id="profileMenu" hidden>
-            <div class="profile-menu-status" id="profileStatus">Guest account</div>
-            <button type="button" id="signInButton">Sign in</button>
-            <button type="button" id="createAccountButton">Create account</button>
-            <button type="button" id="listCarButton">List your car</button>
-            <button type="button" id="themeToggle">Toggle dark mode</button>
+            <button class="profile-menu-link plain" type="button" id="signInButton">Log in</button>
+            <button class="profile-menu-link plain" type="button" id="createAccountButton">Sign up</button>
+            <button class="profile-menu-link" type="button" id="listCarButton">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14h16l-2-5H6l-2 5Zm2 0v4m12-4v4M7 18h.1M17 18h.1M8 9l1-3h6l1 3" /></svg>
+              <span>Become a seller</span>
+            </button>
+            <div class="profile-menu-divider"></div>
+            <a class="profile-menu-link" href="/profile.html">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12.6a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2ZM4.8 20.2a7.5 7.5 0 0 1 14.4 0" /></svg>
+              <span>Profile</span>
+            </a>
+            <a class="profile-menu-link" href="#trust">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 4v5c0 5-3.4 7.9-8 9-4.6-1.1-8-4-8-9V7l8-4Z" /></svg>
+              <span>Trust & safety</span>
+            </a>
+            <button class="profile-menu-link" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 18a7 7 0 1 1 14 0M5 18v-4a7 7 0 0 1 14 0v4M4 18h4v3H4v-3Zm12 0h4v3h-4v-3Z" /></svg>
+              <span>Get help</span>
+            </button>
+            <button class="profile-menu-link" type="button">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l4 4v14H7V3Zm7 0v5h4M9 13h6M9 17h6" /></svg>
+              <span>Legal</span>
+            </button>
+            <button class="profile-menu-link" type="button" id="themeToggle">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a7 7 0 1 0 9 9 8 8 0 1 1-9-9Z" /></svg>
+              <span>Toggle dark mode</span>
+            </button>
           </div>
         </div>
       </div>
@@ -100,11 +128,22 @@
           <p class="hero-copy">
             Search rich vehicle data, compare fair-value signals, browse by map, and message sellers with confidence.
           </p>
+          <div class="hero-cta-row" aria-label="Primary actions">
+            <button class="hero-cta primary" type="button">Browse cars</button>
+            <button class="hero-cta" type="button">List your car</button>
+          </div>
 
           <form class="search-panel" id="searchForm">
             <label class="search-field is-wide">
               <span>Where</span>
-              <input name="q" type="search" placeholder="Porsche Macan, Tacoma, Tesla..." autocomplete="off" />
+              <select name="q">
+                <option value="">New York, NY, Los Angeles, CA</option>
+                <option>Atlanta, GA</option>
+                <option>Miami, FL</option>
+                <option>Denver, CO</option>
+                <option>Seattle, WA</option>
+                <option>Austin, TX</option>
+              </select>
             </label>
             <label class="search-field">
               <span>Make</span>
@@ -131,7 +170,7 @@
             <label class="search-field">
               <span>Price</span>
               <select name="maxPrice">
-                <option value="">Any price</option>
+                <option value="">Under $50k</option>
                 <option value="35000">Under $35k</option>
                 <option value="40000">Under $40k</option>
                 <option value="55000">Under $55k</option>
@@ -140,7 +179,7 @@
             <label class="search-field">
               <span>Mileage</span>
               <select name="maxMileage">
-                <option value="">Any mileage</option>
+                <option value="">Under 40k</option>
                 <option value="25000">Under 25k</option>
                 <option value="40000">Under 40k</option>
                 <option value="50000">Under 50k</option>
@@ -318,6 +357,6 @@
       integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
       crossorigin=""
     ></script>
-    <script src="/app.js?v=29"></script>
+    <script src="/app.js?v=53"></script>
   </body>
 </html>
