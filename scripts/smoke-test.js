@@ -1,6 +1,6 @@
 const fs = require("fs");
 const path = require("path");
-const { listings } = require("../apps/api/data");
+const store = require("../apps/api/store");
 
 function assert(condition, message) {
   if (!condition) {
@@ -11,7 +11,9 @@ function assert(condition, message) {
 const root = path.resolve(__dirname, "..");
 const requiredFiles = [
   "apps/api/server.js",
-  "apps/api/data.js",
+  "apps/api/store.js",
+  "apps/api/seed/listings.json",
+  "apps/api/seed/conversations.json",
   "apps/web/public/index.html",
   "apps/web/public/app.js",
   "apps/web/public/styles.css"
@@ -21,7 +23,8 @@ requiredFiles.forEach((file) => {
   assert(fs.existsSync(path.join(root, file)), `Missing required file: ${file}`);
 });
 
-assert(Array.isArray(listings), "Listings export must be an array.");
+const listings = store.getListings();
+assert(Array.isArray(listings), "Listings store must return an array.");
 assert(listings.length >= 25, "Expected at least 25 seed listings.");
 
 const ids = new Set();

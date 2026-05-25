@@ -2,7 +2,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const { URL } = require("url");
-const { listings, conversations } = require("./data");
+const store = require("./store");
 
 const PORT = Number(process.env.PORT || 4100);
 const PUBLIC_DIR = path.resolve(__dirname, "../web/public");
@@ -147,7 +147,8 @@ function filterListings(params) {
   const cleanTitleOnly = params.get("cleanTitle") === "1";
   const noAccidentsOnly = params.get("noAccidents") === "1";
 
-  return listings
+  return store
+    .getListings()
     .filter((listing) => {
       const haystack = normalize([
         listing.title,
@@ -221,6 +222,7 @@ function handleEvents(req, res) {
   });
 
   const send = () => {
+    const listings = store.getListings();
     const listing = listings[Math.floor(Math.random() * listings.length)];
     res.write(`event: listing.updated\n`);
     res.write(`data: ${JSON.stringify({ id: listing.id, updatedAt: new Date().toISOString() })}\n\n`);
@@ -364,13 +366,13 @@ const server = http.createServer((req, res) => {
 
   if (url.pathname.startsWith("/api/listings/")) {
     const id = url.pathname.split("/").pop();
-    const listing = listings.find((item) => item.id === id);
+    const listing = store.getListingById(id);
     sendJson(res, listing ? 200 : 404, listing || { error: "Listing not found" });
     return;
   }
 
   if (url.pathname === "/api/conversations") {
-    sendJson(res, 200, { conversations });
+    sendJson(res, 200, { conversations: store.getConversations() });
     return;
   }
 
