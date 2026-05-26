@@ -42,6 +42,7 @@ let tileLayer;
 let tileThemeName;
 let activeRequest;
 let searchTimer;
+let userLocation;
 const listingCache = new Map();
 
 function enhanceSelects(scope = document) {
@@ -129,14 +130,46 @@ const currency = new Intl.NumberFormat("en-US", {
 
 const mapThemes = {
   light: {
-    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    attribution: "&copy; OpenStreetMap contributors"
+    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    attribution: "&copy; OpenStreetMap contributors &copy; CARTO"
   },
   dark: {
-    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-    attribution: "&copy; OpenStreetMap contributors"
+    url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+    attribution: "&copy; OpenStreetMap contributors &copy; CARTO"
   }
 };
+
+function distanceMiles(origin, listing) {
+  if (!origin || !Number.isFinite(listing.lat) || !Number.isFinite(listing.lng)) return Number.POSITIVE_INFINITY;
+  const radius = 3958.8;
+  const toRadians = (value) => value * Math.PI / 180;
+  const lat1 = toRadians(origin.lat);
+  const lat2 = toRadians(listing.lat);
+  const deltaLat = toRadians(listing.lat - origin.lat);
+  const deltaLng = toRadians(listing.lng - origin.lng);
+  const a = Math.sin(deltaLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLng / 2) ** 2;
+  return radius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function sortByLocation(listings) {
+  if (!userLocation) return listings;
+  return [...listings].sort((a, b) => distanceMiles(userLocation, a) - distanceMiles(userLocation, b));
+}
+
+function requestUserLocation() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      userLocation = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude
+      };
+      if (state.rawListings.length) renderListings(visibleListings(sortByLocation(state.rawListings)));
+    },
+    () => {},
+    { enableHighAccuracy: false, maximumAge: 300000, timeout: 4000 }
+  );
+}
 
 function paramsFromForm() {
   const data = new FormData(form);
@@ -280,17 +313,25 @@ function popupHtml(listing) {
 }
 
 function mapPreviewHtml(listing) {
+  const miles = distanceMiles(userLocation, listing);
+  const distance = Number.isFinite(miles) ? `${Math.round(miles)} mi away` : listing.location;
   return `
-    <button class="map-preview-close" type="button" aria-label="Close preview">×</button>
-    <img src="${listing.images[0]}" alt="${listing.title}">
-    <div>
-      <strong>${listing.title}</strong>
-      <span>${currency.format(listing.price)} · ${listing.mileage.toLocaleString()} mi · ${listing.location}</span>
-      <small>${listing.seller.name} · ${listing.seller.responseTime}</small>
+    <button class="map-preview-close" type="button" aria-label="Close preview">x</button>
+    <button class="map-preview-save" type="button" aria-label="Save listing">♡</button>
+    <a class="map-preview-media" href="/listing.html?id=${encodeURIComponent(listing.id)}">
+      <img src="${listing.images[0]}" alt="${listing.title}">
+    </a>
+    <div class="map-preview-copy">
+      <div class="map-preview-title-row">
+        <strong>${listing.title}</strong>
+        <span>${listing.dealScore} score</span>
+      </div>
+      <span>${listing.bodyType || listing.fuelType} · ${listing.mileage.toLocaleString()} mi · ${distance}</span>
+      <small>${currency.format(listing.price)} · ${listing.seller.name} · ${listing.seller.responseTime}</small>
+      <a href="/listing.html?id=${encodeURIComponent(listing.id)}">View listing</a>
     </div>
   `;
 }
-
 function showMapPreview(listing) {
   if (!mapPanel || !listing) return;
   if (!mapPreviewCard) {
@@ -308,15 +349,23 @@ function ensureMap() {
   leafletMap = L.map("mapCanvas", {
     center: [39.5, -98.35],
     zoom: 4,
+    minZoom: 3,
     wheelDebounceTime: 90,
     wheelPxPerZoomLevel: 180,
     preferCanvas: true,
     zoomAnimation: false,
     fadeAnimation: false,
     markerZoomAnimation: false,
+    boxZoom: false,
+    doubleClickZoom: false,
+    dragging: true,
+    keyboard: false,
     scrollWheelZoom: false,
-    zoomControl: true
+    touchZoom: false,
+    worldCopyJump: true,
+    zoomControl: false
   });
+  L.control.zoom({ position: "bottomright" }).addTo(leafletMap);
 
   setMapTileTheme();
   markerLayer = L.layerGroup().addTo(leafletMap);
@@ -424,6 +473,7 @@ function renderMap(listings) {
   markerByListingId = new Map();
 
   const bounds = [];
+  if (userLocation) bounds.push([userLocation.lat, userLocation.lng]);
   listings.forEach((listing) => {
     const marker = L.marker([listing.lat, listing.lng], {
       icon: priceIcon(listing),
@@ -438,7 +488,7 @@ function renderMap(listings) {
   });
 
   if (bounds.length) {
-    leafletMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 5 });
+    leafletMap.fitBounds(bounds, { padding: [50, 50], maxZoom: 7 });
   }
 
   setTimeout(() => {
@@ -478,7 +528,7 @@ async function loadListings() {
   try {
     if (listingCache.has(requestKey)) {
       state.rawListings = listingCache.get(requestKey);
-      renderListings(visibleListings(state.rawListings));
+      renderListings(visibleListings(sortByLocation(state.rawListings)));
       return;
     }
 
@@ -490,7 +540,7 @@ async function loadListings() {
     const data = await response.json();
     listingCache.set(requestKey, data.listings);
     state.rawListings = data.listings;
-    renderListings(visibleListings(state.rawListings));
+    renderListings(visibleListings(sortByLocation(state.rawListings)));
   } catch (error) {
     if (error.name !== "AbortError") throw error;
   } finally {
@@ -779,3 +829,5 @@ if ("EventSource" in window) {
 
 enhanceSelects();
 loadListings();
+requestUserLocation();
+

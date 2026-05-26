@@ -1,7 +1,6 @@
 const form = document.querySelector("#resultsSearch");
 const grid = document.querySelector("#resultsGrid");
 const mapView = document.querySelector("#resultsMapView");
-const mapList = document.querySelector("#resultsMapList");
 const title = document.querySelector("#resultsTitle");
 const subtitle = document.querySelector("#resultsSubtitle");
 const themeButton = document.querySelector("#resultsTheme");
@@ -14,8 +13,11 @@ let listingsCache = [];
 let browseListingsCache = [];
 let resultsMap;
 let resultsMarkerLayer;
+let resultsTileLayer;
+let resultsTileThemeName;
 let activeFilterMenu;
 let resultsMapPreviewCard;
+let userLocation;
 
 function savedListingIds() {
   if (!localStorage.getItem("kerodex-user")) return [];
@@ -222,6 +224,42 @@ function currentParams() {
   return new URLSearchParams(window.location.search);
 }
 
+function distanceMiles(origin, listing) {
+  if (!origin || !Number.isFinite(listing.lat) || !Number.isFinite(listing.lng)) return Number.POSITIVE_INFINITY;
+  const radius = 3958.8;
+  const toRadians = (value) => value * Math.PI / 180;
+  const lat1 = toRadians(origin.lat);
+  const lat2 = toRadians(listing.lat);
+  const deltaLat = toRadians(listing.lat - origin.lat);
+  const deltaLng = toRadians(listing.lng - origin.lng);
+  const a = Math.sin(deltaLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(deltaLng / 2) ** 2;
+  return radius * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function sortByLocation(listings) {
+  if (!userLocation) return listings;
+  return [...listings].sort((a, b) => distanceMiles(userLocation, a) - distanceMiles(userLocation, b));
+}
+
+function requestUserLocation() {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      userLocation = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude
+      };
+      if (listingsCache.length) {
+        listingsCache = sortByLocation(listingsCache);
+        renderResultRows(listingsCache, browseListingsCache);
+        if (document.body.classList.contains("map-mode")) renderMapView();
+      }
+    },
+    () => {},
+    { enableHighAccuracy: false, maximumAge: 300000, timeout: 4000 }
+  );
+}
+
 function hydrateForm() {
   const params = currentParams();
   for (const [key, value] of params.entries()) {
@@ -285,17 +323,24 @@ function formatRangeValue(range, value) {
 }
 
 function mapPreviewHtml(listing) {
+  const distance = Number.isFinite(distanceMiles(userLocation, listing)) ? `${Math.round(distanceMiles(userLocation, listing))} mi away` : listing.location;
   return `
-    <button class="map-preview-close" type="button" aria-label="Close preview">×</button>
-    <img src="${listing.images[0]}" alt="${listing.title}">
-    <div>
-      <strong>${listing.title}</strong>
-      <span>${currency.format(listing.price)} · ${listing.mileage.toLocaleString()} mi · ${listing.location}</span>
-      <small>${listing.seller.name} · ${listing.seller.responseTime}</small>
+    <button class="map-preview-close" type="button" aria-label="Close preview">x</button>
+    <button class="map-preview-save" type="button" aria-label="Save listing">♡</button>
+    <a class="map-preview-media" href="/listing.html?id=${encodeURIComponent(listing.id)}">
+      <img src="${listing.images[0]}" alt="${listing.title}">
+    </a>
+    <div class="map-preview-copy">
+      <div class="map-preview-title-row">
+        <strong>${listing.title}</strong>
+        <span>${listing.dealScore} score</span>
+      </div>
+      <span>${listing.bodyType || listing.fuelType} · ${listing.mileage.toLocaleString()} mi · ${distance}</span>
+      <small>${currency.format(listing.price)} · ${listing.seller.name} · ${listing.seller.responseTime}</small>
+      <a href="/listing.html?id=${encodeURIComponent(listing.id)}">View listing</a>
     </div>
   `;
 }
-
 function showResultsMapPreview(listing) {
   const panel = document.querySelector(".results-map-panel");
   if (!panel || !listing) return;
@@ -539,21 +584,35 @@ function renderResultRows(matches, allListings) {
     return;
   }
 
-  const related = relatedListings(matches, allListings);
-  const firstRow = matches.length >= 3 ? matches : uniqueListings([...matches, ...related]).slice(0, Math.max(3, matches.length));
-  const firstRowIds = new Set(firstRow.map((listing) => listing.id));
-  const comparisonRow = related.filter((listing) => !firstRowIds.has(listing.id)).slice(0, 12);
-  const lowMileageRow = uniqueListings([...allListings].sort((a, b) => a.mileage - b.mileage)).slice(0, 12);
-
-  grid.innerHTML = [
-    renderResultRow("Best matches", "Private-party listings that fit your search.", firstRow),
-    renderResultRow("Worth comparing", "Similar cars nearby so you are not boxed into one result.", comparisonRow),
-    renderResultRow("Lower-mileage options", "Cleaner odometers from verified private sellers.", lowMileageRow)
-  ].join("");
+  grid.innerHTML = uniqueListings(matches).map(resultCard).join("");
 }
 
 function markerHtml(listing) {
   return `<button class="leaflet-price-pin" type="button">${Math.round(listing.price / 1000)}k</button>`;
+}
+
+function currentResultsMapTheme() {
+  return document.body.classList.contains("dark") ? "dark" : "light";
+}
+
+function setResultsMapTileTheme() {
+  if (!resultsMap || !window.L) return;
+  const themeName = currentResultsMapTheme();
+  if (resultsTileLayer && resultsTileThemeName === themeName) return;
+  const tileUrl = themeName === "dark"
+    ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+    : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+  const nextTileLayer = L.tileLayer(tileUrl, {
+    attribution: "&copy; OpenStreetMap contributors &copy; CARTO",
+    maxZoom: 20
+  }).addTo(resultsMap);
+
+  window.setTimeout(() => {
+    if (resultsTileLayer && resultsTileLayer !== nextTileLayer) resultsTileLayer.remove();
+    resultsTileLayer = nextTileLayer;
+    resultsTileThemeName = themeName;
+    resultsMap.invalidateSize(true);
+  }, 160);
 }
 
 function ensureResultsMap() {
@@ -561,38 +620,74 @@ function ensureResultsMap() {
   resultsMap = L.map("resultsMap", {
     center: [39.5, -98.35],
     zoom: 4,
-    scrollWheelZoom: false,
-    zoomControl: true
+    minZoom: 3,
+    scrollWheelZoom: true,
+    worldCopyJump: true,
+    zoomControl: false
   });
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: "&copy; OpenStreetMap contributors"
-  }).addTo(resultsMap);
+  L.control.zoom({ position: "bottomright" }).addTo(resultsMap);
+  setResultsMapTileTheme();
   resultsMarkerLayer = L.layerGroup().addTo(resultsMap);
   return true;
 }
 
 function renderMapView() {
-  mapList.innerHTML = listingsCache.map(compactCard).join("");
   if (!ensureResultsMap()) return;
+  resultsMap.invalidateSize(true);
   resultsMarkerLayer.clearLayers();
   const bounds = [];
+  if (userLocation) bounds.push([userLocation.lat, userLocation.lng]);
   listingsCache.forEach((listing) => {
-    L.marker([listing.lat, listing.lng], {
+    const marker = L.marker([listing.lat, listing.lng], {
       icon: L.divIcon({ className: "", html: markerHtml(listing), iconAnchor: [24, 18] })
     })
       .on("click", () => showResultsMapPreview(listing))
       .addTo(resultsMarkerLayer);
+    setTimeout(() => {
+      marker.getElement()?.querySelector(".leaflet-price-pin")?.addEventListener("click", () => showResultsMapPreview(listing));
+    }, 0);
     bounds.push([listing.lat, listing.lng]);
   });
-  if (bounds.length) resultsMap.fitBounds(bounds, { padding: [30, 30], maxZoom: 6 });
-  setTimeout(() => resultsMap.invalidateSize(), 80);
+  if (bounds.length) {
+    [80, 260].forEach((delay) => {
+      setTimeout(() => {
+        resultsMap.invalidateSize(true);
+        resultsMap.fitBounds(bounds, { padding: [60, 60], maxZoom: 7 });
+      }, delay);
+    });
+  }
+}
+
+function renderMapViewWhenReady() {
+  window.requestAnimationFrame(() => {
+    syncMapViewportOffset();
+    renderMapView();
+    window.requestAnimationFrame(() => {
+      resultsMap?.invalidateSize(true);
+      renderMapView();
+    });
+  });
+}
+
+function syncMapViewportOffset() {
+  const top = Math.ceil(filterbar?.getBoundingClientRect().bottom || 0);
+  document.documentElement.style.setProperty("--results-map-top", `${top}px`);
+}
+
+function setResultsView(view) {
+  const isMap = view === "map";
+  document.body.classList.toggle("map-mode", isMap);
+  grid.hidden = isMap;
+  mapView.hidden = !isMap;
+  syncMapViewportOffset();
+  if (isMap) renderMapViewWhenReady();
 }
 
 async function loadResults() {
   const params = currentParams();
   const response = await fetch(`/api/listings?${params.toString()}`);
   const data = await response.json();
-  const listings = data.listings || [];
+  const listings = sortByLocation(data.listings || []);
   listingsCache = listings;
   let allListings = listings;
   try {
@@ -611,7 +706,7 @@ async function loadResults() {
     : `No exact matches for "${query}" yet. Try a broader search.`;
 
   renderResultRows(listings, browseListingsCache);
-  renderMapView();
+  if (document.body.classList.contains("map-mode")) renderMapView();
 }
 
 form.addEventListener("submit", (event) => {
@@ -624,6 +719,7 @@ form.addEventListener("submit", (event) => {
 themeButton?.addEventListener("click", () => {
   document.body.classList.toggle("dark");
   localStorage.setItem("kerodex-theme", document.body.classList.contains("dark") ? "dark" : "light");
+  setResultsMapTileTheme();
 });
 
 logoutButton?.addEventListener("click", () => {
@@ -665,10 +761,7 @@ document.querySelectorAll("[data-results-view]").forEach((button) => {
     document.querySelectorAll("[data-results-view]").forEach((item) => {
       item.classList.toggle("active", item === button);
     });
-    const isMap = button.dataset.resultsView === "map";
-    grid.hidden = isMap;
-    mapView.hidden = !isMap;
-    if (isMap) renderMapView();
+    setResultsView(button.dataset.resultsView === "map" ? "map" : "grid");
   });
 });
 
@@ -709,3 +802,7 @@ hydrateForm();
 enhanceSelects();
 updateFilterButtons();
 loadResults();
+window.addEventListener("resize", syncMapViewportOffset);
+window.addEventListener("scroll", syncMapViewportOffset, { passive: true });
+requestUserLocation();
+

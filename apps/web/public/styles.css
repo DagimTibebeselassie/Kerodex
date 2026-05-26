@@ -6404,6 +6404,274 @@ body.dark .explore-card .result-card-body {
   display: inline-flex !important;
 }
 
+/* v65 final search map reset. Keep this block last. */
+.results-filterbar {
+  grid-template-columns: minmax(0, 1fr) max-content !important;
+}
+
+.results-filterbar .view-toggle {
+  display: inline-grid !important;
+  flex: 0 0 auto !important;
+  gap: 4px !important;
+  grid-template-columns: repeat(2, 78px) !important;
+  justify-self: end !important;
+  padding: 4px !important;
+  width: max-content !important;
+}
+
+.results-filterbar .view-toggle button {
+  width: 78px !important;
+}
+
+.results-body.map-mode {
+  overflow: hidden;
+}
+
+.results-body.map-mode .results-shell {
+  max-width: none !important;
+  padding: 0 !important;
+}
+
+.results-body.map-mode .beta-demo-banner,
+.results-body.map-mode .results-heading,
+.results-body.map-mode .results-trust-strip,
+.results-body.map-mode .results-grid {
+  display: none !important;
+}
+
+.results-body.map-mode .results-map-view {
+  bottom: 0;
+  display: block !important;
+  left: 0;
+  position: fixed;
+  right: 0;
+  top: var(--results-map-top, 212px);
+  z-index: 4;
+}
+
+.results-body.map-mode .results-map-panel,
+.results-body.map-mode #resultsMap {
+  border: 0 !important;
+  border-radius: 0 !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  width: 100% !important;
+}
+
+@media (max-width: 760px) {
+  .results-filterbar {
+    grid-template-columns: minmax(0, 1fr) max-content !important;
+  }
+
+  .results-filterbar .view-toggle {
+    grid-template-columns: repeat(2, 66px) !important;
+    width: max-content !important;
+  }
+
+  .results-filterbar .view-toggle button {
+    width: 66px !important;
+  }
+}
+
+/* v65 final search map reset. Keep this as the last search override. */
+.results-filterbar {
+  grid-template-columns: minmax(0, 1fr) max-content !important;
+}
+
+.results-filterbar .view-toggle {
+  background: color-mix(in srgb, var(--surface-strong) 94%, var(--bg)) !important;
+  border: 1px solid color-mix(in srgb, var(--text) 14%, transparent) !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  display: inline-grid !important;
+  flex: 0 0 auto !important;
+  gap: 4px !important;
+  grid-template-columns: repeat(2, 78px) !important;
+  justify-self: end !important;
+  margin-left: 0 !important;
+  overflow: hidden !important;
+  padding: 4px !important;
+  position: static !important;
+  right: auto !important;
+  top: auto !important;
+  transform: none !important;
+  width: max-content !important;
+  z-index: 20 !important;
+}
+
+.results-filterbar .view-toggle button {
+  border-radius: 6px !important;
+  justify-content: center !important;
+  min-height: 42px !important;
+  padding: 0 !important;
+  width: 78px !important;
+}
+
+.results-map-view[hidden] {
+  display: none !important;
+}
+
+.results-body.map-mode {
+  overflow: hidden;
+}
+
+.results-body.map-mode .results-shell {
+  max-width: none !important;
+  padding: 0 !important;
+}
+
+.results-body.map-mode .beta-demo-banner,
+.results-body.map-mode .results-heading,
+.results-body.map-mode .results-trust-strip,
+.results-body.map-mode .results-grid {
+  display: none !important;
+}
+
+.results-body.map-mode .results-map-view {
+  background: #dfe7e4;
+  bottom: 0;
+  display: block !important;
+  left: 0;
+  position: fixed;
+  right: 0;
+  top: var(--results-map-top, 212px);
+  z-index: 4;
+}
+
+.results-body.map-mode .results-map-panel {
+  border: 0 !important;
+  border-radius: 0 !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  position: relative;
+}
+
+.results-body.map-mode #resultsMap {
+  height: 100% !important;
+  min-height: 0 !important;
+  width: 100% !important;
+}
+
+.leaflet-price-pin {
+  background: #101114;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.28);
+  color: #ffffff;
+  cursor: pointer;
+  font: 900 0.86rem/1 Inter, system-ui, sans-serif;
+  min-height: 32px;
+  min-width: 54px;
+  padding: 0 12px;
+}
+
+.leaflet-price-pin:hover {
+  background: #4f46e5;
+  transform: translateY(-1px);
+}
+
+.map-preview-card {
+  align-items: center;
+  background: color-mix(in srgb, var(--surface-strong) 96%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--text) 14%, transparent) !important;
+  border-radius: 8px !important;
+  bottom: 24px !important;
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.24) !important;
+  display: grid !important;
+  gap: 14px !important;
+  grid-template-columns: 112px minmax(0, 1fr) !important;
+  left: 24px !important;
+  max-width: min(520px, calc(100vw - 48px)) !important;
+  padding: 12px !important;
+  position: absolute !important;
+  right: auto !important;
+  top: auto !important;
+  z-index: 700 !important;
+}
+
+.map-preview-card[hidden] {
+  display: none !important;
+}
+
+.map-preview-card img {
+  aspect-ratio: 4 / 3;
+  border-radius: 6px;
+  height: auto !important;
+  object-fit: cover;
+  width: 112px !important;
+}
+
+.map-preview-card div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding-right: 34px;
+}
+
+.map-preview-card strong,
+.map-preview-card span,
+.map-preview-card small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.map-preview-card a {
+  color: var(--text);
+  font-weight: 900;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.map-preview-close {
+  align-items: center;
+  background: color-mix(in srgb, var(--text) 9%, transparent) !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  color: var(--text) !important;
+  display: inline-flex;
+  height: 30px !important;
+  justify-content: center;
+  min-height: 30px !important;
+  padding: 0 !important;
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  width: 30px !important;
+}
+
+@media (max-width: 760px) {
+  .results-filterbar {
+    grid-template-columns: minmax(0, 1fr) max-content !important;
+  }
+
+  .results-filterbar .view-toggle {
+    grid-template-columns: repeat(2, 66px) !important;
+    width: max-content !important;
+  }
+
+  .results-filterbar .view-toggle button {
+    width: 66px !important;
+  }
+
+  .results-body.map-mode .results-map-view {
+    top: var(--results-map-top, 184px);
+  }
+
+  .map-preview-card {
+    bottom: 14px !important;
+    grid-template-columns: 84px minmax(0, 1fr) !important;
+    left: 14px !important;
+    max-width: calc(100vw - 28px) !important;
+    padding: 10px !important;
+  }
+
+  .map-preview-card img {
+    width: 84px !important;
+  }
+}
+
 /* v64 beta banner, database-launch polish, and listing purchase layout fixes. */
 .beta-demo-banner {
   align-items: center;
@@ -6588,6 +6856,205 @@ body.dark .explore-card .result-card-body {
 
   .slider-row {
     grid-template-columns: 1fr !important;
+  }
+}
+
+/* v65 search map reset: grid stays a card page, map becomes the page. */
+.results-filterbar {
+  grid-template-columns: minmax(0, 1fr) max-content !important;
+}
+
+.results-filterbar .view-toggle {
+  background: color-mix(in srgb, var(--surface-strong) 94%, var(--bg)) !important;
+  border: 1px solid color-mix(in srgb, var(--text) 14%, transparent) !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  display: inline-grid !important;
+  flex: 0 0 auto !important;
+  gap: 4px !important;
+  grid-template-columns: repeat(2, 78px) !important;
+  justify-self: end !important;
+  margin-left: 0 !important;
+  overflow: hidden !important;
+  padding: 4px !important;
+  position: static !important;
+  right: auto !important;
+  top: auto !important;
+  transform: none !important;
+  width: max-content !important;
+  z-index: 20 !important;
+}
+
+.results-filterbar .view-toggle button {
+  border-radius: 6px !important;
+  justify-content: center !important;
+  min-height: 42px !important;
+  padding: 0 !important;
+  width: 78px !important;
+}
+
+.results-map-view[hidden] {
+  display: none !important;
+}
+
+.results-body.map-mode {
+  overflow: hidden;
+}
+
+.results-body.map-mode .results-shell {
+  max-width: none !important;
+  padding: 0 !important;
+}
+
+.results-body.map-mode .beta-demo-banner,
+.results-body.map-mode .results-heading,
+.results-body.map-mode .results-trust-strip,
+.results-body.map-mode .results-grid {
+  display: none !important;
+}
+
+.results-body.map-mode .results-map-view {
+  background: #dfe7e4;
+  bottom: 0;
+  display: block !important;
+  left: 0;
+  position: fixed;
+  right: 0;
+  top: var(--results-map-top, 212px);
+  z-index: 4;
+}
+
+.results-body.map-mode .results-map-panel {
+  border: 0 !important;
+  border-radius: 0 !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  overflow: hidden !important;
+  position: relative;
+}
+
+.results-body.map-mode #resultsMap {
+  height: 100% !important;
+  min-height: 0 !important;
+  width: 100% !important;
+}
+
+.leaflet-price-pin {
+  background: #101114;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.28);
+  color: #ffffff;
+  cursor: pointer;
+  font: 900 0.86rem/1 Inter, system-ui, sans-serif;
+  min-height: 32px;
+  min-width: 54px;
+  padding: 0 12px;
+}
+
+.leaflet-price-pin:hover {
+  background: #4f46e5;
+  transform: translateY(-1px);
+}
+
+.map-preview-card {
+  align-items: center;
+  background: color-mix(in srgb, var(--surface-strong) 96%, transparent) !important;
+  border: 1px solid color-mix(in srgb, var(--text) 14%, transparent) !important;
+  border-radius: 8px !important;
+  bottom: 24px !important;
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.24) !important;
+  display: grid !important;
+  gap: 14px !important;
+  grid-template-columns: 112px minmax(0, 1fr) !important;
+  left: 24px !important;
+  max-width: min(520px, calc(100vw - 48px)) !important;
+  padding: 12px !important;
+  position: absolute !important;
+  right: auto !important;
+  top: auto !important;
+  z-index: 700 !important;
+}
+
+.map-preview-card[hidden] {
+  display: none !important;
+}
+
+.map-preview-card img {
+  aspect-ratio: 4 / 3;
+  border-radius: 6px;
+  height: auto !important;
+  object-fit: cover;
+  width: 112px !important;
+}
+
+.map-preview-card div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding-right: 34px;
+}
+
+.map-preview-card strong,
+.map-preview-card span,
+.map-preview-card small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.map-preview-card a {
+  color: var(--text);
+  font-weight: 900;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.map-preview-close {
+  align-items: center;
+  background: color-mix(in srgb, var(--text) 9%, transparent) !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  color: var(--text) !important;
+  display: inline-flex;
+  height: 30px !important;
+  justify-content: center;
+  min-height: 30px !important;
+  padding: 0 !important;
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  width: 30px !important;
+}
+
+@media (max-width: 760px) {
+  .results-filterbar {
+    grid-template-columns: minmax(0, 1fr) max-content !important;
+  }
+
+  .results-filterbar .view-toggle {
+    grid-template-columns: repeat(2, 66px) !important;
+    width: max-content !important;
+  }
+
+  .results-filterbar .view-toggle button {
+    width: 66px !important;
+  }
+
+  .results-body.map-mode .results-map-view {
+    top: var(--results-map-top, 184px);
+  }
+
+  .map-preview-card {
+    bottom: 14px !important;
+    grid-template-columns: 84px minmax(0, 1fr) !important;
+    left: 14px !important;
+    max-width: calc(100vw - 28px) !important;
+    padding: 10px !important;
+  }
+
+  .map-preview-card img {
+    width: 84px !important;
   }
 }
 
@@ -9583,4 +10050,543 @@ body.dark .explore-card .result-price strong {
 .results-filterbar.filters-open .filter-scroll-track > [data-filter-param],
 .results-filterbar.filters-open .filter-scroll-track > [data-filter-clear] {
   display: inline-flex !important;
+}
+
+/* v65 final search map reset. Keep this block at the physical end of the file. */
+.results-filterbar {
+  grid-template-columns: minmax(0, 1fr) max-content !important;
+}
+
+.results-filterbar .view-toggle {
+  display: inline-grid !important;
+  flex: 0 0 auto !important;
+  gap: 4px !important;
+  grid-template-columns: repeat(2, 78px) !important;
+  justify-self: end !important;
+  padding: 4px !important;
+  width: max-content !important;
+}
+
+.results-filterbar .view-toggle button {
+  width: 78px !important;
+}
+
+.results-body.map-mode {
+  overflow: hidden;
+}
+
+.results-body.map-mode .results-shell {
+  max-width: none !important;
+  padding: 0 !important;
+}
+
+.results-body.map-mode .beta-demo-banner,
+.results-body.map-mode .results-heading,
+.results-body.map-mode .results-trust-strip,
+.results-body.map-mode .results-grid {
+  display: none !important;
+}
+
+.results-body.map-mode .results-map-view {
+  bottom: 0;
+  display: block !important;
+  left: 0;
+  position: fixed;
+  right: 0;
+  top: var(--results-map-top, 212px);
+  z-index: 4;
+}
+
+.results-body.map-mode .results-map-panel,
+.results-body.map-mode #resultsMap {
+  border: 0 !important;
+  border-radius: 0 !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  width: 100% !important;
+}
+
+@media (max-width: 760px) {
+  .results-filterbar {
+    grid-template-columns: minmax(0, 1fr) max-content !important;
+  }
+
+  .results-filterbar .view-toggle {
+    grid-template-columns: repeat(2, 66px) !important;
+    width: max-content !important;
+  }
+
+  .results-filterbar .view-toggle button {
+    width: 66px !important;
+  }
+}
+
+/* v65 final true search grid. */
+.results-grid {
+  display: grid !important;
+  gap: 18px !important;
+  grid-template-columns: repeat(auto-fill, minmax(282px, 1fr)) !important;
+  overflow: visible !important;
+  padding: 0 var(--page-pad) 44px !important;
+}
+
+.results-grid .result-card {
+  min-width: 0 !important;
+  width: 100% !important;
+}
+
+.results-grid .result-card .result-media {
+  min-height: 210px;
+}
+
+@media (max-width: 760px) {
+  .results-grid {
+    grid-template-columns: 1fr !important;
+    padding-left: var(--page-pad) !important;
+    padding-right: var(--page-pad) !important;
+  }
+}
+
+/* v68 shared map polish for home and search. */
+.results-body.map-mode .results-map-view {
+  background: #eef1ee !important;
+  top: calc(var(--results-map-top, 212px) - 1px) !important;
+}
+
+.results-body.map-mode .results-map-panel {
+  background: #eef1ee !important;
+}
+
+.results-body.map-mode .leaflet-container,
+.map-section .leaflet-container {
+  background: #eef1ee !important;
+  font: 800 14px/1.2 Inter, system-ui, sans-serif;
+}
+
+.map-section .map-panel {
+  background: #eef1ee !important;
+  border: 1px solid color-mix(in srgb, var(--text) 12%, transparent) !important;
+  border-radius: 18px !important;
+  min-height: clamp(520px, 72vh, 780px) !important;
+  overflow: hidden !important;
+  position: relative !important;
+}
+
+.map-section #mapCanvas {
+  height: 100% !important;
+  min-height: clamp(520px, 72vh, 780px) !important;
+}
+
+.map-card {
+  background: rgba(255, 255, 255, 0.92) !important;
+  border: 1px solid rgba(17, 24, 39, 0.10) !important;
+  border-radius: 999px !important;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14) !important;
+  left: 22px !important;
+  max-width: calc(100% - 44px) !important;
+  padding: 10px 16px !important;
+  top: 22px !important;
+}
+
+.leaflet-price-pin {
+  background: #ffffff !important;
+  border: 1px solid rgba(17, 24, 39, 0.16) !important;
+  border-radius: 999px !important;
+  box-shadow: 0 5px 16px rgba(15, 23, 42, 0.22) !important;
+  color: #1f2328 !important;
+  cursor: pointer;
+  font: 950 0.9rem/1 Inter, system-ui, sans-serif !important;
+  min-height: 34px !important;
+  min-width: 58px !important;
+  padding: 0 13px !important;
+}
+
+.leaflet-price-pin:hover,
+.leaflet-price-pin.is-selected {
+  background: #111217 !important;
+  border-color: #111217 !important;
+  color: #ffffff !important;
+  transform: translateY(-1px);
+}
+
+.map-preview-card {
+  background: #ffffff !important;
+  border: 2px solid #222326 !important;
+  border-radius: 20px !important;
+  bottom: 28px !important;
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.26) !important;
+  color: #24272d !important;
+  display: block !important;
+  left: auto !important;
+  max-width: min(420px, calc(100vw - 36px)) !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+  position: absolute !important;
+  right: 28px !important;
+  top: auto !important;
+  width: min(420px, calc(100vw - 36px)) !important;
+  z-index: 700 !important;
+}
+
+.results-body.map-mode .map-preview-card {
+  right: 28px !important;
+}
+
+.map-preview-card[hidden] {
+  display: none !important;
+}
+
+.map-preview-media,
+.map-preview-card img {
+  display: block;
+  width: 100% !important;
+}
+
+.map-preview-card img {
+  aspect-ratio: 16 / 9 !important;
+  border-radius: 0 !important;
+  height: auto !important;
+  object-fit: cover !important;
+}
+
+.map-preview-copy {
+  display: grid !important;
+  gap: 7px !important;
+  padding: 14px 16px 16px !important;
+}
+
+.map-preview-title-row {
+  align-items: start;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.map-preview-title-row strong {
+  color: #24272d !important;
+  font-size: 1.05rem !important;
+  line-height: 1.2;
+}
+
+.map-preview-title-row span {
+  color: #24272d !important;
+  flex: 0 0 auto;
+  font-weight: 850;
+}
+
+.map-preview-copy > span,
+.map-preview-copy small {
+  color: #656b74 !important;
+  font-size: 0.94rem !important;
+  line-height: 1.3;
+}
+
+.map-preview-copy a {
+  color: #111217 !important;
+  font-weight: 950 !important;
+  text-decoration: underline !important;
+  text-underline-offset: 3px;
+}
+
+.map-preview-close,
+.map-preview-save {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.94) !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.16) !important;
+  color: #111217 !important;
+  display: inline-flex;
+  font: 950 1rem/1 Inter, system-ui, sans-serif !important;
+  height: 42px !important;
+  justify-content: center;
+  min-height: 42px !important;
+  padding: 0 !important;
+  position: absolute;
+  top: 14px;
+  width: 42px !important;
+  z-index: 2;
+}
+
+.map-preview-close {
+  right: 14px;
+}
+
+.map-preview-save {
+  right: 64px;
+}
+
+.leaflet-control-zoom {
+  border: 0 !important;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.14) !important;
+}
+
+.leaflet-control-zoom a {
+  border: 0 !important;
+  color: #1f2328 !important;
+  height: 46px !important;
+  line-height: 46px !important;
+  width: 46px !important;
+}
+
+@media (max-width: 760px) {
+  .results-body.map-mode .results-map-view {
+    top: calc(var(--results-map-top, 184px) - 1px) !important;
+  }
+
+  .map-section .map-panel,
+  .map-section #mapCanvas {
+    min-height: 560px !important;
+  }
+
+  .map-preview-card,
+  .results-body.map-mode .map-preview-card {
+    bottom: 14px !important;
+    left: 14px !important;
+    right: 14px !important;
+    width: auto !important;
+  }
+}
+
+/* v70 search map correction: no filter gap, no dark tile filter, centered preview. */
+.results-body.map-mode .results-map-view {
+  background: #eef1ee !important;
+  top: var(--results-map-top, 206px) !important;
+}
+
+.results-body.map-mode .results-map-panel,
+.results-body.map-mode #resultsMap,
+.results-body.map-mode .leaflet-container {
+  background: #eef1ee !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  width: 100% !important;
+}
+
+body.dark #resultsMap .leaflet-tile,
+body.dark #mapCanvas .leaflet-tile,
+#resultsMap .leaflet-tile,
+#mapCanvas .leaflet-tile {
+  filter: none !important;
+}
+
+.results-body.map-mode .map-preview-card {
+  bottom: auto !important;
+  left: 50% !important;
+  right: auto !important;
+  top: 54% !important;
+  transform: translate(-50%, -50%) !important;
+  width: min(420px, calc(100vw - 40px)) !important;
+}
+
+@media (max-width: 760px) {
+  .results-body.map-mode .results-map-view {
+    top: var(--results-map-top, 184px) !important;
+  }
+
+  .results-body.map-mode .map-preview-card {
+    bottom: 14px !important;
+    left: 14px !important;
+    right: 14px !important;
+    top: auto !important;
+    transform: none !important;
+    width: auto !important;
+  }
+}
+
+/* v71 search map preview floats over the map at every viewport width. */
+.results-body.map-mode .map-preview-card {
+  bottom: auto !important;
+  left: 50% !important;
+  right: auto !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: min(420px, calc(100vw - 32px)) !important;
+}
+
+/* v72 homepage map is a scroll-safe canvas with theme-aware tiles. */
+.map-section {
+  background: var(--bg) !important;
+  padding-bottom: clamp(36px, 6vw, 72px) !important;
+}
+
+.map-section .map-panel {
+  cursor: default !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  max-width: min(1840px, calc(100vw - (var(--page-pad) * 2))) !important;
+}
+
+.map-section #mapCanvas,
+.map-section #mapCanvas .leaflet-container {
+  cursor: default !important;
+  touch-action: pan-y !important;
+}
+
+body.dark .map-section .map-panel,
+body.dark .map-section .leaflet-container {
+  background: #151a1d !important;
+}
+
+body.dark .map-card {
+  background: rgba(18, 20, 24, 0.92) !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+  color: #f7f8fb !important;
+}
+
+body.dark .map-card span {
+  color: rgba(247, 248, 251, 0.68) !important;
+}
+
+/* v73 search spacing, beta alignment, and theme-aware map polish. */
+.results-body:not(.map-mode) .results-shell {
+  padding-top: 22px !important;
+}
+
+.results-body:not(.map-mode) .beta-demo-banner.compact {
+  align-items: center !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  justify-content: flex-start !important;
+  margin: 0 var(--page-pad) 34px !important;
+  max-width: none !important;
+  overflow: hidden !important;
+  padding: 14px 18px !important;
+  row-gap: 6px !important;
+  width: calc(100% - (var(--page-pad) * 2)) !important;
+}
+
+.results-body:not(.map-mode) .beta-demo-banner.compact strong {
+  line-height: 1.2 !important;
+}
+
+.results-body:not(.map-mode) .beta-demo-banner.compact span {
+  flex: 1 1 360px !important;
+  line-height: 1.35 !important;
+  white-space: normal !important;
+}
+
+.results-heading {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+.results-heading h1,
+.results-heading p,
+.results-trust-strip strong,
+.results-trust-strip span {
+  text-align: left !important;
+}
+
+.results-trust-strip div {
+  align-content: start !important;
+  justify-items: start !important;
+  text-align: left !important;
+}
+
+body.dark .results-body.map-mode .results-map-view,
+body.dark .results-body.map-mode .results-map-panel,
+body.dark .results-body.map-mode #resultsMap,
+body.dark .results-body.map-mode .leaflet-container {
+  background: #151a1d !important;
+}
+
+body.dark .results-body.map-mode .leaflet-control-zoom a,
+body.dark .map-section .leaflet-control-zoom a {
+  background: rgba(21, 24, 28, 0.96) !important;
+  color: #f7f8fb !important;
+}
+
+.map-section .map-panel {
+  min-height: clamp(660px, 86vh, 920px) !important;
+}
+
+.map-section #mapCanvas {
+  min-height: clamp(660px, 86vh, 920px) !important;
+}
+
+.map-section #mapCanvas,
+.map-section #mapCanvas .leaflet-container {
+  cursor: grab !important;
+  touch-action: pan-x pan-y !important;
+}
+
+.map-section #mapCanvas:active,
+.map-section #mapCanvas .leaflet-container:active {
+  cursor: grabbing !important;
+}
+
+/* v74 search grid spacing and compact beta banner alignment. */
+body.results-body:not(.map-mode) .results-shell {
+  box-sizing: border-box !important;
+  margin: 0 auto !important;
+  max-width: none !important;
+  padding: 96px var(--page-pad) 56px !important;
+  width: 100% !important;
+}
+
+body.results-body:not(.map-mode) .beta-demo-banner.compact {
+  align-items: center !important;
+  box-sizing: border-box !important;
+  display: grid !important;
+  gap: 10px 16px !important;
+  grid-template-columns: auto minmax(0, 1fr) !important;
+  justify-content: start !important;
+  margin: 0 auto 28px !important;
+  max-height: none !important;
+  max-width: min(1180px, 100%) !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+  padding: 12px 16px !important;
+  position: relative !important;
+  text-align: left !important;
+  transform: none !important;
+  width: min(1180px, 100%) !important;
+}
+
+body.results-body:not(.map-mode) .beta-demo-banner.compact strong {
+  display: block !important;
+  font-size: 0.78rem !important;
+  line-height: 1.15 !important;
+  white-space: nowrap !important;
+}
+
+body.results-body:not(.map-mode) .beta-demo-banner.compact span {
+  display: block !important;
+  font-size: 0.94rem !important;
+  line-height: 1.35 !important;
+  min-width: 0 !important;
+  overflow-wrap: anywhere !important;
+  text-align: left !important;
+  white-space: normal !important;
+}
+
+body.results-body:not(.map-mode) .results-heading {
+  margin: 0 auto 22px !important;
+  max-width: 1180px !important;
+  padding: 0 !important;
+  width: 100% !important;
+}
+
+body.results-body:not(.map-mode) .results-trust-strip,
+body.results-body:not(.map-mode) .results-grid {
+  margin-left: auto !important;
+  margin-right: auto !important;
+  max-width: 1180px !important;
+  width: 100% !important;
+}
+
+@media (max-width: 760px) {
+  body.results-body:not(.map-mode) .results-shell {
+    padding-top: 156px !important;
+  }
+
+  body.results-body:not(.map-mode) .beta-demo-banner.compact {
+    grid-template-columns: 1fr !important;
+    margin-bottom: 22px !important;
+  }
+
+  body.results-body:not(.map-mode) .beta-demo-banner.compact strong {
+    white-space: normal !important;
+  }
 }

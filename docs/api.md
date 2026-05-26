@@ -12,6 +12,7 @@ GET /api/listings
 GET /api/listings/:id
 GET /api/conversations
 GET /api/events
+GET /api/vin/decode/:vin
 ```
 
 ## Listing Query Parameters
@@ -22,6 +23,20 @@ GET /api/events
 - `fuelType` - fuel type filter.
 - `maxPrice` - max listing price.
 - `maxMileage` - max mileage.
+- `minPrice` - minimum listing price.
+- `minYear` / `maxYear` - year range filters.
+- `minMileage` - minimum mileage.
+- `drivetrain` - drivetrain filter.
+- `cleanTitle` - when `1`, only listings with clean title signals.
+- `noAccidents` - when `1`, only listings with no-accident signals.
+
+## Current Map Behavior
+
+- Search has grid and full-map modes.
+- Map mode uses Leaflet with CARTO light/dark basemaps based on page theme.
+- Vehicle pins open an image-first listing preview and link to the listing detail page.
+- Browser geolocation, when allowed, sorts listings by distance and includes the user location in map bounds.
+- Homepage map uses the same Leaflet/CARTO styling with a larger embedded canvas.
 
 ## Future REST Surface
 
