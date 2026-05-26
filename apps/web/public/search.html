@@ -11,7 +11,7 @@
       integrity="sha256-p4NxAoJBhIINfQX8VgKq9RRG4wI7E9jhdT5q7wS0Bl2M="
       crossorigin=""
     />
-    <link rel="stylesheet" href="/styles.css?v=53" />
+    <link rel="stylesheet" href="/styles.css?v=64" />
   </head>
   <body class="results-body">
     <header class="results-topbar">
@@ -57,25 +57,29 @@
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a7 7 0 1 0 9 9 8 8 0 1 1-9-9Z" /></svg>
               <span>Toggle dark mode</span>
             </button>
+            <div class="profile-menu-divider"></div>
+            <button class="profile-menu-link plain logout-link" type="button" id="resultsLogoutButton">Log out</button>
           </div>
         </div>
       </div>
     </header>
 
     <div class="results-filterbar" id="resultsFilterbar" aria-label="Search filters">
-      <button class="filter-icon" id="filterToggle" type="button" aria-label="Open filters" aria-expanded="false">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M8 17h12M4 17h2M6 5v4M16 5v4M8 15v4" /></svg>
-      </button>
-      <button type="button" data-filter-param="maxPrice">Price</button>
-      <button type="button" data-filter-param="bodyType">Vehicle type</button>
-      <button type="button" data-filter-param="make">Make &amp; model</button>
-      <button type="button" data-filter-param="year">Years</button>
-      <button type="button" data-filter-param="maxMileage">Mileage</button>
-      <button type="button" data-filter-param="fuelType">Fuel type</button>
-      <button type="button" data-filter-param="drivetrain">Drivetrain</button>
-      <button type="button" data-filter-param="cleanTitle">Clean title</button>
-      <button type="button" data-filter-param="noAccidents">No accidents</button>
-      <button type="button" data-filter-clear>All filters</button>
+      <div class="filter-scroll-track">
+        <button class="filter-icon" id="filterToggle" type="button" aria-label="Open filters" aria-expanded="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M8 17h12M4 17h2M6 5v4M16 5v4M8 15v4" /></svg>
+        </button>
+        <button type="button" data-filter-param="maxPrice">Price</button>
+        <button type="button" data-filter-param="bodyType">Vehicle type</button>
+        <button type="button" data-filter-param="make">Make &amp; model</button>
+        <button type="button" data-filter-param="year">Years</button>
+        <button type="button" data-filter-param="maxMileage">Mileage</button>
+        <button type="button" data-filter-param="fuelType">Fuel type</button>
+        <button type="button" data-filter-param="drivetrain">Drivetrain</button>
+        <button type="button" data-filter-param="cleanTitle">Clean title</button>
+        <button type="button" data-filter-param="noAccidents">No accidents</button>
+        <button type="button" data-filter-clear>All filters</button>
+      </div>
       <div class="view-toggle" aria-label="View mode">
         <button class="active" type="button" data-results-view="grid">Grid</button>
         <button type="button" data-results-view="map">Map</button>
@@ -83,6 +87,12 @@
     </div>
 
     <main class="results-shell">
+      <!-- Remove beta-demo-banner when live marketplace inventory replaces demo listings. -->
+      <section class="beta-demo-banner compact" data-removable="beta-demo-banner">
+        <strong>Kerodex beta preview</strong>
+        <span>Search results are demo listings while seller verification and database-backed inventory are being finalized.</span>
+      </section>
+
       <section class="results-heading">
         <h1 id="resultsTitle">Cars available</h1>
         <p id="resultsSubtitle">Private-party listings matched to your search.</p>
@@ -106,6 +116,6 @@
       integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
       crossorigin=""
     ></script>
-    <script src="/search.js?v=53"></script>
+    <script src="/search.js?v=57"></script>
   </body>
 </html>

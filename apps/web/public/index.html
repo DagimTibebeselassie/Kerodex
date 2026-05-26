@@ -11,7 +11,7 @@
       integrity="sha256-p4NxAoJBhIINfQX8VgKq9RRG4wI7E9jhdT5q7wS0Bl2M="
       crossorigin=""
     />
-    <link rel="stylesheet" href="/styles.css?v=53" />
+    <link rel="stylesheet" href="/styles.css?v=64" />
   </head>
   <body>
     <div class="app-loader" id="appLoader" aria-live="polite">
@@ -87,16 +87,15 @@
             </svg>
           </button>
           <div class="profile-menu" id="profileMenu" hidden>
-            <button class="profile-menu-link plain" type="button" id="signInButton">Log in</button>
-            <button class="profile-menu-link plain" type="button" id="createAccountButton">Sign up</button>
+            <button class="profile-menu-link plain" type="button" id="authMenuButton">Log in or sign up</button>
             <button class="profile-menu-link" type="button" id="listCarButton">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14h16l-2-5H6l-2 5Zm2 0v4m12-4v4M7 18h.1M17 18h.1M8 9l1-3h6l1 3" /></svg>
               <span>Become a seller</span>
             </button>
             <div class="profile-menu-divider"></div>
-            <a class="profile-menu-link" href="/profile.html">
+            <a class="profile-menu-link" href="/profile.html" id="profileMenuProfileLink" hidden>
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12.6a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2ZM4.8 20.2a7.5 7.5 0 0 1 14.4 0" /></svg>
-              <span>Profile</span>
+              <span>Account</span>
             </a>
             <a class="profile-menu-link" href="#trust">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 4v5c0 5-3.4 7.9-8 9-4.6-1.1-8-4-8-9V7l8-4Z" /></svg>
@@ -114,12 +113,20 @@
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a7 7 0 1 0 9 9 8 8 0 1 1-9-9Z" /></svg>
               <span>Toggle dark mode</span>
             </button>
+            <div class="profile-menu-divider" data-auth-only hidden></div>
+            <button class="profile-menu-link plain logout-link" type="button" id="logoutButton" hidden>Log out</button>
           </div>
         </div>
       </div>
     </header>
 
     <main>
+      <!-- Remove beta-demo-banner when live marketplace inventory replaces demo listings. -->
+      <section class="beta-demo-banner" data-removable="beta-demo-banner">
+        <strong>Kerodex beta preview</strong>
+        <span>Listings are demo vehicles while the database, seller verification, and public launch systems are being finalized.</span>
+      </section>
+
       <section class="hero">
         <div class="hero-media" aria-hidden="true"></div>
         <div class="hero-content">
@@ -347,7 +354,8 @@
             <span>ZIP code</span>
             <input inputmode="numeric" placeholder="11201" />
           </label>
-          <button class="search-button" type="button" data-close-modal>Start listing draft</button>
+          <button class="search-button" id="startListingDraftButton" type="button">Start listing draft</button>
+          <p class="auth-message" id="sellMessage" role="status"></p>
         </form>
       </section>
     </div>
@@ -357,6 +365,6 @@
       integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
       crossorigin=""
     ></script>
-    <script src="/app.js?v=53"></script>
+    <script src="/app.js?v=55"></script>
   </body>
 </html>
