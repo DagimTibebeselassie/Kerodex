@@ -1,3 +1,22 @@
+-- Current beta database adapter tables.
+-- These mirror the existing listing JSON shape so the app can move from local seed
+-- files to Postgres without rewriting every frontend field at once. The normalized
+-- schema below remains the long-term production model.
+CREATE TABLE IF NOT EXISTS listing_records (
+  id TEXT PRIMARY KEY,
+  payload JSONB NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS listing_records_deal_score_idx
+  ON listing_records (COALESCE((payload->>'dealScore')::int, 0));
+
+CREATE TABLE IF NOT EXISTS conversation_records (
+  id TEXT PRIMARY KEY,
+  payload JSONB NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE users (
   id UUID PRIMARY KEY,
   email TEXT UNIQUE NOT NULL,

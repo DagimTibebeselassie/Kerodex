@@ -5,6 +5,7 @@ const mapList = document.querySelector("#resultsMapList");
 const title = document.querySelector("#resultsTitle");
 const subtitle = document.querySelector("#resultsSubtitle");
 const themeButton = document.querySelector("#resultsTheme");
+const logoutButton = document.querySelector("#resultsLogoutButton");
 const profileToggle = document.querySelector("#resultsProfileToggle");
 const profileMenu = document.querySelector("#resultsProfileMenu");
 const filterbar = document.querySelector("#resultsFilterbar");
@@ -15,6 +16,37 @@ let resultsMap;
 let resultsMarkerLayer;
 let activeFilterMenu;
 let resultsMapPreviewCard;
+
+function savedListingIds() {
+  if (!localStorage.getItem("kerodex-user")) return [];
+  try {
+    return JSON.parse(localStorage.getItem("kerodex-saved-listings") || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function setSavedListingIds(ids) {
+  if (!localStorage.getItem("kerodex-user")) return;
+  localStorage.setItem("kerodex-saved-listings", JSON.stringify([...new Set(ids)]));
+}
+
+function isSaved(listingId) {
+  return savedListingIds().includes(listingId);
+}
+
+function toggleSavedListing(listingId) {
+  if (!localStorage.getItem("kerodex-user")) {
+    window.location.href = "/";
+    return;
+  }
+  const ids = savedListingIds();
+  if (ids.includes(listingId)) {
+    setSavedListingIds(ids.filter((id) => id !== listingId));
+  } else {
+    setSavedListingIds([...ids, listingId]);
+  }
+}
 
 const filterLabels = {
   maxPrice: "Price",
@@ -412,13 +444,14 @@ function updateUrlAndResults(params) {
 
 function resultCard(listing) {
   const savings = Math.abs(Math.min(listing.fairValueDelta || 0, 0));
+  const saved = isSaved(listing.id);
   return `
     <article class="result-card explore-card" data-listing-id="${listing.id}" tabindex="0">
       <div class="result-media">
         <img src="${listing.images[0]}" alt="${listing.title}" loading="lazy">
         <span class="vehicle-ribbon">${listing.fuelType === "Electric" || listing.fuelType === "Plug-in hybrid" ? "EV available" : "Private seller"}</span>
         <span class="vehicle-as-shown">As listed: ${currency.format(listing.price)} · ${listing.mileage.toLocaleString()} mi</span>
-        <button class="result-save" type="button" aria-label="Save ${listing.title}">♡</button>
+        <button class="result-save${saved ? " is-saved" : ""}" type="button" aria-label="${saved ? "Unsave" : "Save"} ${listing.title}" data-save-listing="${listing.id}">${saved ? "Saved" : "Save"}</button>
       </div>
       <div class="result-card-body">
         <p class="result-year">${listing.year}</p>
@@ -593,6 +626,13 @@ themeButton?.addEventListener("click", () => {
   localStorage.setItem("kerodex-theme", document.body.classList.contains("dark") ? "dark" : "light");
 });
 
+logoutButton?.addEventListener("click", () => {
+  localStorage.removeItem("kerodex-token");
+  localStorage.removeItem("kerodex-user");
+  profileMenu.hidden = true;
+  profileToggle?.setAttribute("aria-expanded", "false");
+});
+
 profileToggle?.addEventListener("click", () => {
   const isOpen = !profileMenu.hidden;
   profileMenu.hidden = isOpen;
@@ -647,13 +687,22 @@ document.querySelector("[data-filter-clear]")?.addEventListener("click", () => {
 });
 
 grid.addEventListener("click", (event) => {
-  if (event.target.closest(".result-save")) return;
+  const saveButton = event.target.closest(".result-save");
+  if (saveButton) {
+    toggleSavedListing(saveButton.dataset.saveListing);
+    renderResultRows(listingsCache, browseListingsCache);
+    return;
+  }
   const card = event.target.closest(".result-card[data-listing-id]");
   if (card) window.location.href = `/listing.html?id=${encodeURIComponent(card.dataset.listingId)}`;
 });
 
 if (localStorage.getItem("kerodex-theme") === "dark") {
   document.body.classList.add("dark");
+}
+
+if (logoutButton) {
+  logoutButton.hidden = !localStorage.getItem("kerodex-user");
 }
 
 hydrateForm();

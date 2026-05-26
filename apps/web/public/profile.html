@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#0f172a" />
     <title>Kerodex | Profile</title>
-    <link rel="stylesheet" href="/styles.css?v=53" />
+    <link rel="stylesheet" href="/styles.css?v=60" />
   </head>
   <body class="profile-page">
     <header class="profile-topbar">
@@ -15,56 +15,59 @@
       </a>
       <div class="profile-top-actions">
         <button class="seller-link" type="button">Become a seller</button>
-        <div class="profile-avatar">K</div>
+        <div class="profile-avatar" id="profileInitial" hidden>K</div>
         <div class="profile-shell">
-        <button class="profile-toggle" id="profilePageMenuToggle" type="button" aria-label="Open profile menu" aria-expanded="false">
-          <svg class="menu-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M4 7h16" />
-            <path d="M4 12h16" />
-            <path d="M4 17h16" />
-          </svg>
-        </button>
-        <div class="profile-menu" id="profilePageMenu" hidden>
-          <a class="profile-menu-link plain" href="/">Home</a>
-          <button class="profile-menu-link" type="button">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 14h16l-2-5H6l-2 5Zm2 0v4m12-4v4M7 18h.1M17 18h.1M8 9l1-3h6l1 3" /></svg>
-            <span>Become a seller</span>
+          <button class="profile-toggle" id="profilePageMenuToggle" type="button" aria-label="Open profile menu" aria-expanded="false">
+            <svg class="menu-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M4 7h16" />
+              <path d="M4 12h16" />
+              <path d="M4 17h16" />
+            </svg>
           </button>
-          <div class="profile-menu-divider"></div>
-          <a class="profile-menu-link" href="/search.html">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.8 18.1a7.3 7.3 0 1 1 0-14.6 7.3 7.3 0 0 1 0 14.6Zm5.4-1.8 4.3 4.2" /></svg>
-            <span>Browse cars</span>
-          </a>
-          <button class="profile-menu-link" type="button" id="profileThemeToggle">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a7 7 0 1 0 9 9 8 8 0 1 1-9-9Z" /></svg>
-            <span>Toggle dark mode</span>
-          </button>
-        </div>
+          <div class="profile-menu" id="profilePageMenu" hidden>
+            <a class="profile-menu-link plain" href="/">Home</a>
+            <a class="profile-menu-link" href="/search.html">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10.8 18.1a7.3 7.3 0 1 1 0-14.6 7.3 7.3 0 0 1 0 14.6Zm5.4-1.8 4.3 4.2" /></svg>
+              <span>Browse cars</span>
+            </a>
+            <button class="profile-menu-link" type="button" id="profileThemeToggle">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a7 7 0 1 0 9 9 8 8 0 1 1-9-9Z" /></svg>
+              <span>Toggle dark mode</span>
+            </button>
+            <div class="profile-menu-divider"></div>
+            <button class="profile-menu-link plain logout-link" type="button" id="profileLogoutButton">Log out</button>
+          </div>
         </div>
       </div>
     </header>
 
-    <main class="profile-layout">
+    <section class="signed-out-profile" id="signedOutProfile" hidden>
+      <h1>Sign in to use your profile.</h1>
+      <p>Saved cars, seller verification, drafts, and account details are only available after you log in or create an account.</p>
+      <button type="button" id="profileAuthPromptButton">Log in or sign up</button>
+    </section>
+
+    <main class="profile-layout" id="profileApp">
       <aside class="profile-sidebar" aria-label="Profile sections">
         <h1>Profile</h1>
-        <a class="profile-tab active" href="#about">
+        <button class="profile-tab active" type="button" data-profile-panel="about">
           <span class="profile-tab-avatar">K</span>
           <strong>About me</strong>
-        </a>
-        <a class="profile-tab" href="#activity">
+        </button>
+        <button class="profile-tab" type="button" data-profile-panel="saved">
           <span>Car</span>
           <strong>Saved cars</strong>
-        </a>
-        <a class="profile-tab" href="#connections">
+        </button>
+        <button class="profile-tab" type="button" data-profile-panel="verification">
           <span>ID</span>
           <strong>Verification</strong>
-        </a>
+        </button>
       </aside>
 
-      <section class="profile-main" id="about">
+      <section class="profile-main profile-panel active" id="profilePanelAbout">
         <div class="profile-heading">
           <h2>About me</h2>
-          <button type="button">Edit</button>
+          <button type="button" id="editProfileButton">Edit</button>
         </div>
 
         <section class="profile-card">
@@ -80,10 +83,22 @@
           </div>
           <div class="profile-stats">
             <div><strong>0</strong><span>Cars sold</span></div>
-            <div><strong>0</strong><span>Reviews</span></div>
-            <div><strong>2026</strong><span>Joined</span></div>
+            <div><strong id="savedCount">0</strong><span>Saved cars</span></div>
+            <div><strong id="joinedYear">--</strong><span>Joined</span></div>
           </div>
         </section>
+
+        <form class="profile-edit-form" id="profileEditForm" hidden>
+          <label>
+            <span>Name</span>
+            <input id="profileNameInput" type="text" placeholder="Your name" />
+          </label>
+          <label>
+            <span>Location</span>
+            <input id="profileLocationInput" type="text" placeholder="City, state" />
+          </label>
+          <button type="submit">Save profile</button>
+        </form>
 
         <div class="profile-facts">
           <p><span>01</span> Private-party marketplace member</p>
@@ -102,58 +117,152 @@
           </div>
         </section>
       </section>
+
+      <section class="profile-main profile-panel" id="profilePanelSaved" hidden>
+        <div class="profile-heading">
+          <h2>Saved cars</h2>
+          <a class="profile-action-link" href="/search.html">Browse more</a>
+        </div>
+        <div class="saved-cars-grid" id="savedCarsGrid"></div>
+      </section>
+
+      <section class="profile-main profile-panel" id="profilePanelVerification" hidden>
+        <div class="profile-heading">
+          <h2>Verification</h2>
+        </div>
+        <section class="verification-hero-card">
+          <div>
+            <span class="verification-kicker">Seller trust gate</span>
+            <h3 id="verificationStatusTitle">Not ready to list yet</h3>
+            <p id="verificationStatusText">Complete identity, VIN, ownership, and live-proof checks before publishing a car.</p>
+          </div>
+          <div class="verification-score">
+            <strong id="verificationScore">0</strong>
+            <span>trust score</span>
+          </div>
+        </section>
+
+        <div class="verification-grid">
+          <form class="verification-card" id="accountVerificationForm">
+            <h3>1. Account identity</h3>
+            <p>Use real contact info so buyers can trust that the seller is reachable.</p>
+            <label>
+              <span>Legal name</span>
+              <input id="verifyLegalName" type="text" placeholder="Full legal name" />
+            </label>
+            <label>
+              <span>Email</span>
+              <input id="verifyEmail" type="email" placeholder="you@example.com" />
+            </label>
+            <label>
+              <span>Phone</span>
+              <input id="verifyPhone" type="tel" placeholder="(555) 123-4567" />
+            </label>
+            <button type="submit">Save identity</button>
+          </form>
+
+          <form class="verification-card" id="documentVerificationForm">
+            <h3>2. Private ID review</h3>
+            <p>Documents stay private. This prototype stores only filenames and review state.</p>
+            <label>
+              <span>Government ID</span>
+              <input id="verifyIdDocument" type="file" accept="image/*,.pdf" />
+            </label>
+            <label>
+              <span>Selfie or liveness photo</span>
+              <input id="verifySelfie" type="file" accept="image/*" />
+            </label>
+            <button type="submit">Mark ID ready for review</button>
+          </form>
+
+          <form class="verification-card verification-card-wide" id="vinVerificationForm">
+            <h3>3. VIN and ownership</h3>
+            <p>Decode the VIN with the free official NHTSA vPIC API, then match it to ownership proof.</p>
+            <div class="verification-inline">
+              <label>
+                <span>VIN</span>
+                <input id="verifyVin" type="text" maxlength="17" placeholder="17-character VIN" />
+              </label>
+              <button type="submit">Decode VIN</button>
+            </div>
+            <div class="vin-decode-result" id="vinDecodeResult" hidden></div>
+            <div class="ownership-upload-grid">
+              <label>
+                <span>Title or registration</span>
+                <input id="verifyOwnershipDocument" type="file" accept="image/*,.pdf" />
+              </label>
+              <label>
+                <span>VIN plate photo</span>
+                <input id="verifyVinPhoto" type="file" accept="image/*" />
+              </label>
+              <label>
+                <span>Odometer photo</span>
+                <input id="verifyOdometerPhoto" type="file" accept="image/*" />
+              </label>
+              <label>
+                <span>License plate photo</span>
+                <input id="verifyPlatePhoto" type="file" accept="image/*" />
+              </label>
+            </div>
+          </form>
+
+          <section class="verification-card verification-card-wide">
+            <h3>4. Live proof photo</h3>
+            <p>Ask the seller to photograph the car next to this code and today's date. It discourages copied listing photos.</p>
+            <div class="proof-code-row">
+              <strong id="proofCode">KERODEX-000000</strong>
+              <button type="button" id="refreshProofCode">New code</button>
+            </div>
+            <label>
+              <span>Live proof photo</span>
+              <input id="verifyLiveProofPhoto" type="file" accept="image/*" />
+            </label>
+          </section>
+        </div>
+
+        <section class="verification-review-panel">
+          <div>
+            <h3>Internal review checklist</h3>
+            <p>These are the buyer-visible trust badges once the seller passes review.</p>
+          </div>
+          <div class="verification-checklist" id="verificationChecklist"></div>
+          <div class="verification-actions">
+            <button type="button" id="runVerificationReview">Run review</button>
+            <button type="button" id="clearVerification">Reset verification</button>
+          </div>
+        </section>
+      </section>
     </main>
 
-    <script>
-      const storedTheme = localStorage.getItem("kerodex-theme");
-      if (storedTheme === "dark") document.body.classList.add("dark");
-      const storedUser = localStorage.getItem("kerodex-user");
-      if (storedUser) {
-        try {
-          const user = JSON.parse(storedUser);
-          document.querySelector("#profileName").textContent = user.name || user.email || "Kerodex User";
-        } catch {}
-      }
-      const menuToggle = document.querySelector("#profilePageMenuToggle");
-      const menu = document.querySelector("#profilePageMenu");
-      menuToggle.addEventListener("click", () => {
-        const isOpen = !menu.hidden;
-        menu.hidden = isOpen;
-        menuToggle.setAttribute("aria-expanded", String(!isOpen));
-      });
-      document.addEventListener("click", (event) => {
-        if (event.target.closest(".profile-shell")) return;
-        menu.hidden = true;
-        menuToggle.setAttribute("aria-expanded", "false");
-      });
-      document.querySelector("#profileThemeToggle").addEventListener("click", () => {
-        document.body.classList.toggle("dark");
-        localStorage.setItem("kerodex-theme", document.body.classList.contains("dark") ? "dark" : "light");
-      });
-      const imageInput = document.querySelector("#profileImageInput");
-      const profilePhoto = document.querySelector("#profilePhoto");
-      const storedProfilePhoto = localStorage.getItem("kerodex-profile-photo");
-      if (storedProfilePhoto) {
-        profilePhoto.textContent = "";
-        profilePhoto.style.backgroundImage = `url("${storedProfilePhoto}")`;
-        profilePhoto.classList.add("has-image");
-      }
-      imageInput.addEventListener("change", () => {
-        const file = imageInput.files && imageInput.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = () => {
-          profilePhoto.textContent = "";
-          profilePhoto.style.backgroundImage = `url("${reader.result}")`;
-          profilePhoto.classList.add("has-image");
-          try {
-            localStorage.setItem("kerodex-profile-photo", reader.result);
-          } catch {
-            document.querySelector(".profile-photo-action").textContent = "Image too large";
-          }
-        };
-        reader.readAsDataURL(file);
-      });
-    </script>
+    <div class="modal-backdrop" id="profileAuthModal" hidden>
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="profileAuthTitle">
+        <button class="modal-close" id="profileAuthClose" type="button" aria-label="Close">Close</button>
+        <p class="eyebrow" id="profileAuthEyebrow">Welcome back</p>
+        <h2 id="profileAuthTitle">Sign in or create an account.</h2>
+        <div class="auth-toggle" aria-label="Authentication mode">
+          <button class="active" type="button" data-profile-auth-mode="signin">Sign in</button>
+          <button type="button" data-profile-auth-mode="create">Create account</button>
+        </div>
+        <div class="social-auth">
+          <button class="social-button" type="button" data-profile-social-provider="google">Continue with Google</button>
+          <button class="social-button" type="button" data-profile-social-provider="apple">Continue with Apple</button>
+        </div>
+        <div class="divider"><span>or use email</span></div>
+        <form class="modal-form">
+          <label>
+            <span>Email</span>
+            <input id="profileAuthEmail" type="email" placeholder="you@example.com" />
+          </label>
+          <label>
+            <span>Password</span>
+            <input id="profileAuthPassword" type="password" placeholder="8+ characters" />
+          </label>
+          <button class="search-button" id="profileAuthSubmit" type="button">Sign in</button>
+          <p class="auth-message" id="profileAuthMessage" role="status"></p>
+        </form>
+      </section>
+    </div>
+
+    <script src="/profile.js?v=58"></script>
   </body>
 </html>

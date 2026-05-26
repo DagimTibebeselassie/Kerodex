@@ -131,7 +131,7 @@ function normalize(value) {
   return String(value || "").trim().toLowerCase();
 }
 
-function filterListings(params) {
+async function filterListings(params) {
   const query = normalize(params.get("q"));
   const make = normalize(params.get("make"));
   const bodyType = normalize(params.get("bodyType"));
@@ -147,8 +147,8 @@ function filterListings(params) {
   const cleanTitleOnly = params.get("cleanTitle") === "1";
   const noAccidentsOnly = params.get("noAccidents") === "1";
 
-  return store
-    .getListings()
+  const listings = await store.getListings();
+  return listings
     .filter((listing) => {
       const haystack = normalize([
         listing.title,
@@ -178,6 +178,55 @@ function filterListings(params) {
       );
     })
     .sort((a, b) => b.dealScore - a.dealScore);
+}
+
+function normalizeVin(value) {
+  return String(value || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+async function decodeVin(vin) {
+  const cleanVin = normalizeVin(vin);
+  if (!/^[A-HJ-NPR-Z0-9]{17}$/.test(cleanVin)) {
+    return {
+      ok: false,
+      error: "VIN must be 17 characters and cannot include I, O, or Q.",
+      vin: cleanVin
+    };
+  }
+
+  const apiUrl = `https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/${encodeURIComponent(cleanVin)}?format=json`;
+  const response = await fetch(apiUrl, {
+    headers: {
+      accept: "application/json",
+      "user-agent": "Kerodex local prototype VIN verification"
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(`NHTSA vPIC request failed with ${response.status}`);
+  }
+
+  const data = await response.json();
+  const result = data.Results && data.Results[0] ? data.Results[0] : {};
+  const errorCode = String(result.ErrorCode || "");
+  return {
+    ok: errorCode === "0" || errorCode === "",
+    vin: cleanVin,
+    errorCode,
+    errorText: result.ErrorText || "",
+    vehicle: {
+      year: result.ModelYear || "",
+      make: result.Make || "",
+      model: result.Model || "",
+      trim: result.Trim || "",
+      bodyClass: result.BodyClass || "",
+      vehicleType: result.VehicleType || "",
+      fuelType: result.FuelTypePrimary || "",
+      driveType: result.DriveType || "",
+      plantCountry: result.PlantCountry || ""
+    },
+    source: "NHTSA vPIC"
+  };
 }
 
 function serveStatic(req, res, pathname) {
@@ -221,15 +270,16 @@ function handleEvents(req, res) {
     "access-control-allow-origin": "*"
   });
 
-  const send = () => {
-    const listings = store.getListings();
+  const send = async () => {
+    const listings = await store.getListings();
+    if (!listings.length) return;
     const listing = listings[Math.floor(Math.random() * listings.length)];
     res.write(`event: listing.updated\n`);
     res.write(`data: ${JSON.stringify({ id: listing.id, updatedAt: new Date().toISOString() })}\n\n`);
   };
 
-  send();
-  const timer = setInterval(send, 12000);
+  send().catch(() => {});
+  const timer = setInterval(() => send().catch(() => {}), 12000);
   req.on("close", () => clearInterval(timer));
 }
 
@@ -247,7 +297,7 @@ const server = http.createServer((req, res) => {
   }
 
   if (url.pathname === "/api/health") {
-    sendJson(res, 200, { ok: true, service: "kerodex-api", timestamp: new Date().toISOString() });
+    sendJson(res, 200, { ok: true, service: "kerodex-api", dataSource: store.kind, timestamp: new Date().toISOString() });
     return;
   }
 
@@ -360,19 +410,36 @@ const server = http.createServer((req, res) => {
   }
 
   if (url.pathname === "/api/listings") {
-    sendJson(res, 200, { listings: filterListings(url.searchParams) });
+    filterListings(url.searchParams)
+      .then((listings) => sendJson(res, 200, { listings }))
+      .catch((error) => sendJson(res, 500, { error: "Unable to load listings.", detail: error.message }));
+    return;
+  }
+
+  if (url.pathname.startsWith("/api/vin/decode/")) {
+    const vin = decodeURIComponent(url.pathname.split("/").pop() || "");
+    decodeVin(vin)
+      .then((body) => sendJson(res, body.ok ? 200 : 400, body))
+      .catch((error) => sendJson(res, 502, {
+        ok: false,
+        error: "VIN decoder is unavailable right now. Save the VIN and retry before publishing.",
+        detail: error.message
+      }));
     return;
   }
 
   if (url.pathname.startsWith("/api/listings/")) {
     const id = url.pathname.split("/").pop();
-    const listing = store.getListingById(id);
-    sendJson(res, listing ? 200 : 404, listing || { error: "Listing not found" });
+    store.getListingById(id)
+      .then((listing) => sendJson(res, listing ? 200 : 404, listing || { error: "Listing not found" }))
+      .catch((error) => sendJson(res, 500, { error: "Unable to load listing.", detail: error.message }));
     return;
   }
 
   if (url.pathname === "/api/conversations") {
-    sendJson(res, 200, { conversations: store.getConversations() });
+    store.getConversations()
+      .then((conversations) => sendJson(res, 200, { conversations }))
+      .catch((error) => sendJson(res, 500, { error: "Unable to load conversations.", detail: error.message }));
     return;
   }
 

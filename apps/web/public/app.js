@@ -15,10 +15,12 @@ const skeletonsEl = document.querySelector("#skeletons");
 const resultCountEl = document.querySelector("#resultCount");
 const appLoader = document.querySelector("#appLoader");
 const themeToggle = document.querySelector("#themeToggle");
-const signInButton = document.querySelector("#signInButton");
-const createAccountButton = document.querySelector("#createAccountButton");
+const authMenuButton = document.querySelector("#authMenuButton");
+const profileMenuProfileLink = document.querySelector("#profileMenuProfileLink");
+const logoutButton = document.querySelector("#logoutButton");
 const listCarButton = document.querySelector("#listCarButton");
 const becomeSellerButton = document.querySelector("#becomeSellerButton");
+const startListingDraftButton = document.querySelector("#startListingDraftButton");
 const profileToggle = document.querySelector("#profileToggle");
 const profileMenu = document.querySelector("#profileMenu");
 const authModal = document.querySelector("#authModal");
@@ -28,6 +30,7 @@ const authSubmit = document.querySelector("#authSubmit");
 const authEmail = document.querySelector("#authEmail");
 const authPassword = document.querySelector("#authPassword");
 const authMessage = document.querySelector("#authMessage");
+const sellMessage = document.querySelector("#sellMessage");
 const mapCountEl = document.querySelector("#mapCount");
 const mapPanel = document.querySelector(".map-panel");
 let mapPreviewCard;
@@ -615,12 +618,45 @@ function displayUserName(user) {
   return user.name || user.email || "Kerodex account";
 }
 
+function currentUser() {
+  const storedUser = localStorage.getItem("kerodex-user");
+  if (!storedUser) return null;
+  try {
+    return JSON.parse(storedUser);
+  } catch {
+    return null;
+  }
+}
+
+function updateAuthMenu() {
+  const user = currentUser();
+  const signedIn = Boolean(user);
+  authMenuButton.hidden = signedIn;
+  profileMenuProfileLink.hidden = !signedIn;
+  logoutButton.hidden = !signedIn;
+  document.querySelectorAll("[data-auth-only]").forEach((item) => {
+    item.hidden = !signedIn;
+  });
+  if (signedIn) {
+    profileMenuProfileLink.querySelector("span").textContent = displayUserName(user);
+  } else {
+    profileMenuProfileLink.querySelector("span").textContent = "Account";
+  }
+}
+
 function storeSession(session) {
   localStorage.setItem("kerodex-token", session.token);
   localStorage.setItem("kerodex-user", JSON.stringify(session.user));
-  signInButton.textContent = "Switch account";
-  createAccountButton.textContent = "Account";
+  updateAuthMenu();
   setAuthMessage(`Signed in as ${session.user.email}`, "success");
+}
+
+function logout() {
+  localStorage.removeItem("kerodex-token");
+  localStorage.removeItem("kerodex-user");
+  updateAuthMenu();
+  profileMenu.hidden = true;
+  profileToggle?.setAttribute("aria-expanded", "false");
 }
 
 async function finishAuth(response) {
@@ -656,10 +692,32 @@ async function socialAuth(provider) {
   await finishAuth(response);
 }
 
-signInButton.addEventListener("click", () => openModal(authModal, "signin"));
-createAccountButton.addEventListener("click", () => openModal(authModal, "create"));
+authMenuButton.addEventListener("click", () => openModal(authModal, "signin"));
 listCarButton.addEventListener("click", () => openModal(sellModal));
 becomeSellerButton?.addEventListener("click", () => openModal(sellModal));
+profileMenu?.addEventListener("click", (event) => {
+  if (event.target.closest("#logoutButton")) logout();
+});
+startListingDraftButton?.addEventListener("click", () => {
+  if (!currentUser()) {
+    closeModals();
+    openModal(authModal, "create");
+    setAuthMessage("Create an account before starting a seller draft.", "error");
+    return;
+  }
+
+  localStorage.setItem("kerodex-listing-draft", JSON.stringify({
+    startedAt: new Date().toISOString(),
+    status: "verification-required"
+  }));
+  if (sellMessage) {
+    sellMessage.textContent = "Draft started. Finish seller verification before publishing.";
+    sellMessage.className = "auth-message is-success";
+  }
+  window.setTimeout(() => {
+    window.location.href = "/profile.html#verification";
+  }, 450);
+});
 
 profileToggle?.addEventListener("click", () => {
   const isOpen = !profileMenu.hidden;
@@ -710,14 +768,7 @@ if (localStorage.getItem("kerodex-theme") === "dark") {
 
 updateNavState();
 
-const storedUser = localStorage.getItem("kerodex-user");
-if (storedUser) {
-  try {
-    const user = JSON.parse(storedUser);
-    signInButton.textContent = "Switch account";
-    createAccountButton.textContent = "Account";
-  } catch {}
-}
+updateAuthMenu();
 
 if ("EventSource" in window) {
   const events = new EventSource("/api/events");
