@@ -12,7 +12,9 @@ The product goal is simple: help real owners sell real cars directly to buyers w
 - Dedicated search results experience with grid and map modes.
 - Local Node.js API with realistic seed listings.
 - Local authentication demo flow for email, Google, and Apple placeholders.
-- Leaflet/OpenStreetMap map browsing.
+- Leaflet/CARTO map browsing with grid/map search modes, clickable vehicle pins, and theme-aware map tiles.
+- Removable beta/demo inventory notice for public launch preparation.
+- Postgres-ready store adapter with local JSON seed fallback.
 - Smoke test coverage for the local prototype.
 - GitHub Actions CI workflow.
 - Architecture direction for AWS, microservices, search, trust, AI, and real-time systems.
@@ -22,8 +24,9 @@ The product goal is simple: help real owners sell real cars directly to buyers w
 ```text
 apps/
   api/
-    data.js          # Seed listings and demo data
     server.js        # Dependency-free local API/static server
+    store.js         # JSON fallback or Postgres-backed listing store
+    seed/            # Demo listing and conversation JSON
   web/
     public/
       index.html     # Homepage
@@ -38,6 +41,7 @@ docs/
   database.md        # Database schema direction
   roadmap.md         # MVP and scaling roadmap
 scripts/
+  seed-database.js   # Copies demo JSON into Postgres record tables
   smoke-test.js      # CI smoke test
 .github/
   workflows/
@@ -68,14 +72,30 @@ npm.cmd test
 
 This prototype stays close to $0:
 
-- No database dependency yet.
+- Local development can run from JSON seed files without a database.
+- Hosted environments can set `DATABASE_URL` to read listings/conversations from Postgres.
 - No paid AWS infrastructure yet.
 - No build step required.
-- No package install required for the running app.
-- Local static assets and seed data.
-- OpenStreetMap tiles via Leaflet for development.
+- Local static assets and demo seed data.
+- Leaflet with CARTO basemaps for free map rendering during beta.
 
 This keeps iteration fast while the product, UX, and data model are still changing.
+
+## Database Prep
+
+The current beta database bridge uses two Postgres record tables:
+
+- `listing_records`
+- `conversation_records`
+
+Run this after setting `DATABASE_URL`:
+
+```powershell
+npm.cmd install
+npm.cmd run db:seed
+```
+
+The normalized long-term schema remains in `docs/database-schema.sql`.
 
 ## Target Architecture
 
