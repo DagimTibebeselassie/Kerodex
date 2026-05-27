@@ -24,6 +24,11 @@ class JsonStore {
     return this.listings.find((listing) => listing.id === id);
   }
 
+  async createListing(listing) {
+    this.listings.unshift(listing);
+    return listing;
+  }
+
   async getConversations() {
     return this.conversations;
   }
@@ -53,6 +58,14 @@ class PostgresStore {
   async getListingById(id) {
     const result = await this.pool.query("SELECT payload FROM listing_records WHERE id = $1 LIMIT 1", [id]);
     return result.rows[0]?.payload;
+  }
+
+  async createListing(listing) {
+    await this.pool.query(
+      "INSERT INTO listing_records (id, payload, updated_at) VALUES ($1, $2, NOW()) ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload, updated_at = NOW()",
+      [listing.id, listing]
+    );
+    return listing;
   }
 
   async getConversations() {

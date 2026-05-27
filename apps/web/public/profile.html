@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#0f172a" />
     <title>Kerodex | Profile</title>
-    <link rel="stylesheet" href="/styles.css?v=60" />
+    <link rel="stylesheet" href="/styles.css?v=82" />
   </head>
   <body class="profile-page">
     <header class="profile-topbar">
@@ -52,7 +52,7 @@
         <h1>Profile</h1>
         <button class="profile-tab active" type="button" data-profile-panel="about">
           <span class="profile-tab-avatar">K</span>
-          <strong>About me</strong>
+          <strong>Personal Information</strong>
         </button>
         <button class="profile-tab" type="button" data-profile-panel="saved">
           <span>Car</span>
@@ -62,11 +62,15 @@
           <span>ID</span>
           <strong>Verification</strong>
         </button>
+        <button class="profile-tab" type="button" data-profile-panel="seller">
+          <span>Sell</span>
+          <strong>Seller cockpit</strong>
+        </button>
       </aside>
 
       <section class="profile-main profile-panel active" id="profilePanelAbout">
         <div class="profile-heading">
-          <h2>About me</h2>
+          <h2>Personal Information</h2>
           <button type="button" id="editProfileButton">Edit</button>
         </div>
 
@@ -106,6 +110,56 @@
           <p><span>03</span> Seller verification not started</p>
           <p><span>04</span> Identity verification will appear here</p>
         </div>
+
+        <section class="tesla-settings-grid" aria-label="Account settings">
+          <div class="tesla-settings-section">
+            <div>
+              <h3>Basic Information</h3>
+              <button type="button" data-profile-edit-shortcut>Edit</button>
+            </div>
+            <dl>
+              <dt>Name</dt>
+              <dd id="settingsName">Kerodex User</dd>
+              <dt>Region</dt>
+              <dd>United States</dd>
+              <dt>Language</dt>
+              <dd>English</dd>
+            </dl>
+          </div>
+          <aside class="tesla-checkup-card">
+            <h3>Security Checkup</h3>
+            <p>Complete these steps to protect your account and publish trusted listings.</p>
+            <div class="tesla-progress"><span id="accountSecurityFill"></span></div>
+            <strong id="accountSecurityText">1 of 3 completed</strong>
+            <ul>
+              <li><span></span> Email verified</li>
+              <li><span></span> Add phone number</li>
+              <li><span></span> Complete seller verification</li>
+            </ul>
+          </aside>
+          <div class="tesla-settings-section">
+            <div>
+              <h3>Contact Information</h3>
+              <button type="button" data-profile-edit-shortcut>Edit</button>
+            </div>
+            <dl>
+              <dt>Primary Email</dt>
+              <dd id="settingsEmail">Not added</dd>
+              <dt>Primary Phone Number</dt>
+              <dd id="settingsPhone">No phone number added</dd>
+            </dl>
+          </div>
+          <div class="tesla-settings-section">
+            <div>
+              <h3>Addresses</h3>
+              <button type="button" data-profile-edit-shortcut>Add</button>
+            </div>
+            <dl>
+              <dt>Mailing</dt>
+              <dd id="settingsAddress">No mailing address added</dd>
+            </dl>
+          </div>
+        </section>
 
         <section class="profile-interests">
           <h2>My interests</h2>
@@ -232,6 +286,178 @@
           </div>
         </section>
       </section>
+
+      <section class="profile-main profile-panel" id="profilePanelSeller" hidden>
+        <div class="profile-heading seller-heading">
+          <div>
+            <h2>Seller cockpit</h2>
+            <p>Build a clean, trusted listing fast. Drafts stay private until verification is ready.</p>
+          </div>
+          <button type="button" id="sellerNewDraftButton">New draft</button>
+        </div>
+
+        <section class="seller-command-strip">
+          <div>
+            <strong id="sellerTrustScore">0</strong>
+            <span>trust score</span>
+          </div>
+          <div>
+            <strong id="sellerDraftCount">0</strong>
+            <span>cars listed</span>
+          </div>
+          <div>
+            <strong id="sellerQualityAverage">0</strong>
+            <span>avg quality</span>
+          </div>
+          <div>
+            <strong id="sellerBuyerRule">Open</strong>
+            <span>buyer access</span>
+          </div>
+        </section>
+
+        <section class="seller-stats-dashboard" aria-label="Seller listing stats">
+          <article>
+            <span>Total views</span>
+            <strong id="sellerTotalViews">0</strong>
+            <em>Across listed cars</em>
+          </article>
+          <article>
+            <span>Saves</span>
+            <strong id="sellerTotalSaves">0</strong>
+            <em>Interested buyers</em>
+          </article>
+          <article>
+            <span>Messages</span>
+            <strong id="sellerTotalMessages">0</strong>
+            <em>Filtered for quality</em>
+          </article>
+          <article>
+            <span>Avg. days listed</span>
+            <strong id="sellerAvgDays">0</strong>
+            <em>Private beta estimate</em>
+          </article>
+        </section>
+
+        <section class="seller-panel-grid">
+          <form class="seller-draft-card" id="sellerDraftForm">
+            <div class="seller-card-heading">
+              <span>Fast listing draft</span>
+              <strong id="sellerDraftStatus">Private draft</strong>
+            </div>
+
+            <div class="seller-form-grid">
+              <label>
+                <span>VIN</span>
+                <input id="sellerVin" type="text" maxlength="17" placeholder="17-character VIN" />
+              </label>
+              <button class="seller-inline-button" id="sellerDecodeVin" type="button">Auto-fill</button>
+              <label>
+                <span>Year</span>
+                <input id="sellerYear" type="number" min="1981" max="2027" placeholder="2022" />
+              </label>
+              <label>
+                <span>Make</span>
+                <input id="sellerMake" type="text" placeholder="Toyota" />
+              </label>
+              <label>
+                <span>Model</span>
+                <input id="sellerModel" type="text" placeholder="Camry" />
+              </label>
+              <label>
+                <span>Trim</span>
+                <input id="sellerTrim" type="text" placeholder="XSE" />
+              </label>
+              <label>
+                <span>Mileage</span>
+                <input id="sellerMileage" type="number" min="0" step="100" placeholder="42000" />
+              </label>
+              <label>
+                <span>Asking price</span>
+                <input id="sellerPrice" type="number" min="0" step="250" placeholder="28500" />
+              </label>
+            </div>
+
+            <div class="seller-upload-grid">
+              <label>
+                <span>Photos</span>
+                <input id="sellerPhotos" type="file" accept="image/*" multiple />
+              </label>
+              <label>
+                <span>Maintenance records</span>
+                <input id="sellerMaintenance" type="file" accept="image/*,.pdf" multiple />
+              </label>
+            </div>
+
+            <label class="seller-full-field">
+              <span>Damage disclosure</span>
+              <textarea id="sellerDamage" rows="3" placeholder="Describe cosmetic, mechanical, title, or accident issues. Write none if clean."></textarea>
+            </label>
+
+            <label class="seller-full-field">
+              <span>AI-assisted description</span>
+              <textarea id="sellerDescription" rows="5" placeholder="Use Generate description after VIN, mileage, and price are filled."></textarea>
+            </label>
+
+            <div class="seller-draft-actions">
+              <button type="button" id="sellerGenerateDescription">Generate description</button>
+              <button type="submit">Add car</button>
+            </div>
+            <p class="seller-form-message" id="sellerDraftMessage" role="status"></p>
+          </form>
+
+          <aside class="seller-assistant-card">
+            <h3>Pricing assistant</h3>
+            <div class="pricing-range">
+              <span>Suggested range</span>
+              <strong id="sellerPricingRange">$0 - $0</strong>
+              <em id="sellerPricingSignal">Add vehicle details to estimate.</em>
+              <small id="sellerPricingSource">Estimate source appears here.</small>
+            </div>
+            <div class="listing-quality-meter">
+              <div><span id="sellerQualityFill"></span></div>
+              <strong id="sellerQualityScore">0%</strong>
+            </div>
+            <ul class="seller-quality-list" id="sellerQualityList"></ul>
+          </aside>
+        </section>
+
+        <section class="seller-management-grid">
+          <article class="seller-management-card">
+            <div class="seller-card-heading">
+              <span>Serious buyers only</span>
+              <strong>Message rules</strong>
+            </div>
+            <label class="seller-toggle-row">
+              <input id="sellerRequireVerified" type="checkbox" />
+              <span>Require verified buyers before messaging</span>
+            </label>
+            <label class="seller-toggle-row">
+              <input id="sellerHideLowball" type="checkbox" />
+              <span>Filter lowball and copy-paste messages</span>
+            </label>
+            <label class="seller-toggle-row">
+              <input id="sellerPrecheck" type="checkbox" />
+              <span>Show financing pre-check indicators</span>
+            </label>
+          </article>
+
+          <article class="seller-management-card">
+            <div class="seller-card-heading">
+              <span>Buyer management</span>
+              <strong>Demo queue</strong>
+            </div>
+            <div class="buyer-list" id="sellerBuyerList"></div>
+          </article>
+        </section>
+
+        <section class="seller-dashboard-card">
+          <div class="seller-card-heading">
+            <span>Active listings</span>
+            <strong>Simple performance</strong>
+          </div>
+          <div class="seller-listings-grid" id="sellerListingsGrid"></div>
+        </section>
+      </section>
     </main>
 
     <div class="modal-backdrop" id="profileAuthModal" hidden>
@@ -263,6 +489,6 @@
       </section>
     </div>
 
-    <script src="/profile.js?v=58"></script>
+    <script src="/profile.js?v=82"></script>
   </body>
 </html>

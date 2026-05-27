@@ -761,11 +761,11 @@ startListingDraftButton?.addEventListener("click", () => {
     status: "verification-required"
   }));
   if (sellMessage) {
-    sellMessage.textContent = "Draft started. Finish seller verification before publishing.";
+    sellMessage.textContent = "Draft started. Opening the seller cockpit.";
     sellMessage.className = "auth-message is-success";
   }
   window.setTimeout(() => {
-    window.location.href = "/profile.html#verification";
+    window.location.href = "/profile.html#seller-cockpit";
   }, 450);
 });
 
