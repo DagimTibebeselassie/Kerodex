@@ -5,7 +5,10 @@ const { URL } = require("url");
 const store = require("./store");
 
 const PORT = Number(process.env.PORT || 4100);
-const PUBLIC_DIR = path.resolve(__dirname, "../web/public");
+const REACT_DIST_DIR = path.resolve(__dirname, "../web-react/dist");
+const PUBLIC_DIR = fs.existsSync(REACT_DIST_DIR)
+  ? REACT_DIST_DIR
+  : path.resolve(__dirname, "../web/public");
 const users = new Map();
 const sessions = new Map();
 

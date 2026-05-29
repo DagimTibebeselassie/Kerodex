@@ -4,10 +4,13 @@
   "private": true,
   "description": "Local-first private-party car marketplace prototype.",
   "scripts": {
+    "build:web": "npm --prefix apps/web-react run build",
     "db:seed": "node scripts/seed-database.js",
+    "dev:react": "npm --prefix apps/web-react run dev",
     "dev": "node apps/api/server.js",
     "start": "node apps/api/server.js",
-    "test": "node scripts/smoke-test.js"
+    "test": "node scripts/smoke-test.js",
+    "test:react": "npm --prefix apps/web-react run build"
   },
   "dependencies": {
     "pg": "^8.13.1"
