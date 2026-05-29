@@ -328,7 +328,7 @@ function makeModelIndex() {
   Object.entries(commonMakesModels).forEach(([make, models]) => {
     index.set(make, new Set(models));
   });
-  browseListingsCache.concat(listingsCache).forEach((listing) => {
+  [...browseListingsCache, ...listingsCache].forEach((listing) => {
     if (!listing.make) return;
     if (!index.has(listing.make)) index.set(listing.make, new Set());
     if (listing.model) index.get(listing.make).add(listing.model);
@@ -346,7 +346,8 @@ function formatRangeValue(range, value) {
 }
 
 function mapPreviewHtml(listing) {
-  const distance = Number.isFinite(distanceMiles(userLocation, listing)) ? `${Math.round(distanceMiles(userLocation, listing))} mi away` : listing.location;
+  const listingDistance = distanceMiles(userLocation, listing);
+  const distance = Number.isFinite(listingDistance) ? `${Math.round(listingDistance)} mi away` : listing.location;
   return `
     <button class="map-preview-close" type="button" aria-label="Close preview">x</button>
     <button class="map-preview-save" type="button" aria-label="Save listing">♡</button>

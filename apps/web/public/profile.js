@@ -311,10 +311,9 @@ function sellerPricingEstimate(draft = loadSellerDraft(), comparableListings = [
   const exact = comparableListings.filter((listing) => {
     return normalizeMarketText(listing.make) === make && normalizeMarketText(listing.model) === model;
   });
-  const nearby = exact;
 
-  if (nearby.length >= 2) {
-    const adjustedValues = nearby.map((listing) => adjustMarketValue(Number(listing.price || 0), draft, Number(listing.year || year || 2023), Number(listing.mileage || mileage || 30000)));
+  if (exact.length >= 2) {
+    const adjustedValues = exact.map((listing) => adjustMarketValue(Number(listing.price || 0), draft, Number(listing.year || year || 2023), Number(listing.mileage || mileage || 30000)));
     adjustedValues.sort((a, b) => a - b);
     const middle = adjustedValues.slice(0, Math.min(5, adjustedValues.length));
     const average = middle.reduce((sum, value) => sum + value, 0) / middle.length;
@@ -396,6 +395,8 @@ function hydrateSellerForm() {
 
 function draftFromSellerForm() {
   const existing = loadSellerDraft();
+  const photoNames = namesForFiles(document.querySelector("#sellerPhotos"));
+  const maintenanceNames = namesForFiles(document.querySelector("#sellerMaintenance"));
   return {
     ...existing,
     vin: document.querySelector("#sellerVin").value.trim().toUpperCase(),
@@ -405,8 +406,8 @@ function draftFromSellerForm() {
     trim: document.querySelector("#sellerTrim").value.trim(),
     mileage: document.querySelector("#sellerMileage").value.trim(),
     price: document.querySelector("#sellerPrice").value.trim(),
-    photoNames: namesForFiles(document.querySelector("#sellerPhotos")).length ? namesForFiles(document.querySelector("#sellerPhotos")) : existing.photoNames,
-    maintenanceNames: namesForFiles(document.querySelector("#sellerMaintenance")).length ? namesForFiles(document.querySelector("#sellerMaintenance")) : existing.maintenanceNames,
+    photoNames: photoNames.length ? photoNames : existing.photoNames,
+    maintenanceNames: maintenanceNames.length ? maintenanceNames : existing.maintenanceNames,
     damage: document.querySelector("#sellerDamage").value.trim(),
     description: document.querySelector("#sellerDescription").value.trim(),
     requireVerified: document.querySelector("#sellerRequireVerified").checked,
