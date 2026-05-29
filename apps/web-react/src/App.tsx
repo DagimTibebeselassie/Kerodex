@@ -9,6 +9,9 @@ import { DashboardPage } from './pages/Dashboard';
 import { SellPage } from './pages/Sell';
 import { SavedVehiclesPage } from './pages/Saved';
 import { ProfilePage } from './pages/Profile';
+import { SellerCockpitPage } from './pages/SellerCockpit';
+import { VerificationPage } from './pages/Verification';
+import { MessagesPage } from './pages/Messages';
 import { StubPage } from './pages/StubPage';
 
 const queryClient = new QueryClient();
@@ -78,7 +81,7 @@ const savedRoute = createRoute({
 const messagesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/messages',
-  component: () => <StubPage title="Messages" description="Your conversations with buyers and sellers will appear here." />,
+  component: MessagesPage,
 });
 
 const profileRoute = createRoute({
@@ -96,13 +99,13 @@ const legacyProfileRoute = createRoute({
 const cockpitRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/cockpit',
-  component: ProfilePage,
+  component: SellerCockpitPage,
 });
 
 const verifyRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/verify',
-  component: ProfilePage,
+  component: VerificationPage,
 });
 
 const aboutRoute = createRoute({
