@@ -184,6 +184,64 @@ function normalizeVin(value) {
   return String(value || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
 
+function numberFrom(value, fallback = 0) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : fallback;
+}
+
+function createSellerListing(body = {}) {
+  const year = numberFrom(body.year, new Date().getFullYear());
+  const make = String(body.make || "").trim() || "Unknown make";
+  const model = String(body.model || "").trim() || "Unknown model";
+  const trim = String(body.trim || "").trim();
+  const title = [year, make, model, trim].filter(Boolean).join(" ");
+  const id = body.id && String(body.id).startsWith("seller_") ? String(body.id) : `seller_${Date.now()}`;
+  const mileage = numberFrom(body.mileage, 0);
+  const price = numberFrom(body.price, 0);
+  const image = String(body.image || "").trim() || "https://images.unsplash.com/photo-1549924231-f129b911e442?auto=format&fit=crop&w=1600&q=80";
+
+  return {
+    id,
+    title,
+    make,
+    model,
+    year,
+    trim,
+    price,
+    mileage,
+    location: String(body.location || "Private seller").trim(),
+    zip: String(body.zip || "").trim(),
+    lat: numberFrom(body.lat, 39.5),
+    lng: numberFrom(body.lng, -98.35),
+    bodyType: String(body.bodyType || "Sedan").trim(),
+    fuelType: String(body.fuelType || "Gasoline").trim(),
+    transmission: String(body.transmission || "Automatic").trim(),
+    drivetrain: String(body.drivetrain || "").trim(),
+    color: String(body.color || "").trim(),
+    condition: String(body.condition || "Good").trim(),
+    sellerRating: 0,
+    dealScore: numberFrom(body.dealScore, 75),
+    fairValueDelta: numberFrom(body.fairValueDelta, 0),
+    status: "active",
+    vin: normalizeVin(body.vin),
+    badges: ["Private seller", "Seller draft", "Verification pending"],
+    features: [
+      trim ? `${trim} trim` : "Trim pending",
+      body.damage && !/^none$/i.test(String(body.damage)) ? "Damage disclosed" : "Damage disclosure ready",
+      body.maintenanceNames?.length ? "Maintenance records uploaded" : "Maintenance records pending"
+    ],
+    images: [image],
+    seller: {
+      name: String(body.sellerName || "Kerodex seller").trim(),
+      responseTime: "New listing",
+      completedSales: 0,
+      verified: false
+    },
+    description: String(body.description || "").trim(),
+    updatedAt: new Date().toISOString()
+  };
+}
+
 async function decodeVin(vin) {
   const cleanVin = normalizeVin(vin);
   if (!/^[A-HJ-NPR-Z0-9]{17}$/.test(cleanVin)) {
@@ -218,7 +276,8 @@ async function decodeVin(vin) {
       year: result.ModelYear || "",
       make: result.Make || "",
       model: result.Model || "",
-      trim: result.Trim || "",
+      trim: result.Trim || result.Series || result.Trim2 || "",
+      series: result.Series || "",
       bodyClass: result.BodyClass || "",
       vehicleType: result.VehicleType || "",
       fuelType: result.FuelTypePrimary || "",
@@ -409,10 +468,24 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  if (url.pathname === "/api/listings") {
+  if (url.pathname === "/api/listings" && req.method === "GET") {
     filterListings(url.searchParams)
       .then((listings) => sendJson(res, 200, { listings }))
       .catch((error) => sendJson(res, 500, { error: "Unable to load listings.", detail: error.message }));
+    return;
+  }
+
+  if (url.pathname === "/api/listings" && req.method === "POST") {
+    readJson(req)
+      .then((body) => {
+        if (!String(body.make || "").trim() || !String(body.model || "").trim() || !Number(body.year) || !Number(body.price)) {
+          sendJson(res, 400, { error: "Add year, make, model, and asking price before publishing locally." });
+          return;
+        }
+        const listing = createSellerListing(body);
+        return store.createListing(listing).then((created) => sendJson(res, 201, { listing: created }));
+      })
+      .catch((error) => sendJson(res, 400, { error: "Unable to create listing.", detail: error.message }));
     return;
   }
 

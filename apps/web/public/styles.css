@@ -5932,6 +5932,46 @@ body.dark .choice-select-option {
   }
 }
 
+/* Make/model filter menu. */
+.make-model-filter-menu {
+  width: min(520px, calc(100vw - 24px)) !important;
+}
+
+.make-model-columns {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  max-height: 360px;
+  overflow: hidden;
+}
+
+.make-model-columns > div {
+  display: grid;
+  gap: 4px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.filter-menu-title.small {
+  color: var(--muted);
+  font-size: 0.78rem;
+  margin-bottom: 2px;
+}
+
+@media (max-width: 760px) {
+  .make-model-columns,
+  .profile-page .seller-command-strip,
+  .profile-page .seller-stats-dashboard,
+  .profile-page .seller-listings-grid article {
+    grid-template-columns: 1fr !important;
+  }
+
+  .seller-car-thumb {
+    width: 100%;
+  }
+}
+
 @media (max-width: 760px) {
   .results-filterbar > [data-filter-param],
   .results-filterbar > [data-filter-clear] {
@@ -10589,4 +10629,866 @@ body.results-body:not(.map-mode) .results-grid {
   body.results-body:not(.map-mode) .beta-demo-banner.compact strong {
     white-space: normal !important;
   }
+}
+
+/* v76 restore horizontal search rows and remove map-mode blank space. */
+body.results-body:not(.map-mode) .results-grid {
+  display: block !important;
+  max-width: 100% !important;
+  overflow: visible !important;
+  padding: 0 0 44px !important;
+  width: 100% !important;
+}
+
+body.results-body:not(.map-mode) .results-carousel-row {
+  margin: 0 auto 34px !important;
+  max-width: 1180px !important;
+  overflow: visible !important;
+  width: 100% !important;
+}
+
+body.results-body:not(.map-mode) .results-carousel-track {
+  display: grid !important;
+  gap: 18px !important;
+  grid-auto-columns: minmax(282px, 360px) !important;
+  grid-auto-flow: column !important;
+  grid-template-columns: none !important;
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  padding: 4px 2px 18px !important;
+  scroll-snap-type: x proximity !important;
+}
+
+body.results-body:not(.map-mode) .results-carousel-track .result-card {
+  scroll-snap-align: start !important;
+  width: auto !important;
+}
+
+body.results-body.map-mode .results-shell {
+  height: 0 !important;
+  min-height: 0 !important;
+  overflow: visible !important;
+}
+
+body.results-body.map-mode .results-map-view {
+  background: var(--bg) !important;
+  top: calc(var(--results-map-top, 206px) - 1px) !important;
+}
+
+body.dark.results-body.map-mode .results-map-view,
+body.dark.results-body.map-mode .results-map-panel,
+body.dark.results-body.map-mode #resultsMap,
+body.dark.results-body.map-mode .leaflet-container {
+  background: #151a1d !important;
+}
+
+@media (max-width: 760px) {
+  body.results-body:not(.map-mode) .results-carousel-track {
+    grid-auto-columns: minmax(260px, 84vw) !important;
+  }
+}
+
+/* v76 seller hub. */
+.seller-heading {
+  align-items: end;
+}
+
+.seller-heading p {
+  color: var(--muted);
+  margin: 6px 0 0;
+}
+
+.seller-command-strip,
+.seller-panel-grid,
+.seller-management-grid,
+.seller-listings-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.seller-command-strip {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 18px;
+}
+
+.seller-command-strip div,
+.seller-draft-card,
+.seller-assistant-card,
+.seller-management-card,
+.seller-dashboard-card {
+  background: var(--surface-strong);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.seller-command-strip div {
+  padding: 18px;
+}
+
+.seller-command-strip strong {
+  display: block;
+  font-size: clamp(1.6rem, 4vw, 2.5rem);
+  line-height: 1;
+}
+
+.seller-command-strip span,
+.seller-card-heading span,
+.seller-quality-list span,
+.buyer-list span,
+.seller-listings-grid span {
+  color: var(--muted);
+}
+
+.seller-panel-grid {
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.55fr);
+  margin-bottom: 18px;
+}
+
+.seller-draft-card,
+.seller-assistant-card,
+.seller-management-card,
+.seller-dashboard-card {
+  padding: 18px;
+}
+
+.seller-card-heading {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.seller-card-heading strong {
+  font-size: 0.9rem;
+}
+
+.seller-form-grid,
+.seller-upload-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.seller-form-grid label,
+.seller-upload-grid label,
+.seller-full-field {
+  display: grid;
+  gap: 7px;
+}
+
+.seller-form-grid span,
+.seller-upload-grid span,
+.seller-full-field span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.seller-form-grid input,
+.seller-upload-grid input,
+.seller-full-field textarea {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  font: inherit;
+  min-height: 46px;
+  padding: 11px 12px;
+  width: 100%;
+}
+
+.seller-full-field {
+  margin-top: 12px;
+}
+
+.seller-inline-button,
+.seller-draft-actions button,
+.seller-heading button {
+  align-self: end;
+  background: var(--text);
+  border: 0;
+  border-radius: 8px;
+  color: var(--bg);
+  font-weight: 900;
+  min-height: 46px;
+  padding: 0 16px;
+}
+
+.seller-draft-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.seller-form-message {
+  color: var(--muted);
+  margin: 12px 0 0;
+}
+
+.pricing-range {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.pricing-range strong {
+  font-size: 1.7rem;
+}
+
+.pricing-range em {
+  color: var(--muted);
+  font-style: normal;
+}
+
+.listing-quality-meter {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-bottom: 14px;
+}
+
+.listing-quality-meter div {
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+  border-radius: 999px;
+  height: 10px;
+  overflow: hidden;
+}
+
+.listing-quality-meter span {
+  background: #4f46e5;
+  display: block;
+  height: 100%;
+  width: 0;
+}
+
+.seller-quality-list,
+.buyer-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+}
+
+.seller-quality-list li,
+.buyer-list div,
+.seller-listings-grid article {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  list-style: none;
+  padding: 12px;
+}
+
+.seller-quality-list li.done {
+  border-color: color-mix(in srgb, #22c55e 38%, var(--line));
+}
+
+.seller-quality-list span {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 900;
+  margin-right: 8px;
+  text-transform: uppercase;
+}
+
+.seller-management-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 18px;
+}
+
+.seller-toggle-row {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.seller-toggle-row input {
+  accent-color: #4f46e5;
+  height: 18px;
+  width: 18px;
+}
+
+.buyer-list div {
+  display: grid;
+  gap: 4px;
+}
+
+.buyer-list p,
+.seller-listings-grid p {
+  color: var(--muted);
+  margin: 0;
+}
+
+.buyer-list em,
+.seller-listings-grid em {
+  background: color-mix(in srgb, var(--text) 9%, transparent);
+  border-radius: 999px;
+  display: inline-flex;
+  font-style: normal;
+  font-weight: 850;
+  padding: 6px 10px;
+  width: max-content;
+}
+
+.seller-listings-grid article div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+body.dark .seller-inline-button,
+body.dark .seller-draft-actions button,
+body.dark .seller-heading button {
+  background: #f7f8fb;
+  color: #07080a;
+}
+
+@media (max-width: 900px) {
+  .seller-command-strip,
+  .seller-panel-grid,
+  .seller-management-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .seller-form-grid,
+  .seller-upload-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* v77 Tesla-inspired profile/account settings and larger map controls. */
+.profile-page {
+  --profile-bg: #ffffff;
+  --profile-text: #111827;
+  --profile-muted: #5c636d;
+  --profile-line: #e5e7eb;
+  --profile-soft: #f4f4f4;
+  background: var(--profile-bg) !important;
+  color: var(--profile-text) !important;
+}
+
+.profile-page.dark {
+  --profile-bg: #0b0d10;
+  --profile-text: #f7f8fb;
+  --profile-muted: #a5abb5;
+  --profile-line: rgba(255, 255, 255, 0.14);
+  --profile-soft: #171a1f;
+}
+
+.profile-page .profile-topbar {
+  background: var(--profile-bg) !important;
+  border-bottom: 0 !important;
+  height: 82px;
+  padding: 18px clamp(24px, 4vw, 62px) !important;
+}
+
+.profile-page .brand {
+  height: 44px !important;
+  width: 150px !important;
+}
+
+.profile-page .profile-layout {
+  display: grid !important;
+  gap: clamp(48px, 7vw, 116px);
+  grid-template-columns: 300px minmax(0, 1fr) !important;
+  margin: 0 auto;
+  max-width: 1840px;
+  min-height: calc(100vh - 82px) !important;
+  padding: 70px clamp(28px, 5vw, 62px) 80px;
+}
+
+.profile-page .profile-sidebar {
+  border-right: 0 !important;
+  padding: 0 !important;
+}
+
+.profile-page .profile-sidebar h1 {
+  font-size: 1.35rem !important;
+  margin: 0 0 28px !important;
+}
+
+.profile-page .profile-tab {
+  align-items: center;
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  color: var(--profile-muted) !important;
+  display: grid !important;
+  gap: 18px !important;
+  grid-template-columns: 34px minmax(0, 1fr);
+  margin: 0 0 22px !important;
+  min-height: 34px !important;
+  padding: 0 !important;
+}
+
+.profile-page .profile-tab.active,
+.profile-page .profile-tab:hover {
+  color: var(--profile-text) !important;
+}
+
+.profile-page .profile-tab span,
+.profile-page .profile-tab-avatar {
+  background: transparent !important;
+  border: 1.5px solid currentColor;
+  border-radius: 999px !important;
+  color: inherit !important;
+  font-size: 0.66rem !important;
+  height: 26px !important;
+  width: 26px !important;
+}
+
+.profile-page .profile-tab strong {
+  font-size: 1rem !important;
+  font-weight: 760 !important;
+}
+
+.profile-page .profile-main {
+  max-width: 1280px;
+  padding: 0 !important;
+}
+
+.profile-page .profile-heading {
+  align-items: start !important;
+  margin-bottom: 44px !important;
+}
+
+.profile-page .profile-heading h2 {
+  font-size: clamp(2.6rem, 5vw, 4.4rem) !important;
+  letter-spacing: 0 !important;
+  line-height: 0.98 !important;
+  margin: 0 !important;
+}
+
+.profile-page .profile-heading p,
+.profile-page .profile-heading + p {
+  color: var(--profile-muted) !important;
+  font-size: 1.05rem;
+}
+
+.profile-page button,
+.profile-page a {
+  font-weight: 760;
+}
+
+.profile-page .profile-heading button,
+.profile-page .tesla-settings-section button,
+.profile-page .seller-card-heading button,
+.profile-page .seller-listings-grid button {
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid currentColor !important;
+  border-radius: 0 !important;
+  color: var(--profile-text) !important;
+  min-height: 0 !important;
+  padding: 0 0 2px !important;
+}
+
+.profile-page .profile-card,
+.profile-page .profile-interests,
+.profile-page .verification-hero-card,
+.profile-page .verification-card,
+.profile-page .verification-review-panel,
+.profile-page .seller-draft-card,
+.profile-page .seller-assistant-card,
+.profile-page .seller-management-card,
+.profile-page .seller-dashboard-card,
+.profile-page .seller-command-strip div,
+.profile-page .seller-stats-dashboard article {
+  background: transparent !important;
+  border: 1px solid var(--profile-line) !important;
+  border-radius: 4px !important;
+  box-shadow: none !important;
+}
+
+.profile-page .profile-card {
+  align-items: start !important;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.7fr) !important;
+  margin-bottom: 44px;
+  padding: 28px !important;
+}
+
+.profile-page .profile-identity {
+  text-align: left !important;
+}
+
+.profile-page .profile-photo {
+  background: var(--profile-soft) !important;
+  color: var(--profile-text) !important;
+}
+
+.profile-page .verified-badge {
+  background: #f2f2f2 !important;
+  color: #1f7a32 !important;
+}
+
+.profile-page .profile-stats {
+  border-left: 1px solid var(--profile-line);
+  display: grid;
+  gap: 22px;
+  padding-left: 28px;
+}
+
+.profile-page .profile-stats div {
+  background: transparent !important;
+  border: 0 !important;
+  padding: 0 !important;
+}
+
+.profile-page .profile-facts,
+.profile-page .profile-interests {
+  display: none;
+}
+
+.tesla-settings-grid {
+  display: grid;
+  gap: 64px 72px;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.72fr);
+}
+
+.tesla-settings-section {
+  display: grid;
+  gap: 28px;
+}
+
+.tesla-settings-section > div {
+  align-items: start;
+  display: flex;
+  gap: 24px;
+  justify-content: space-between;
+}
+
+.tesla-settings-section h3,
+.tesla-checkup-card h3 {
+  font-size: clamp(1.45rem, 2.4vw, 2.15rem);
+  line-height: 1.1;
+  margin: 0;
+}
+
+.tesla-settings-section dl {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.tesla-settings-section dt {
+  color: var(--profile-muted);
+  font-size: 1rem;
+  margin-top: 18px;
+}
+
+.tesla-settings-section dd {
+  font-size: 1rem;
+  font-weight: 760;
+  margin: 0;
+}
+
+.tesla-checkup-card {
+  border: 1px solid var(--profile-line);
+  border-radius: 4px;
+  grid-row: span 2;
+  padding: 34px;
+}
+
+.tesla-checkup-card p {
+  color: var(--profile-muted);
+  font-size: 1.05rem;
+  line-height: 1.45;
+}
+
+.tesla-progress {
+  background: var(--profile-soft);
+  border-radius: 999px;
+  height: 8px;
+  margin: 28px 0 12px;
+  overflow: hidden;
+}
+
+.tesla-progress span {
+  background: #3368e8;
+  display: block;
+  height: 100%;
+  width: 33%;
+}
+
+.tesla-checkup-card ul {
+  display: grid;
+  gap: 22px;
+  margin: 28px 0 0;
+  padding: 0;
+}
+
+.tesla-checkup-card li {
+  align-items: center;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: 22px minmax(0, 1fr);
+  list-style: none;
+}
+
+.tesla-checkup-card li span {
+  border: 2px solid var(--profile-muted);
+  border-radius: 999px;
+  height: 18px;
+  width: 18px;
+}
+
+.profile-page .saved-cars-grid {
+  display: grid;
+  gap: 0 !important;
+  max-width: 1050px !important;
+}
+
+.profile-page .saved-car-card,
+.profile-page .saved-empty {
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--profile-line) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 24px 0 !important;
+}
+
+.profile-page .saved-car-card {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: 180px minmax(0, 1fr);
+}
+
+.profile-page .saved-car-card img {
+  border-radius: 4px !important;
+}
+
+.seller-stats-dashboard {
+  display: grid;
+  gap: 0;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: -18px 0 38px;
+}
+
+.seller-stats-dashboard article {
+  border-left: 0 !important;
+  border-radius: 0 !important;
+  display: grid;
+  gap: 8px;
+  padding: 22px;
+}
+
+.seller-stats-dashboard article:first-child {
+  border-left: 1px solid var(--profile-line) !important;
+}
+
+.seller-stats-dashboard span,
+.seller-stats-dashboard em {
+  color: var(--profile-muted);
+  font-style: normal;
+}
+
+.seller-stats-dashboard strong {
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 1;
+}
+
+.profile-page .seller-command-strip {
+  gap: 0 !important;
+}
+
+.profile-page .seller-command-strip div {
+  border-left: 0 !important;
+  border-radius: 0 !important;
+}
+
+.profile-page .seller-command-strip div:first-child {
+  border-left: 1px solid var(--profile-line) !important;
+}
+
+.profile-page .seller-panel-grid,
+.profile-page .seller-management-grid {
+  gap: 28px !important;
+}
+
+.profile-page .seller-listings-grid {
+  gap: 0 !important;
+}
+
+.profile-page .seller-listings-grid article {
+  align-items: start;
+  border: 0 !important;
+  border-bottom: 1px solid var(--profile-line) !important;
+  border-radius: 0 !important;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  padding: 24px 0 !important;
+}
+
+.seller-car-main {
+  display: grid !important;
+  gap: 8px !important;
+  margin: 0 !important;
+}
+
+.seller-car-stats {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 8px !important;
+  justify-content: end;
+  margin: 0 !important;
+  max-width: 320px;
+}
+
+.profile-page .seller-inline-button,
+.profile-page .seller-draft-actions button,
+.profile-page .seller-heading button,
+.profile-page .verification-card button,
+.profile-page .verification-actions button {
+  background: var(--profile-text) !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  color: var(--profile-bg) !important;
+  min-height: 42px !important;
+}
+
+.profile-page input,
+.profile-page textarea,
+.profile-page select {
+  border-radius: 4px !important;
+}
+
+.leaflet-control-zoom {
+  border: 0 !important;
+  border-radius: 18px !important;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.22) !important;
+  overflow: hidden !important;
+}
+
+.leaflet-control-zoom a {
+  align-items: center !important;
+  background: rgba(255, 255, 255, 0.96) !important;
+  border: 0 !important;
+  color: #111827 !important;
+  display: flex !important;
+  font-size: 2rem !important;
+  font-weight: 650 !important;
+  height: 58px !important;
+  justify-content: center !important;
+  line-height: 58px !important;
+  width: 58px !important;
+}
+
+.leaflet-control-zoom a + a {
+  border-top: 1px solid rgba(17, 24, 39, 0.12) !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: #f4f4f4 !important;
+}
+
+body.dark .leaflet-control-zoom a {
+  background: rgba(20, 24, 30, 0.96) !important;
+  color: #f7f8fb !important;
+}
+
+body.dark .leaflet-control-zoom a + a {
+  border-top-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+@media (max-width: 980px) {
+  .profile-page .profile-layout {
+    gap: 28px;
+    grid-template-columns: 1fr !important;
+    padding-top: 34px;
+  }
+
+  .profile-page .profile-sidebar {
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .profile-page .profile-tab {
+    display: inline-grid !important;
+    margin-right: 22px !important;
+  }
+
+  .tesla-settings-grid,
+  .profile-page .profile-card,
+  .seller-stats-dashboard,
+  .profile-page .seller-listings-grid article {
+    grid-template-columns: 1fr !important;
+  }
+
+  .profile-page .profile-stats {
+    border-left: 0;
+    border-top: 1px solid var(--profile-line);
+    padding-left: 0;
+    padding-top: 24px;
+  }
+}
+
+/* Consolidated seller cockpit account-settings finish. */
+.profile-page {
+  font-family: "Helvetica Neue", Arial, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+}
+
+.profile-page #sellerNewDraftButton {
+  background: #f2f3f3 !important;
+  border: 0 !important;
+  border-radius: 4px !important;
+  color: #171a20 !important;
+  font-size: 0.74rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.04em !important;
+  min-height: 36px !important;
+  padding: 0 18px !important;
+  text-transform: uppercase !important;
+}
+
+.profile-page.dark #sellerNewDraftButton {
+  background: #2e333a !important;
+  color: #f4f4f4 !important;
+}
+
+.profile-page .seller-command-strip,
+.profile-page .seller-stats-dashboard {
+  background: transparent !important;
+  border: 0 !important;
+  border-bottom: 1px solid var(--profile-line) !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  gap: 0 !important;
+  padding-bottom: 24px !important;
+}
+
+.profile-page .seller-command-strip div,
+.profile-page .seller-command-strip div:first-child,
+.profile-page .seller-stats-dashboard article,
+.profile-page .seller-stats-dashboard article:first-child {
+  background: transparent !important;
+  border: 0 !important;
+  border-left: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding-left: 0 !important;
+}
+
+.profile-page .seller-stats-dashboard strong,
+.profile-page .seller-command-strip strong {
+  font-size: clamp(1.8rem, 3vw, 2.6rem) !important;
+  font-weight: 650 !important;
+}
+
+.profile-page .seller-listings-grid article {
+  grid-template-columns: 132px minmax(0, 1fr) auto auto !important;
+}
+
+.profile-page .seller-car-thumb {
+  aspect-ratio: 4 / 3 !important;
+  border-radius: 4px !important;
+  object-fit: cover !important;
+  width: 132px !important;
 }
