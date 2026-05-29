@@ -5,6 +5,7 @@ import { Vehicle } from '@/types';
 import { listVehicles } from '@/lib/api';
 import { MAKES, getModelsForMake } from '@/data/makes-models';
 import { VehicleCard } from '@/components/VehicleCard';
+import { MapView } from '@/components/MapView';
 import { Button, Input, Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@blinkdotnew/ui';
 import {
   Search,
@@ -340,37 +341,20 @@ export function HomePage() {
               )}
             </div>
 
-            {/* Map placeholder */}
+            {/* Map preview */}
             <div className="relative h-64 md:h-80 lg:h-96 bg-muted border border-border overflow-hidden">
-              {/* Grid overlay for map feel */}
-              <div
-                className="absolute inset-0 opacity-10"
-                style={{
-                  backgroundImage: 'linear-gradient(hsl(var(--border)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border)) 1px, transparent 1px)',
-                  backgroundSize: '32px 32px',
-                }}
+              <MapView
+                vehicles={locationEnabled ? vehicles ?? [] : []}
+                isDark={document.documentElement.classList.contains('dark')}
+                className="absolute inset-0"
               />
+              {!locationEnabled && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/70 backdrop-blur-[1px]">
+                  <MapPin className="h-6 w-6 text-muted-foreground mb-2" />
+                  <p className="text-[12px] text-muted-foreground font-medium">Enable location to populate pins</p>
+                </div>
+              )}
 
-              {/* Mock map pins */}
-              <div className="absolute top-[30%] left-[40%] w-8 h-8 -translate-x-1/2 -translate-y-1/2">
-                <div className="bg-foreground text-background text-[9px] font-bold px-1.5 py-0.5 whitespace-nowrap">$24,500</div>
-              </div>
-              <div className="absolute top-[55%] left-[62%] w-8 h-8 -translate-x-1/2 -translate-y-1/2">
-                <div className="bg-foreground text-background text-[9px] font-bold px-1.5 py-0.5 whitespace-nowrap">$18,900</div>
-              </div>
-              <div className="absolute top-[25%] left-[70%] w-8 h-8 -translate-x-1/2 -translate-y-1/2">
-                <div className="bg-foreground text-background text-[9px] font-bold px-1.5 py-0.5 whitespace-nowrap">$47,000</div>
-              </div>
-              <div className="absolute top-[65%] left-[28%] w-8 h-8 -translate-x-1/2 -translate-y-1/2">
-                <div className="bg-background text-foreground border border-border text-[9px] font-bold px-1.5 py-0.5 whitespace-nowrap">$31,200</div>
-              </div>
-
-              {/* Center overlay label */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <MapPin className="h-6 w-6 text-muted-foreground mb-2" />
-                <p className="text-[12px] text-muted-foreground font-medium">Map loading…</p>
-                <p className="text-[11px] text-muted-foreground/70 mt-1">Enable location to populate pins</p>
-              </div>
             </div>
           </div>
         </div>

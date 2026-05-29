@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Vehicle } from '@/types';
 
 interface MapViewProps {
@@ -25,6 +25,10 @@ export function MapView({ vehicles = [], selectedId, onSelectPin, className = ''
   const mapInstanceRef = useRef<any>(null);
   const tileLayerRef = useRef<any>(null);
   const markersRef = useRef<any[]>([]);
+  const [isReady, setIsReady] = useState(false);
+  const tileUrl = isDark
+    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+    : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
 
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return;
@@ -49,34 +53,36 @@ export function MapView({ vehicles = [], selectedId, onSelectPin, className = ''
       L.control.zoom({ position: 'bottomright' }).addTo(map);
 
       // CARTO tile style — light or dark
-      tileLayerRef.current = L.tileLayer('', {
+      tileLayerRef.current = L.tileLayer(tileUrl, {
         subdomains: 'abcd',
         maxZoom: 20,
         minZoom: 4,
       }).addTo(map);
 
       mapInstanceRef.current = map;
+      setIsReady(true);
+      window.setTimeout(() => map.invalidateSize(), 0);
     });
 
     return () => {
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
+        tileLayerRef.current = null;
+        markersRef.current = [];
+        setIsReady(false);
       }
     };
   }, []);
 
   useEffect(() => {
     if (!tileLayerRef.current) return;
-    const tileUrl = isDark
-      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
     tileLayerRef.current.setUrl(tileUrl);
-  }, [isDark]);
+  }, [tileUrl]);
 
   // Add/update markers when vehicles change
   useEffect(() => {
-    if (!mapInstanceRef.current) return;
+    if (!isReady || !mapInstanceRef.current) return;
     import('leaflet').then((L) => {
       // Clear old markers
       markersRef.current.forEach((m) => m.remove());
@@ -125,8 +131,9 @@ export function MapView({ vehicles = [], selectedId, onSelectPin, className = ''
       } else if (bounds.length === 1) {
         mapInstanceRef.current.setView(bounds[0], 10);
       }
+      window.setTimeout(() => mapInstanceRef.current?.invalidateSize(), 0);
     });
-  }, [vehicles, selectedId, onSelectPin]);
+  }, [vehicles, selectedId, onSelectPin, isReady]);
 
   return (
     <div
