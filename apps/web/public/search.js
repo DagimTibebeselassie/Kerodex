@@ -53,13 +53,33 @@ function toggleSavedListing(listingId) {
 const filterLabels = {
   maxPrice: "Price",
   bodyType: "Vehicle type",
-  make: "Make & model",
+  make: "Make",
   year: "Years",
   maxMileage: "Mileage",
   fuelType: "Fuel type",
   drivetrain: "Drivetrain",
   cleanTitle: "Clean title",
   noAccidents: "No accidents"
+};
+
+const commonMakesModels = {
+  Acura: ["ILX", "Integra", "MDX", "RDX", "TLX"],
+  Audi: ["A3", "A4", "A5", "Q5", "Q7"],
+  BMW: ["3 Series", "5 Series", "M3", "X3", "X5"],
+  Chevrolet: ["Camaro", "Corvette", "Equinox", "Silverado", "Tahoe"],
+  Ford: ["Bronco", "Escape", "Explorer", "F-150", "Mustang"],
+  Honda: ["Accord", "Civic", "CR-V", "Odyssey", "Pilot"],
+  Hyundai: ["Elantra", "Ioniq 5", "Palisade", "Santa Fe", "Sonata", "Tucson"],
+  Jeep: ["Cherokee", "Grand Cherokee", "Wrangler"],
+  Kia: ["K5", "Sorento", "Sportage", "Telluride"],
+  Lexus: ["ES", "GX 460", "IS", "NX", "RX"],
+  Mazda: ["CX-5", "CX-9", "Mazda3", "Mazda6", "MX-5 Miata"],
+  Mercedes: ["C-Class", "E-Class", "GLC", "GLE", "S-Class"],
+  Nissan: ["Altima", "Frontier", "Maxima", "Rogue", "Sentra"],
+  Porsche: ["911", "Cayenne", "Macan", "Panamera"],
+  Subaru: ["Crosstrek", "Forester", "Impreza", "Outback", "WRX"],
+  Tesla: ["Model 3", "Model S", "Model X", "Model Y"],
+  Toyota: ["4Runner", "Camry", "Corolla", "Highlander", "Prius", "RAV4", "Tacoma", "Tundra"]
 };
 
 const rangeFilters = {
@@ -85,19 +105,7 @@ const filterOptions = {
   ],
   make: [
     ["", "Any make"],
-    ["Toyota|", "Toyota"],
-    ["Toyota|Camry", "Toyota Camry"],
-    ["Toyota|Tacoma", "Toyota Tacoma"],
-    ["Toyota|4Runner", "Toyota 4Runner"],
-    ["Porsche|", "Porsche"],
-    ["Porsche|911", "Porsche 911"],
-    ["Tesla|", "Tesla"],
-    ["Tesla|Model 3", "Tesla Model 3"],
-    ["Tesla|Model Y", "Tesla Model Y"],
-    ["BMW|", "BMW"],
-    ["Ford|F-150", "Ford F-150"],
-    ["Honda|Civic", "Honda Civic"],
-    ["Lexus|GX 460", "Lexus GX 460"]
+    ...Object.keys(commonMakesModels).sort().map((make) => [make, make])
   ],
   year: [
     ["", "Any year"],
@@ -305,7 +313,7 @@ function updateFilterButtons() {
       const make = params.get("make") || "";
       const model = params.get("model") || "";
       button.classList.toggle("is-active", Boolean(make || model));
-      button.textContent = model ? `${make} ${model}` : make || filterLabels[key];
+      button.textContent = model ? `${make} / ${model}` : make || filterLabels[key];
       return;
     }
     const value = params.get(key) || "";
@@ -313,6 +321,21 @@ function updateFilterButtons() {
     button.classList.toggle("is-active", Boolean(value));
     button.textContent = value && option ? option[1] : filterLabels[key];
   });
+}
+
+function makeModelIndex() {
+  const index = new Map();
+  Object.entries(commonMakesModels).forEach(([make, models]) => {
+    index.set(make, new Set(models));
+  });
+  [...browseListingsCache, ...listingsCache].forEach((listing) => {
+    if (!listing.make) return;
+    if (!index.has(listing.make)) index.set(listing.make, new Set());
+    if (listing.model) index.get(listing.make).add(listing.model);
+  });
+  return [...index.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([make, models]) => [make, [...models].sort((a, b) => a.localeCompare(b))]);
 }
 
 function formatRangeValue(range, value) {
@@ -323,7 +346,8 @@ function formatRangeValue(range, value) {
 }
 
 function mapPreviewHtml(listing) {
-  const distance = Number.isFinite(distanceMiles(userLocation, listing)) ? `${Math.round(distanceMiles(userLocation, listing))} mi away` : listing.location;
+  const listingDistance = distanceMiles(userLocation, listing);
+  const distance = Number.isFinite(listingDistance) ? `${Math.round(listingDistance)} mi away` : listing.location;
   return `
     <button class="map-preview-close" type="button" aria-label="Close preview">x</button>
     <button class="map-preview-save" type="button" aria-label="Save listing">♡</button>
@@ -396,17 +420,39 @@ function openFilterMenu(button) {
       </div>
     `;
   } else {
-    const selectedValue = key === "make" ? `${params.get("make") || ""}|${params.get("model") || ""}` : currentValue;
-    menu.innerHTML = `
-      <div class="filter-menu-title">${filterLabels[key]}</div>
-      ${options
-        .map(([value, label]) => `
-          <button class="${value === selectedValue ? "selected" : ""}" type="button" data-filter-option="${value}" role="option" aria-selected="${value === selectedValue}">
-            <span>${label}</span>
-          </button>
-        `)
-        .join("")}
-    `;
+    if (key === "make") {
+      const selectedMake = params.get("make") || "";
+      const selectedModel = params.get("model") || "";
+      const index = makeModelIndex();
+      const models = index.find(([make]) => make === selectedMake)?.[1] || [];
+      menu.classList.add("make-model-filter-menu");
+      menu.innerHTML = `
+        <div class="filter-menu-title">Make</div>
+        <div class="make-model-columns">
+          <div>
+            <button class="${!selectedMake ? "selected" : ""}" type="button" data-make-option="">Any make</button>
+            ${index.map(([make]) => `<button class="${make === selectedMake ? "selected" : ""}" type="button" data-make-option="${make}">${make}</button>`).join("")}
+          </div>
+          <div>
+            <div class="filter-menu-title small">Model</div>
+            <button class="${!selectedModel ? "selected" : ""}" type="button" data-model-option="">Any model</button>
+            ${models.map((model) => `<button class="${model === selectedModel ? "selected" : ""}" type="button" data-model-option="${model}">${model}</button>`).join("")}
+          </div>
+        </div>
+      `;
+    } else {
+      const selectedValue = currentValue;
+      menu.innerHTML = `
+        <div class="filter-menu-title">${filterLabels[key]}</div>
+        ${options
+          .map(([value, label]) => `
+            <button class="${value === selectedValue ? "selected" : ""}" type="button" data-filter-option="${value}" role="option" aria-selected="${value === selectedValue}">
+              <span>${label}</span>
+            </button>
+          `)
+          .join("")}
+      `;
+    }
   }
 
   document.body.appendChild(menu);
@@ -457,17 +503,32 @@ function openFilterMenu(button) {
   }
 
   menu.addEventListener("click", (event) => {
+    const makeOption = event.target.closest("[data-make-option]");
+    if (makeOption) {
+      const nextParams = currentParams();
+      if (makeOption.dataset.makeOption) nextParams.set("make", makeOption.dataset.makeOption);
+      else nextParams.delete("make");
+      nextParams.delete("model");
+      closeFilterMenu();
+      updateUrlAndResults(nextParams);
+      return;
+    }
+
+    const modelOption = event.target.closest("[data-model-option]");
+    if (modelOption) {
+      const nextParams = currentParams();
+      if (modelOption.dataset.modelOption) nextParams.set("model", modelOption.dataset.modelOption);
+      else nextParams.delete("model");
+      closeFilterMenu();
+      updateUrlAndResults(nextParams);
+      return;
+    }
+
     const option = event.target.closest("[data-filter-option]");
     if (!option) return;
     const nextValue = option.dataset.filterOption;
     const nextParams = currentParams();
-    if (key === "make") {
-      const [make, model] = nextValue.split("|");
-      if (make) nextParams.set("make", make);
-      else nextParams.delete("make");
-      if (model) nextParams.set("model", model);
-      else nextParams.delete("model");
-    } else if (nextValue) {
+    if (nextValue) {
       nextParams.set(key, nextValue);
     } else {
       nextParams.delete(key);
@@ -584,7 +645,17 @@ function renderResultRows(matches, allListings) {
     return;
   }
 
-  grid.innerHTML = uniqueListings(matches).map(resultCard).join("");
+  const related = relatedListings(matches, allListings);
+  const firstRow = matches.length >= 3 ? matches : uniqueListings([...matches, ...related]).slice(0, Math.max(3, matches.length));
+  const firstRowIds = new Set(firstRow.map((listing) => listing.id));
+  const comparisonRow = related.filter((listing) => !firstRowIds.has(listing.id)).slice(0, 12);
+  const lowMileageRow = uniqueListings([...allListings].sort((a, b) => a.mileage - b.mileage)).slice(0, 12);
+
+  grid.innerHTML = [
+    renderResultRow("Best matches", "Private-party listings that fit your search.", firstRow),
+    renderResultRow("Worth comparing", "Similar cars nearby so you are not boxed into one result.", comparisonRow),
+    renderResultRow("Lower-mileage options", "Cleaner odometers from verified private sellers.", lowMileageRow)
+  ].join("");
 }
 
 function markerHtml(listing) {
@@ -727,6 +798,12 @@ logoutButton?.addEventListener("click", () => {
   localStorage.removeItem("kerodex-user");
   profileMenu.hidden = true;
   profileToggle?.setAttribute("aria-expanded", "false");
+});
+
+document.querySelectorAll(".seller-link, .results-menu button:not(#resultsTheme):not(#resultsLogoutButton)").forEach((button) => {
+  button.addEventListener("click", () => {
+    window.location.href = localStorage.getItem("kerodex-user") ? "/profile.html#seller" : "/profile.html";
+  });
 });
 
 profileToggle?.addEventListener("click", () => {
