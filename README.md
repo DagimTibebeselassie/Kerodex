@@ -8,15 +8,18 @@ The product goal is simple: help real owners sell real cars directly to buyers w
 
 ## What Exists Today
 
-- Premium responsive web marketplace UI.
-- Dedicated search results experience with grid and map modes.
-- Local Node.js API with realistic seed listings.
+- React/Vite/Tailwind marketplace web app served by the local Node API.
+- Premium responsive UI for home, search, listing details, listing creation, saved cars, messages, profile, verification, and seller cockpit.
+- Search results with grid/map modes, expanded filters, sort options, separate make/model selection, and mobile filter sheets.
+- Leaflet/CARTO map browsing with clickable price pins, listing preview cards, theme-aware map tiles, and contained stacking so maps stay beneath navigation and assistant UI.
+- Listing creation flow with VIN decode, dependent make/model fields, local image previews, and backend listing creation.
+- Listing detail trust surfaces: verification levels, trust score, buyer risk meter, vehicle story timeline, maintenance records summary, market value explainer, payment estimate, and trade-in UI.
+- Seller cockpit with listing stats, listing completeness, VIN decoder, draft/active listing patterns, analytics panels, and delete/edit/publish controls.
+- Verification center with demo phone OTP, government ID upload, selfie upload, trust points, and badge states.
+- Kerodex Assistant placeholder UI for future AI support.
 - Local authentication demo flow for email, Google, and Apple placeholders.
-- Leaflet/CARTO map browsing with grid/map search modes, clickable vehicle pins, and theme-aware map tiles.
-- Removable beta/demo inventory notice for public launch preparation.
 - Postgres-ready store adapter with local JSON seed fallback.
-- Smoke test coverage for the local prototype.
-- GitHub Actions CI workflow.
+- Smoke test coverage and GitHub Actions CI workflow.
 - Architecture direction for AWS, microservices, search, trust, AI, and real-time systems.
 
 ## Repository Structure
@@ -27,18 +30,15 @@ apps/
     server.js        # Dependency-free local API/static server
     store.js         # JSON fallback or Postgres-backed listing store
     seed/            # Demo listing and conversation JSON
+  web-react/
+    src/             # Current React/Vite marketplace app
+    dist/            # Local production build served by the API when present
   web/
-    public/
-      index.html     # Homepage
-      search.html    # Search results page
-      app.js         # Homepage client behavior
-      search.js      # Search results behavior
-      styles.css     # Current UI system
-      assets/        # Logo assets
+    public/          # Legacy static prototype fallback
 docs/
   architecture.md    # System architecture notes
   api.md             # API direction
-  database.md        # Database schema direction
+  database-schema.sql # Database schema direction
   roadmap.md         # MVP and scaling roadmap
 scripts/
   seed-database.js   # Copies demo JSON into Postgres record tables
@@ -68,6 +68,12 @@ Run tests:
 npm.cmd test
 ```
 
+Build the React web app:
+
+```powershell
+npm.cmd run build:web
+```
+
 ## Current Technical Approach
 
 This prototype stays close to $0:
@@ -75,7 +81,7 @@ This prototype stays close to $0:
 - Local development can run from JSON seed files without a database.
 - Hosted environments can set `DATABASE_URL` to read listings/conversations from Postgres.
 - No paid AWS infrastructure yet.
-- No build step required.
+- React build output is served from `apps/web-react/dist` when present; otherwise the API falls back to the legacy static prototype.
 - Local static assets and demo seed data.
 - Leaflet with CARTO basemaps for free map rendering during beta.
 

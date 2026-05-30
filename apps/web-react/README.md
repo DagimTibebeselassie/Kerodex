@@ -1,59 +1,55 @@
-# Enhanced Vite React TypeScript Template
+# Kerodex Web React App
 
-This template includes built-in detection for missing CSS variables between your Tailwind config and CSS files.
+This is the current Kerodex web experience. It is a React, Vite, TypeScript, and Tailwind app served by `apps/api/server.js` after running a production build.
 
-## Features
+## Main Screens
 
-- **CSS Variable Detection**: Automatically detects if CSS variables referenced in `tailwind.config.cjs` are defined in `src/index.css`
-- **Enhanced Linting**: Includes ESLint, Stylelint, and custom CSS variable validation
-- **Shadcn/ui**: Pre-configured with all Shadcn components
-- **Modern Stack**: Vite + React + TypeScript + Tailwind CSS
+- Home page with search, curated listing rows, map preview, trust messaging, and Kerodex Assistant placeholder.
+- Search page with grid/map modes, advanced filters, sorting, mobile filter sheet, Leaflet/CARTO map pins, and listing popup cards.
+- Vehicle detail page with gallery, seller card, trust score, buyer risk meter, scam warnings, market value panel, payment estimator, trade-in UI, features, history, timeline, and maintenance record summary.
+- Sell page with VIN autofill, dependent make/model fields, photo upload previews, listing fields, and backend listing creation.
+- Seller cockpit with active/draft listing management, completeness scoring, analytics panels, and VIN decoder.
+- Verification center with demo phone OTP, ID upload, selfie upload, trust points, and badge states.
+- Messages, saved cars, account/profile, and auth modal flows.
 
-## Available Scripts
+## Local Commands
 
-```bash
-# Run all linting (includes CSS variable check)
-npm run lint
+From the repository root:
 
-# Check only CSS variables
-npm run check:css-vars
-
-# Individual linting
-npm run lint:js    # ESLint
-npm run lint:css   # Stylelint
+```powershell
+npm.cmd --prefix apps/web-react run lint:types
+npm.cmd --prefix apps/web-react run build
+npm.cmd test
 ```
 
-## CSS Variable Detection
+Start the local API/static server:
 
-The template includes a custom script that:
-
-1. **Parses `tailwind.config.cjs`** to find all `var(--variable)` references
-2. **Parses `src/index.css`** to find all defined CSS variables (`--variable:`)
-3. **Cross-references** them to find missing definitions
-4. **Reports undefined variables** with clear error messages
-
-### Example Output
-
-When CSS variables are missing:
-```
-❌ Undefined CSS variables found in tailwind.config.cjs:
-   --sidebar-background
-   --sidebar-foreground
-   --sidebar-primary
-
-Add these variables to src/index.css
+```powershell
+npm.cmd run dev
 ```
 
-When all variables are defined:
+Then open:
+
+```text
+http://localhost:4100
 ```
-✅ All CSS variables in tailwind.config.cjs are defined
-```
 
-## How It Works
+## Backend Integration
 
-The detection happens during the `npm run lint` command, which will:
-- Exit with error code 1 if undefined variables are found
-- Show exactly which variables need to be added to your CSS file
-- Integrate seamlessly with your development workflow
+The web app uses `src/lib/api.ts` for Kerodex API calls:
 
-This prevents runtime CSS issues where Tailwind classes reference undefined CSS variables.
+- `GET /api/listings`
+- `GET /api/listings/:id`
+- `POST /api/listings`
+- `GET /api/conversations`
+- `GET /api/vin/decode/:vin`
+- demo auth endpoints under `/api/auth`
+
+The current app still uses local/demo state for some beta behaviors, including saved cars, some message replies, verification status, and listing action mock states. These are intentionally shaped so they can later be replaced with real database-backed endpoints.
+
+## Notes
+
+- Maps use Leaflet with CARTO tiles.
+- Map panes are isolated so Leaflet layers do not cover the sticky nav or assistant UI.
+- The app supports dark/light mode through document-level theme classes.
+- The build may show warnings from `@blinkdotnew/ui` internals and chunk size. They do not block the current build.

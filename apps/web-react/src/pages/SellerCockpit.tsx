@@ -1,17 +1,15 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useAuth } from '@/hooks/useAuth';
+import { Button, Input } from '@blinkdotnew/ui';
 import { listVehicles } from '@/lib/api';
-import { Button, Input, toast } from '@blinkdotnew/ui';
 import {
   Plus, BarChart3, MessageSquare, Car, ExternalLink, Eye, Heart,
   Pencil, Trash2, BadgeCheck, TrendingUp, DollarSign, AlertTriangle,
-  CheckCircle2, Clock, Loader2, Search,
+  CheckCircle2, Clock, Loader2, Search, ShieldCheck,
 } from 'lucide-react';
-import { Vehicle } from '@/types';
 
-// ── VIN Decoder ───────────────────────────────────────────────────────────
+// ── VIN Decoder ────────────────────────────────────────────────────────────
 interface VinResult {
   make: string;
   model: string;
@@ -25,14 +23,15 @@ interface VinResult {
 async function decodeVin(vin: string): Promise<VinResult | null> {
   try {
     const res = await fetch(`/api/vin/decode/${encodeURIComponent(vin)}`);
-    const r = await res.json();
-    if (!res.ok || !r.ok) return null;
+    const json = await res.json();
+    const r = json?.vehicle || json;
+    if (!r || !r.make) return null;
     return {
       make: r.make || '',
       model: r.model || '',
       year: r.year || '',
-      trim: r.trim || r.series || '',
-      engine: r.engine || '',
+      trim: r.trim || '',
+      engine: r.bodyClass || '',
       fuelType: r.fuelType || '',
       driveType: r.driveType || '',
     };
@@ -40,6 +39,47 @@ async function decodeVin(vin: string): Promise<VinResult | null> {
     return null;
   }
 }
+
+// ── Mock Data ──────────────────────────────────────────────────────────────
+interface MockListing {
+  id: string;
+  make: string;
+  model: string;
+  year: number;
+  price: number;
+  mileage: number;
+  location: string;
+  status: 'active' | 'draft';
+  completeness: number;
+  views: number;
+  saves: number;
+  messages: number;
+  images: string[];
+  daysListed: number;
+  dealScore: 'great' | 'good' | 'fair' | null;
+}
+
+const MOCK_LISTINGS: MockListing[] = [
+  {
+    id: 'ml1', make: 'BMW', model: '3 Series', year: 2021, price: 42000, mileage: 28000,
+    location: 'Nashville, TN', status: 'active',
+    completeness: 88, views: 342, saves: 18, messages: 7,
+    images: ['https://images.unsplash.com/photo-1555215695-3004980ad54e?q=80&w=400'],
+    daysListed: 3, dealScore: 'great',
+  },
+  {
+    id: 'ml2', make: 'Honda', model: 'Civic', year: 2020, price: 17500, mileage: 52000,
+    location: 'Nashville, TN', status: 'draft',
+    completeness: 45, views: 0, saves: 0, messages: 0,
+    images: ['https://images.unsplash.com/photo-1606016159991-dfe4f2746ad5?q=80&w=400'],
+    daysListed: 0, dealScore: null,
+  },
+];
+
+const COMPLETENESS_TIPS: Record<string, string[]> = {
+  ml1: ['Add inspection report', 'Verify ownership'],
+  ml2: ['Upload photos (0 added)', 'Add a description', 'Set your price'],
+};
 
 // ── Stat Card ──────────────────────────────────────────────────────────────
 function StatCard({ icon, label, value, sub }: {
@@ -60,75 +100,214 @@ function StatCard({ icon, label, value, sub }: {
   );
 }
 
-// ── Listing Row ────────────────────────────────────────────────────────────
-function ListingRow({
-  vehicle,
+// ── Listing Card ───────────────────────────────────────────────────────────
+function ListingCard({
+  listing,
   onDelete,
 }: {
-  vehicle: Vehicle;
+  listing: MockListing;
   onDelete: (id: string) => void;
 }) {
-  const imageUrl = (() => {
-    try {
-      const p = typeof vehicle.images === 'string' ? JSON.parse(vehicle.images) : vehicle.images;
-      return Array.isArray(p) ? p[0] : p;
-    } catch { return ''; }
-  })() || 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=200';
+  const tips = COMPLETENESS_TIPS[listing.id] ?? [];
+
+  const dealColors: Record<string, string> = {
+    great: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+    good: 'border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400',
+    fair: 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400',
+  };
 
   return (
-    <div className="flex items-center gap-4 p-4 border-b border-border hover:bg-muted/30 transition-colors group">
-      {/* Thumbnail */}
-      <div className="w-16 h-12 bg-muted shrink-0 overflow-hidden rounded-sm">
-        <img src={imageUrl} alt="" className="w-full h-full object-cover" />
-      </div>
-
-      {/* Info */}
-      <div className="flex-1 min-w-0">
-        <div className="text-[13px] font-bold truncate">
-          {vehicle.year} {vehicle.make} {vehicle.model}
+    <div className="border border-border bg-card p-5 space-y-4">
+      <div className="flex gap-4">
+        {/* Thumbnail */}
+        <div className="w-24 h-18 shrink-0 overflow-hidden bg-muted">
+          <img
+            src={listing.images[0]}
+            alt={`${listing.year} ${listing.make} ${listing.model}`}
+            className="w-full h-full object-cover"
+          />
         </div>
-        <div className="text-[12px] text-muted-foreground truncate">{vehicle.location}</div>
+
+        {/* Info */}
+        <div className="flex-1 min-w-0 space-y-1.5">
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="text-[15px] font-black tracking-tight">
+              {listing.year} {listing.make} {listing.model}
+            </h3>
+            <div className="flex items-center gap-2 shrink-0">
+              {/* Status badge */}
+              <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 border ${
+                listing.status === 'active'
+                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                  : 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+              }`}>
+                {listing.status === 'active' ? 'Active' : 'Draft'}
+              </span>
+
+              {/* Deal score */}
+              {listing.dealScore && (
+                <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 border ${dealColors[listing.dealScore]}`}>
+                  {listing.dealScore === 'great' ? '★ Great Deal' : listing.dealScore === 'good' ? '✓ Good Deal' : '— Fair'}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="text-[16px] font-black text-primary">${listing.price.toLocaleString()}</div>
+          <div className="text-[12px] text-muted-foreground">{listing.location} · {listing.mileage.toLocaleString()} mi</div>
+        </div>
       </div>
 
-      {/* Price */}
-      <div className="text-[14px] font-black shrink-0 hidden sm:block">
-        ${vehicle.price.toLocaleString()}
+      {/* Completeness bar */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+            Listing Completeness
+          </span>
+          <span className={`text-[11px] font-bold ${listing.completeness >= 80 ? 'text-emerald-500' : 'text-amber-500'}`}>
+            {listing.completeness}%
+          </span>
+        </div>
+        <div className="h-1.5 bg-muted overflow-hidden">
+          <div
+            className={`h-full transition-all ${listing.completeness >= 80 ? 'bg-emerald-500' : 'bg-amber-500'}`}
+            style={{ width: `${listing.completeness}%` }}
+          />
+        </div>
       </div>
 
-      {/* Status */}
-      <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 border shrink-0 hidden md:block ${
-        vehicle.status === 'available'
-          ? 'border-green-500/30 bg-green-500/10 text-green-500'
-          : 'border-muted-foreground/30 bg-muted text-muted-foreground'
-      }`}>
-        {vehicle.status}
-      </span>
+      {/* Improvement suggestions */}
+      {tips.length > 0 && (
+        <div className="space-y-1.5">
+          {listing.status === 'draft' ? (
+            <div className="flex items-start gap-2 p-3 border border-amber-500/20 bg-amber-500/5">
+              <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
+              <div className="space-y-1">
+                <p className="text-[11px] font-bold text-amber-600 dark:text-amber-400">Missing:</p>
+                {tips.map((tip) => (
+                  <p key={tip} className="text-[11px] text-muted-foreground">• {tip}</p>
+                ))}
+              </div>
+            </div>
+          ) : (
+            tips.map((tip) => (
+              <div key={tip} className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                <div className="w-1 h-1 bg-muted-foreground/50 rounded-full shrink-0" />
+                {tip}
+              </div>
+            ))
+          )}
+        </div>
+      )}
 
-      {/* Actions */}
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-        <Link to="/vehicle/$id" params={{ id: vehicle.id }}>
-          <button className="h-8 w-8 flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="View listing">
-            <ExternalLink className="h-3.5 w-3.5" />
-          </button>
-        </Link>
-        <Link to="/sell" search={{ edit: vehicle.id } as any}>
-          <button className="h-8 w-8 flex items-center justify-center hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title="Edit listing">
-            <Pencil className="h-3.5 w-3.5" />
+      {/* Stats row */}
+      {listing.status === 'active' && (
+        <div className="flex items-center gap-4 text-[12px] text-muted-foreground border-t border-border pt-3">
+          <span className="flex items-center gap-1.5">
+            <Eye className="h-3.5 w-3.5" />
+            {listing.views} views
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Heart className="h-3.5 w-3.5" />
+            {listing.saves} saves
+          </span>
+          <span className="flex items-center gap-1.5">
+            <MessageSquare className="h-3.5 w-3.5" />
+            {listing.messages} messages
+          </span>
+        </div>
+      )}
+
+      {/* Action buttons */}
+      <div className="flex items-center gap-2 pt-1">
+        {listing.status === 'active' ? (
+          <Link to="/vehicle/$id" params={{ id: listing.id }}>
+            <button className="flex items-center gap-1.5 h-8 px-3 text-[11px] font-bold uppercase tracking-wider border border-border hover:border-foreground/30 transition-colors">
+              <ExternalLink className="h-3 w-3" />
+              View
+            </button>
+          </Link>
+        ) : (
+          <Link to="/sell">
+            <button className="flex items-center gap-1.5 h-8 px-4 text-[11px] font-bold uppercase tracking-wider bg-primary text-primary-foreground hover:opacity-90 transition-opacity">
+              Complete to publish
+            </button>
+          </Link>
+        )}
+        <Link to="/sell" search={{ edit: listing.id } as any}>
+          <button className="flex items-center gap-1.5 h-8 px-3 text-[11px] font-bold uppercase tracking-wider border border-border hover:border-foreground/30 transition-colors">
+            <Pencil className="h-3 w-3" />
+            Edit
           </button>
         </Link>
         <button
-          onClick={() => onDelete(vehicle.id)}
-          className="h-8 w-8 flex items-center justify-center hover:bg-destructive/10 transition-colors text-muted-foreground hover:text-destructive"
-          title="Delete listing"
+          onClick={() => onDelete(listing.id)}
+          className="flex items-center gap-1.5 h-8 px-3 text-[11px] font-bold uppercase tracking-wider border border-border hover:border-destructive/30 hover:text-destructive transition-colors ml-auto"
         >
-          <Trash2 className="h-3.5 w-3.5" />
+          <Trash2 className="h-3 w-3" />
+          Delete
         </button>
       </div>
     </div>
   );
 }
 
-// ── VIN Autofill Panel ─────────────────────────────────────────────────────
+// ── Trust Score Panel ──────────────────────────────────────────────────────
+function TrustScorePanel() {
+  const score = 72;
+  const steps = [
+    { done: true, label: 'Email verified', points: '+10' },
+    { done: true, label: 'Phone verified', points: '+20' },
+    { done: false, label: 'Identity not verified', points: '+35 if complete' },
+    { done: false, label: 'No completed sales yet', points: '+20 per sale' },
+  ];
+
+  return (
+    <div className="p-5 border border-border bg-card space-y-4">
+      <div className="flex items-center gap-2">
+        <ShieldCheck className="h-4 w-4 text-primary" />
+        <h3 className="text-[12px] font-bold uppercase tracking-[0.15em]">Seller Trust Score</h3>
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-end justify-between">
+          <span className="text-4xl font-black tracking-tight">{score}</span>
+          <span className="text-[13px] text-muted-foreground mb-1">/100</span>
+        </div>
+        <div className="h-2.5 bg-muted overflow-hidden">
+          <div
+            className="h-full bg-primary transition-all"
+            style={{ width: `${score}%` }}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {steps.map((step) => (
+          <div key={step.label} className="flex items-center gap-2.5 text-[12px]">
+            {step.done
+              ? <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+              : <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/40 shrink-0" />}
+            <span className={step.done ? 'text-foreground' : 'text-muted-foreground'}>
+              {step.label}
+            </span>
+            <span className={`ml-auto text-[11px] font-bold ${step.done ? 'text-emerald-500' : 'text-muted-foreground'}`}>
+              {step.points}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <Link to="/verify">
+        <Button className="w-full h-9 text-[11px] font-bold uppercase tracking-wider">
+          Complete Verification →
+        </Button>
+      </Link>
+    </div>
+  );
+}
+
+// ── VIN Panel ──────────────────────────────────────────────────────────────
 function VinPanel({ onResult }: { onResult: (r: VinResult) => void }) {
   const [vin, setVin] = useState('');
   const [loading, setLoading] = useState(false);
@@ -197,7 +376,7 @@ function VinPanel({ onResult }: { onResult: (r: VinResult) => void }) {
               <span className="font-bold">{v}</span>
             </div>
           ))}
-          <div className="col-span-2 flex items-center gap-2 mt-1 text-[11px] text-green-500">
+          <div className="col-span-2 flex items-center gap-2 mt-1 text-[11px] text-emerald-500">
             <CheckCircle2 className="h-3.5 w-3.5" />
             VIN verified via NHTSA — fields populated
           </div>
@@ -211,37 +390,41 @@ function VinPanel({ onResult }: { onResult: (r: VinResult) => void }) {
 export function SellerCockpitPage() {
   const { user, login, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'listings' | 'analytics' | 'vin'>('listings');
   const [vinResult, setVinResult] = useState<VinResult | null>(null);
+  const [listings, setListings] = useState<MockListing[]>(MOCK_LISTINGS);
 
-  const { data: myVehicles, isLoading: vehiclesLoading } = useQuery({
-    queryKey: ['my-vehicles', user?.id],
-    queryFn: async () => {
-      if (!user) return [] as Vehicle[];
-      const localHidden = new Set(JSON.parse(localStorage.getItem('kerodex-hidden-listings') || '[]') as string[]);
-      const result = await listVehicles();
-      return result.filter((vehicle) => !localHidden.has(vehicle.id)) as Vehicle[];
-    },
-    enabled: !!user,
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const current = new Set(JSON.parse(localStorage.getItem('kerodex-hidden-listings') || '[]') as string[]);
-      current.add(id);
-      localStorage.setItem('kerodex-hidden-listings', JSON.stringify([...current]));
-    },
-    onSuccess: () => {
-      toast.success('Listing deleted.');
-      queryClient.invalidateQueries({ queryKey: ['my-vehicles'] });
-    },
-    onError: () => toast.error('Failed to delete listing.'),
-  });
+  useEffect(() => {
+    if (!user) return;
+    let alive = true;
+    listVehicles()
+      .then((vehicles) => {
+        if (!alive || vehicles.length === 0) return;
+        setListings(vehicles.map((v, index) => ({
+          id: v.id,
+          make: v.make,
+          model: v.model,
+          year: v.year,
+          price: v.price,
+          mileage: v.mileage,
+          location: v.location,
+          status: v.status === 'sold' ? 'active' : 'active',
+          completeness: Math.min(96, 62 + (v.images.length * 6)),
+          views: 140 + index * 37,
+          saves: 6 + index * 2,
+          messages: 2 + index,
+          images: v.images,
+          daysListed: Math.max(1, index + 1),
+          dealScore: index % 3 === 0 ? 'great' : index % 3 === 1 ? 'good' : 'fair',
+        })));
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [user]);
 
   const handleDelete = (id: string) => {
     if (confirm('Delete this listing permanently?')) {
-      deleteMutation.mutate(id);
+      setListings((prev) => prev.filter((l) => l.id !== id));
     }
   };
 
@@ -268,10 +451,9 @@ export function SellerCockpitPage() {
     );
   }
 
-  const totalViews = 1284;
-  const avgDaysToSell = 18;
-  const vehicles = myVehicles ?? [];
-  const activeCount = vehicles.filter((v) => v.status === 'available').length;
+  const activeListings = listings.filter((l) => l.status === 'active');
+  const totalViews = listings.reduce((sum, l) => sum + l.views, 0);
+  const totalMessages = listings.reduce((sum, l) => sum + l.messages, 0);
 
   return (
     <div className="animate-fade-in px-4 md:px-6 py-10 max-w-screen-xl mx-auto">
@@ -298,7 +480,7 @@ export function SellerCockpitPage() {
         <StatCard
           icon={<Car className="h-4 w-4" />}
           label="Active Listings"
-          value={activeCount}
+          value={activeListings.length}
           sub="Currently on market"
         />
         <StatCard
@@ -310,15 +492,20 @@ export function SellerCockpitPage() {
         <StatCard
           icon={<MessageSquare className="h-4 w-4" />}
           label="Messages"
-          value={12}
+          value={totalMessages}
           sub="3 unread"
         />
         <StatCard
           icon={<Clock className="h-4 w-4" />}
           label="Avg. Days to Sell"
-          value={avgDaysToSell}
+          value={18}
           sub="Market average: 24"
         />
+      </div>
+
+      {/* ── Trust Score ─────────────────────────────────────────────────── */}
+      <div className="mb-10">
+        <TrustScorePanel />
       </div>
 
       {/* ── Tabs ────────────────────────────────────────────────────────── */}
@@ -345,14 +532,24 @@ export function SellerCockpitPage() {
 
       {/* ── Tab: Listings ───────────────────────────────────────────────── */}
       {activeTab === 'listings' && (
-        <div>
-          {vehiclesLoading ? (
-            <div className="space-y-3">
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="h-20 bg-muted animate-pulse" />
-              ))}
+        <div className="space-y-4">
+          {/* Scam warning for draft */}
+          {listings.some((l) => l.status === 'draft') && (
+            <div className="flex items-start gap-3 p-4 border border-amber-500/20 bg-amber-500/5">
+              <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+              <div>
+                <h4 className="text-[12px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-1.5">
+                  Listing Health Check
+                </h4>
+                <ul className="space-y-1">
+                  <li className="text-[12px] text-muted-foreground">• No photos uploaded — buyers trust listings with 6+ photos</li>
+                  <li className="text-[12px] text-muted-foreground">• Draft not published — not visible to buyers</li>
+                </ul>
+              </div>
             </div>
-          ) : vehicles.length === 0 ? (
+          )}
+
+          {listings.length === 0 ? (
             <div className="border border-dashed border-border py-20 text-center">
               <Car className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
               <p className="text-[14px] font-bold mb-2">No listings yet</p>
@@ -368,19 +565,9 @@ export function SellerCockpitPage() {
               </Button>
             </div>
           ) : (
-            <div className="border border-border">
-              {/* Column headers */}
-              <div className="flex items-center gap-4 px-4 py-2 bg-muted/50 border-b border-border">
-                <div className="w-16 shrink-0" />
-                <div className="flex-1 text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground">Vehicle</div>
-                <div className="w-24 text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground hidden sm:block">Price</div>
-                <div className="w-24 text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground hidden md:block">Status</div>
-                <div className="w-28 shrink-0" />
-              </div>
-              {vehicles.map((v) => (
-                <ListingRow key={v.id} vehicle={v} onDelete={handleDelete} />
-              ))}
-            </div>
+            listings.map((listing) => (
+              <ListingCard key={listing.id} listing={listing} onDelete={handleDelete} />
+            ))
           )}
         </div>
       )}
@@ -389,15 +576,14 @@ export function SellerCockpitPage() {
       {activeTab === 'analytics' && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Performance chart placeholder */}
+            {/* Views chart */}
             <div className="border border-border bg-card p-6 space-y-4">
               <div className="flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-primary" />
                 <h3 className="text-[12px] font-bold uppercase tracking-[0.15em]">Views This Month</h3>
               </div>
-              <div className="text-4xl font-black tracking-tight">1,284</div>
-              <div className="text-[12px] text-green-500 font-medium">↑ 23% vs last month</div>
-              {/* Simple bar chart */}
+              <div className="text-4xl font-black tracking-tight">342</div>
+              <div className="text-[12px] text-emerald-500 font-medium">↑ 23% vs last month</div>
               <div className="flex items-end gap-1.5 h-20 pt-4">
                 {[40, 65, 45, 80, 60, 90, 75, 100, 85, 95, 70, 88].map((h, i) => (
                   <div
@@ -412,29 +598,33 @@ export function SellerCockpitPage() {
               </div>
             </div>
 
-            {/* Conversion */}
+            {/* Per-listing performance */}
             <div className="border border-border bg-card p-6 space-y-4">
               <div className="flex items-center gap-2">
                 <DollarSign className="h-4 w-4 text-primary" />
                 <h3 className="text-[12px] font-bold uppercase tracking-[0.15em]">Listing Performance</h3>
               </div>
-              {vehicles.slice(0, 3).map((v, i) => (
-                <div key={v.id} className="flex items-center gap-3">
+              {activeListings.map((listing, i) => (
+                <div key={listing.id} className="flex items-center gap-3">
                   <div className="text-[11px] text-muted-foreground w-4">{i + 1}</div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-[12px] font-bold truncate">{v.year} {v.make} {v.model}</div>
-                    <div className="h-1.5 bg-muted mt-1 rounded-full overflow-hidden">
+                    <div className="text-[12px] font-bold truncate">
+                      {listing.year} {listing.make} {listing.model}
+                    </div>
+                    <div className="h-1.5 bg-muted mt-1 overflow-hidden">
                       <div
                         className="h-full bg-primary"
-                        style={{ width: `${[85, 62, 48][i]}%` }}
+                        style={{ width: `${Math.min(100, (listing.views / 400) * 100)}%` }}
                       />
                     </div>
                   </div>
-                  <div className="text-[11px] font-bold text-muted-foreground shrink-0">{[850, 620, 480][i]} views</div>
+                  <div className="text-[11px] font-bold text-muted-foreground shrink-0">
+                    {listing.views} views
+                  </div>
                 </div>
               ))}
-              {vehicles.length === 0 && (
-                <p className="text-[12px] text-muted-foreground">Create listings to see analytics.</p>
+              {activeListings.length === 0 && (
+                <p className="text-[12px] text-muted-foreground">Publish listings to see analytics.</p>
               )}
             </div>
           </div>
