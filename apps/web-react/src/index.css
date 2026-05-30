@@ -192,6 +192,20 @@
   animation: fadeIn 0.3s ease-in-out;
 }
 
+.leaflet-container {
+  z-index: 0;
+}
+
+.leaflet-pane,
+.leaflet-top,
+.leaflet-bottom {
+  z-index: auto;
+}
+
+.leaflet-control {
+  z-index: 10;
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;

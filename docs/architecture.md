@@ -1,32 +1,34 @@
 # Kerodex Architecture
 
-## Zero-Cost First Step
+## Current Local Architecture
 
-Start with a modular monolith locally:
+Kerodex currently runs as a low-cost modular prototype:
 
-- Static responsive web app.
-- Node API with REST endpoints.
-- JSON-backed local seed store behind the API.
-- Server-sent events for live listing updates.
-- No cloud bill.
+- React/Vite/Tailwind web app in `apps/web-react`.
+- Node API/static server in `apps/api`.
+- The API serves `apps/web-react/dist` when a React build exists and falls back to the legacy static prototype in `apps/web/public`.
+- REST endpoints for listings, conversations, demo auth, and VIN decode.
+- JSON-backed local seed store behind the API, with a Postgres-ready adapter.
+- Leaflet/CARTO client maps with price pins and listing popup cards.
+- No required cloud bill for local development.
 
 This keeps the product moving while preserving boundaries for later extraction.
 
 ## Near-Free MVP
 
-- Web: Next.js when dependencies are installed, deployed to Vercel or Cloudflare Pages free tier.
-- API: NestJS or Fastify service on a free/low-cost host.
-- Database: Neon or Supabase free Postgres.
-- Search: Postgres full-text + trigram indexes before OpenSearch.
-- Media: local uploads in dev, S3-compatible storage later.
+- Web: keep the React app, then decide between Vite static hosting or Next.js if SSR becomes useful.
+- API: current Node server can evolve into Fastify/NestJS once routing and middleware needs grow.
+- Database: Neon, Supabase, or AWS RDS Postgres when hosting leaves local JSON.
+- Search: Postgres full-text, trigram, and geo queries before OpenSearch.
+- Media: local previews in dev, S3-compatible storage for real uploads.
 - Realtime: WebSockets or Server-Sent Events; Redis only when needed.
-- Maps: Mapbox free tier with strict token/domain limits.
+- Maps: Leaflet/CARTO during beta; consider Google/Mapbox only if routing, geocoding, or usage needs justify keys/cost.
 
 ## Scale Target
 
 ```mermaid
 flowchart LR
-  Web["Next.js Web"] --> Gateway["API Gateway"]
+  Web["React/Vite or Next.js Web"] --> Gateway["API Gateway"]
   IOS["React Native iOS"] --> Gateway
   Android["React Native Android"] --> Gateway
   Gateway --> Auth["Auth Service"]

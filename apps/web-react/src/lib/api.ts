@@ -15,6 +15,16 @@ export interface AuthSession {
   user: KerodexUser;
 }
 
+export interface ConversationRecord {
+  id: string;
+  listingId: string;
+  buyerName: string;
+  sellerName: string;
+  lastMessage: string;
+  unread: number;
+  updatedAt: string;
+}
+
 type ListingPayload = Record<string, any>;
 
 function apiUrl(path: string) {
@@ -131,6 +141,11 @@ export async function createVehicle(payload: ListingPayload) {
     body: JSON.stringify(payload),
   });
   return toVehicle(body.listing);
+}
+
+export async function listConversations() {
+  const body = await request<{ conversations: ConversationRecord[] }>('/api/conversations');
+  return body.conversations;
 }
 
 export function saveVehicleLocal(vehicleId: string, saved: boolean) {

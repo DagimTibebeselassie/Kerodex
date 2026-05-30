@@ -2,31 +2,40 @@
 
 ## Phase 0: Local Foundation
 
-- Dependency-free API and web prototype.
-- Seed listings.
-- Responsive premium UI.
-- Initial schema and architecture docs.
+- Node API/static server.
+- React/Vite web app with premium responsive UI.
+- Seed listings and demo conversations.
+- Grid/map search with Leaflet/CARTO.
+- Listing details, listing creation, saved cars, messages, verification, and seller cockpit UI.
+- VIN decode bridge through the backend.
+- Initial schema, API, architecture, and product docs.
 
 ## Phase 1: Real MVP
 
-- Next.js web app with TypeScript.
-- Auth with email/OAuth.
+- Production auth with email/OAuth.
 - Postgres database.
-- Listing CRUD.
-- Image upload pipeline.
-- Basic map browse.
-- Saved listings.
-- Seller dashboard v1.
+- Database-backed listing CRUD.
+- S3 image upload pipeline with EXIF stripping and optional plate blur.
+- Saved listings persisted to user accounts.
+- Real message send/store endpoints.
+- Seller cockpit backed by real listing/message/save data.
+- Geo radius filtering and closest-first sorting.
+- Location autofill/geocoding for listing creation.
 
 ## Phase 2: Marketplace Trust
 
-- Messaging.
+- Phone verification provider.
+- Email verification hardening.
+- Identity verification provider evaluation.
+- Ownership document review workflow.
+- Vehicle photo challenge with generated Kerodex code.
+- Listing trust score backed by real verification events.
+- Maintenance record vault.
 - Offers and counter-offers.
-- Seller verification.
-- Phone verification.
 - Fraud reports.
 - Moderation queue.
 - Vehicle history and recall integrations.
+- Market value provider or internal pricing model.
 
 ## Phase 3: Search Power
 

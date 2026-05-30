@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { Vehicle } from '@/types';
+import { savedVehicleIds, saveVehicleLocal } from '@/lib/api';
 import { Heart, MapPin, Gauge, BadgeCheck, Star } from 'lucide-react';
 
 interface VehicleCardProps {
@@ -20,7 +21,7 @@ export function VehicleCard({
   isVerified = false,
   className = '',
 }: VehicleCardProps) {
-  const [saved, setSaved] = useState(savedIds?.has(vehicle.id) ?? false);
+  const [saved, setSaved] = useState(savedIds?.has(vehicle.id) ?? savedVehicleIds().has(vehicle.id));
 
   const imageUrl = (() => {
     try {
@@ -36,6 +37,7 @@ export function VehicleCard({
     e.stopPropagation();
     const next = !saved;
     setSaved(next);
+    saveVehicleLocal(vehicle.id, next);
     onSave?.(vehicle.id, next);
   };
 
