@@ -3,21 +3,6 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { URL } = require("url");
-const store = require("./store");
-
-loadLocalEnvFile(path.resolve(__dirname, "../../.env.local"));
-loadLocalEnvFile(path.resolve(__dirname, "../../.env"));
-
-const PORT = Number(process.env.PORT || 4100);
-const REACT_DIST_DIR = path.resolve(__dirname, "../web-react/dist");
-const PUBLIC_DIR = fs.existsSync(REACT_DIST_DIR)
-  ? REACT_DIST_DIR
-  : path.resolve(__dirname, "../web/public");
-const users = new Map();
-const sessions = new Map();
-const adminSessions = new Map();
-const oauthStates = new Map();
-const emailVerifications = new Map();
 
 function loadLocalEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return;
@@ -31,6 +16,21 @@ function loadLocalEnvFile(filePath) {
     if (key && process.env[key] === undefined) process.env[key] = value;
   }
 }
+
+loadLocalEnvFile(path.resolve(__dirname, "../../.env.local"));
+loadLocalEnvFile(path.resolve(__dirname, "../../.env"));
+
+const store = require("./store");
+const PORT = Number(process.env.PORT || 4100);
+const REACT_DIST_DIR = path.resolve(__dirname, "../web-react/dist");
+const PUBLIC_DIR = fs.existsSync(REACT_DIST_DIR)
+  ? REACT_DIST_DIR
+  : path.resolve(__dirname, "../web/public");
+const users = new Map();
+const sessions = new Map();
+const adminSessions = new Map();
+const oauthStates = new Map();
+const emailVerifications = new Map();
 
 const adminRoles = {
   support_agent: ["dashboard:read", "users:read", "reports:read", "reports:write", "audit:read"],
