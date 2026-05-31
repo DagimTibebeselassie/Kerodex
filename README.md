@@ -11,7 +11,7 @@ The product goal is simple: help real owners sell real cars directly to buyers w
 - Premium responsive web marketplace UI.
 - Dedicated search results experience with grid and map modes.
 - Local Node.js API with realistic seed listings.
-- Local authentication demo flow for email, Google, and Apple placeholders.
+- Local authentication flow with email verification plus Google and Microsoft OAuth hooks.
 - Separate local admin dashboard app with protected admin API routes, role-based access, analytics, moderation queues, verification review, CSV exports, and immutable audit-log scaffolding.
 - Leaflet/CARTO map browsing with grid/map search modes, clickable vehicle pins, and theme-aware map tiles.
 - Removable beta/demo inventory notice for public launch preparation.
@@ -86,6 +86,24 @@ Access code: kerodex-admin-local
 ```
 
 Set `ADMIN_ACCESS_CODE` before starting the API to change the local admin access code.
+
+Copy `.env.example` to `.env.local` for local secrets. The API loads `.env.local` automatically and the file is ignored by Git.
+
+```powershell
+Copy-Item .env.example .env.local
+```
+
+OAuth and email verification use these variables:
+
+```text
+GOOGLE_CLIENT_ID
+GOOGLE_CLIENT_SECRET
+MICROSOFT_CLIENT_ID
+MICROSOFT_CLIENT_SECRET
+MICROSOFT_TENANT_ID
+RESEND_API_KEY
+AUTH_EMAIL_FROM
+```
 
 Run tests:
 
@@ -177,8 +195,8 @@ As the app grows, CI/CD should expand to:
 Current prototype:
 
 - No production secrets should be committed.
-- No real OAuth client IDs are required locally.
-- Demo auth is intentionally local-only.
+- OAuth secrets must stay in `.env.local` locally or in the host environment in production.
+- Email verification uses Resend when `RESEND_API_KEY` and `AUTH_EMAIL_FROM` are set; otherwise local development displays a temporary code.
 
 Production direction:
 

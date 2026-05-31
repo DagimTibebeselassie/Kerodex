@@ -9,6 +9,25 @@ interface AuthModalProps {
   defaultTab?: 'login' | 'signup';
 }
 
+function GoogleLogo() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" aria-hidden="true">
+      <path fill="currentColor" d="M21.6 12.23c0-.75-.07-1.47-.19-2.16H12v4.09h5.38a4.6 4.6 0 0 1-1.99 3.02v2.51h3.22c1.89-1.74 2.99-4.3 2.99-7.46Z" />
+      <path fill="currentColor" d="M12 22c2.7 0 4.96-.89 6.61-2.41l-3.22-2.51c-.9.6-2.04.95-3.39.95-2.6 0-4.8-1.75-5.59-4.11H3.08v2.59A9.99 9.99 0 0 0 12 22Z" opacity=".82" />
+      <path fill="currentColor" d="M6.41 13.92A6.01 6.01 0 0 1 6.1 12c0-.67.11-1.32.31-1.92V7.49H3.08A9.99 9.99 0 0 0 2 12c0 1.61.39 3.13 1.08 4.51l3.33-2.59Z" opacity=".64" />
+      <path fill="currentColor" d="M12 5.97c1.47 0 2.79.5 3.82 1.49l2.86-2.86C16.95 2.99 14.69 2 12 2a9.99 9.99 0 0 0-8.92 5.49l3.33 2.59C7.2 7.72 9.4 5.97 12 5.97Z" opacity=".9" />
+    </svg>
+  );
+}
+
+function MicrosoftLogo() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" aria-hidden="true">
+      <path fill="currentColor" d="M3 3h8.4v8.4H3V3Zm9.6 0H21v8.4h-8.4V3ZM3 12.6h8.4V21H3v-8.4Zm9.6 0H21V21h-8.4v-8.4Z" />
+    </svg>
+  );
+}
+
 export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalProps) {
   const [tab, setTab] = useState<'login' | 'signup'>(defaultTab);
   const [email, setEmail] = useState('');
@@ -217,7 +236,7 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
           <Button
             type="button"
             variant="outline"
-            className="h-10 text-[11px] font-bold uppercase tracking-wider"
+            className="h-10 text-[11px] font-bold uppercase tracking-wider inline-flex items-center justify-center gap-2"
             onClick={async () => {
               setError('');
               setIsLoading(true);
@@ -231,26 +250,28 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
               }
             }}
           >
+            <GoogleLogo />
             Google
           </Button>
           <Button
             type="button"
             variant="outline"
-            className="h-10 text-[11px] font-bold uppercase tracking-wider"
+            className="h-10 text-[11px] font-bold uppercase tracking-wider inline-flex items-center justify-center gap-2"
             onClick={async () => {
               setError('');
               setIsLoading(true);
               try {
-                await socialAuth('apple');
+                await socialAuth('microsoft');
                 onClose();
               } catch (err: any) {
-                setError(err.message || 'Apple sign in failed');
+                setError(err.message || 'Microsoft sign in failed');
               } finally {
                 setIsLoading(false);
               }
             }}
           >
-            Apple
+            <MicrosoftLogo />
+            Microsoft
           </Button>
         </div>}
 

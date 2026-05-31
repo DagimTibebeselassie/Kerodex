@@ -11,8 +11,15 @@ GET /api/health
 GET /api/listings
 GET /api/listings/:id
 GET /api/conversations
+POST /api/conversations
 GET /api/events
 GET /api/vin/decode/:vin
+GET /api/auth/google
+GET /api/auth/microsoft
+GET /api/auth/callback/google
+GET /api/auth/callback/microsoft
+POST /api/auth/email
+POST /api/auth/email/verify
 ```
 
 ## Admin Routes
@@ -77,7 +84,7 @@ Message-content access must remain gated behind a report, fraud investigation, o
 ```http
 POST /auth/login
 POST /auth/oauth/google
-POST /auth/oauth/apple
+POST /auth/oauth/microsoft
 GET /users/me
 PATCH /users/me
 POST /listings

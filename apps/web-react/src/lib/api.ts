@@ -148,7 +148,7 @@ export async function verifyEmail(email: string, code: string) {
   return session;
 }
 
-export async function socialAuth(provider: 'google' | 'apple') {
+export async function socialAuth(provider: 'google' | 'microsoft') {
   window.location.assign(apiUrl(`/api/auth/${provider}`));
 }
 

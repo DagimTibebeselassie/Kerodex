@@ -5,6 +5,9 @@ const crypto = require("crypto");
 const { URL } = require("url");
 const store = require("./store");
 
+loadLocalEnvFile(path.resolve(__dirname, "../../.env.local"));
+loadLocalEnvFile(path.resolve(__dirname, "../../.env"));
+
 const PORT = Number(process.env.PORT || 4100);
 const REACT_DIST_DIR = path.resolve(__dirname, "../web-react/dist");
 const PUBLIC_DIR = fs.existsSync(REACT_DIST_DIR)
@@ -15,6 +18,19 @@ const sessions = new Map();
 const adminSessions = new Map();
 const oauthStates = new Map();
 const emailVerifications = new Map();
+
+function loadLocalEnvFile(filePath) {
+  if (!fs.existsSync(filePath)) return;
+  const lines = fs.readFileSync(filePath, "utf8").split(/\r?\n/);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#") || !trimmed.includes("=")) continue;
+    const index = trimmed.indexOf("=");
+    const key = trimmed.slice(0, index).trim();
+    const value = trimmed.slice(index + 1).trim().replace(/^["']|["']$/g, "");
+    if (key && process.env[key] === undefined) process.env[key] = value;
+  }
+}
 
 const adminRoles = {
   support_agent: ["dashboard:read", "users:read", "reports:read", "reports:write", "audit:read"],
@@ -239,14 +255,14 @@ function createSession(user) {
 }
 
 function upsertSocialUser(provider) {
-  const email = provider === "apple" ? "apple.demo@kerodex.local" : "google.demo@kerodex.local";
+  const email = provider === "microsoft" ? "microsoft.demo@kerodex.local" : "google.demo@kerodex.local";
   const existing = users.get(email);
   if (existing) return existing;
 
   const user = {
     id: `usr_${users.size + 1}`,
     email,
-    name: provider === "apple" ? "Apple Demo User" : "Google Demo User",
+    name: provider === "microsoft" ? "Microsoft Demo User" : "Google Demo User",
     password: null,
     provider,
     emailVerified: false,
@@ -301,31 +317,6 @@ function consumeOAuthState(state, provider) {
   return record && record.provider === provider && Date.now() - record.createdAt < 10 * 60 * 1000;
 }
 
-function base64Url(input) {
-  return Buffer.from(input).toString("base64").replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
-}
-
-function makeAppleClientSecret() {
-  const clientId = process.env.APPLE_CLIENT_ID;
-  const teamId = process.env.APPLE_TEAM_ID;
-  const keyId = process.env.APPLE_KEY_ID;
-  const privateKey = (process.env.APPLE_PRIVATE_KEY || "").replace(/\\n/g, "\n");
-  if (!clientId || !teamId || !keyId || !privateKey) {
-    throw new Error("Apple sign in needs APPLE_CLIENT_ID, APPLE_TEAM_ID, APPLE_KEY_ID, and APPLE_PRIVATE_KEY.");
-  }
-  const now = Math.floor(Date.now() / 1000);
-  const header = base64Url(JSON.stringify({ alg: "ES256", kid: keyId }));
-  const payload = base64Url(JSON.stringify({
-    iss: teamId,
-    iat: now,
-    exp: now + 60 * 60 * 24 * 30,
-    aud: "https://appleid.apple.com",
-    sub: clientId
-  }));
-  const signature = crypto.createSign("SHA256").update(`${header}.${payload}`).sign(privateKey);
-  return `${header}.${payload}.${base64Url(signature)}`;
-}
-
 function decodeJwtPayload(jwt) {
   const payload = String(jwt || "").split(".")[1];
   if (!payload) return {};
@@ -359,25 +350,26 @@ async function exchangeGoogleCode({ code, redirectUri }) {
   };
 }
 
-async function exchangeAppleCode({ code, redirectUri }) {
-  const response = await fetch("https://appleid.apple.com/auth/token", {
+async function exchangeMicrosoftCode({ code, redirectUri }) {
+  const tenant = process.env.MICROSOFT_TENANT_ID || "common";
+  const response = await fetch(`https://login.microsoftonline.com/${encodeURIComponent(tenant)}/oauth2/v2.0/token`, {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
       code,
-      client_id: process.env.APPLE_CLIENT_ID,
-      client_secret: makeAppleClientSecret(),
+      client_id: process.env.MICROSOFT_CLIENT_ID,
+      client_secret: process.env.MICROSOFT_CLIENT_SECRET,
       redirect_uri: redirectUri,
       grant_type: "authorization_code"
     })
   });
   const tokenBody = await response.json();
-  if (!response.ok) throw new Error(tokenBody.error_description || tokenBody.error || "Apple token exchange failed.");
+  if (!response.ok) throw new Error(tokenBody.error_description || tokenBody.error || "Microsoft token exchange failed.");
   const payload = decodeJwtPayload(tokenBody.id_token);
   return {
-    email: payload.email,
-    name: payload.email ? String(payload.email).split("@")[0] : "Apple user",
-    emailVerified: payload.email_verified === true || payload.email_verified === "true"
+    email: payload.email || payload.preferred_username || payload.upn,
+    name: payload.name || (payload.email ? String(payload.email).split("@")[0] : "Microsoft user"),
+    emailVerified: true
   };
 }
 
@@ -417,7 +409,10 @@ async function sendVerificationEmail({ email, code, req }) {
 }
 
 function sendAuthSetup(res, provider) {
-  const label = provider === "apple" ? "Apple" : "Google";
+  const label = provider === "microsoft" ? "Microsoft" : "Google";
+  const expectedEnv = provider === "microsoft"
+    ? "MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET"
+    : "GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET";
   sendHtml(res, 200, `<!doctype html>
     <html lang="en">
       <head>
@@ -430,7 +425,7 @@ function sendAuthSetup(res, provider) {
           <p style="color:#5eead4;font-weight:800;letter-spacing:.08em;text-transform:uppercase;margin:0 0 12px">Auth setup required</p>
           <h1 style="font-size:clamp(2rem,5vw,4rem);line-height:1;margin:0 0 18px">${label} login is ready to wire up.</h1>
           <p style="color:#a7b0bf;line-height:1.6">To avoid the OAuth 401 invalid client error, Kerodex will not send you to ${label} with a fake client ID. Add a real ${label} client ID in the server environment, then this route will redirect to the provider.</p>
-          <p style="color:#a7b0bf;line-height:1.6"><strong style="color:#f8fafc">Expected env var:</strong> ${provider === "apple" ? "APPLE_CLIENT_ID" : "GOOGLE_CLIENT_ID"}</p>
+          <p style="color:#a7b0bf;line-height:1.6"><strong style="color:#f8fafc">Expected env vars:</strong> ${expectedEnv}</p>
           <a href="/?v=10#browse" style="display:inline-flex;align-items:center;min-height:44px;background:#f8fafc;color:#0b1119;border-radius:999px;padding:0 18px;text-decoration:none;font-weight:800">Back to Kerodex</a>
         </main>
       </body>
@@ -879,30 +874,33 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  if (url.pathname === "/api/auth/apple") {
-    const clientId = process.env.APPLE_CLIENT_ID;
-    if (!clientId || !process.env.APPLE_TEAM_ID || !process.env.APPLE_KEY_ID || !process.env.APPLE_PRIVATE_KEY) {
+  if (url.pathname === "/api/auth/microsoft") {
+    const clientId = process.env.MICROSOFT_CLIENT_ID;
+    const clientSecret = process.env.MICROSOFT_CLIENT_SECRET;
+    if (!clientId || !clientSecret) {
       if ((req.headers.accept || "").includes("application/json")) {
-        sendJson(res, 503, { error: "Apple sign in needs APPLE_CLIENT_ID, APPLE_TEAM_ID, APPLE_KEY_ID, and APPLE_PRIVATE_KEY." });
+        sendJson(res, 503, { error: "Microsoft sign in needs MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET." });
         return;
       }
-      sendAuthSetup(res, "apple");
+      sendAuthSetup(res, "microsoft");
       return;
     }
-    const redirectUri = `${appOrigin(req)}/api/auth/callback/apple`;
-    const authUrl = new URL("https://appleid.apple.com/auth/authorize");
+    const tenant = process.env.MICROSOFT_TENANT_ID || "common";
+    const redirectUri = `${appOrigin(req)}/api/auth/callback/microsoft`;
+    const authUrl = new URL(`https://login.microsoftonline.com/${encodeURIComponent(tenant)}/oauth2/v2.0/authorize`);
     authUrl.searchParams.set("client_id", clientId);
     authUrl.searchParams.set("redirect_uri", redirectUri);
-    authUrl.searchParams.set("response_type", "code id_token");
-    authUrl.searchParams.set("scope", "name email");
-    authUrl.searchParams.set("response_mode", "form_post");
-    authUrl.searchParams.set("state", makeOAuthState("apple"));
+    authUrl.searchParams.set("response_type", "code");
+    authUrl.searchParams.set("scope", "openid email profile");
+    authUrl.searchParams.set("response_mode", "query");
+    authUrl.searchParams.set("prompt", "select_account");
+    authUrl.searchParams.set("state", makeOAuthState("microsoft"));
     redirect(res, authUrl.toString());
     return;
   }
 
   if (url.pathname.startsWith("/api/auth/callback/")) {
-    const provider = url.pathname.endsWith("/apple") ? "apple" : "google";
+    const provider = url.pathname.endsWith("/microsoft") ? "microsoft" : "google";
     const readPayload = req.method === "POST" ? readForm(req) : Promise.resolve(Object.fromEntries(url.searchParams));
     readPayload
       .then(async (payload) => {
@@ -912,8 +910,8 @@ const server = http.createServer((req, res) => {
           throw new Error("OAuth state is invalid or expired. Try signing in again.");
         }
         const redirectUri = `${appOrigin(req)}/api/auth/callback/${provider}`;
-        const profile = provider === "apple"
-          ? await exchangeAppleCode({ code, redirectUri })
+        const profile = provider === "microsoft"
+          ? await exchangeMicrosoftCode({ code, redirectUri })
           : await exchangeGoogleCode({ code, redirectUri });
         const user = upsertOAuthUser(provider, profile);
         const session = createSession(user);
