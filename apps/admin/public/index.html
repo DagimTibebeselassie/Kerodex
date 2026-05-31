@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Kerodex Admin</title>
+    <link rel="stylesheet" href="/admin.css">
+  </head>
+  <body>
+    <section class="login-shell" id="loginShell">
+      <form class="login-card" id="loginForm">
+        <div class="brand-row">
+          <span class="brand-mark">K</span>
+          <div>
+            <strong>Kerodex Admin</strong>
+            <span>Private marketplace operations</span>
+          </div>
+        </div>
+        <h1>Operate the marketplace from one secure console.</h1>
+        <label>
+          Admin email
+          <input id="adminEmail" type="email" value="admin@kerodex.local" autocomplete="username">
+        </label>
+        <label>
+          Access code
+          <input id="adminCode" type="password" value="kerodex-admin-local" autocomplete="current-password">
+        </label>
+        <button type="submit">Sign in</button>
+        <p id="loginMessage">Local demo code is controlled by <code>ADMIN_ACCESS_CODE</code>.</p>
+      </form>
+    </section>
+
+    <main class="admin-shell" id="adminShell" hidden>
+      <aside class="sidebar">
+        <div class="brand-row">
+          <span class="brand-mark">K</span>
+          <div>
+            <strong>Kerodex</strong>
+            <span id="adminRole">Admin</span>
+          </div>
+        </div>
+        <nav id="navTabs">
+          <button class="active" data-view="overview">Overview</button>
+          <button data-view="analytics">Website Analytics</button>
+          <button data-view="users">Users</button>
+          <button data-view="verification">Verification</button>
+          <button data-view="listings">Listings</button>
+          <button data-view="moderation">Moderation</button>
+          <button data-view="reports">Reports</button>
+          <button data-view="messages">Messages</button>
+          <button data-view="financials">Financials</button>
+          <button data-view="system">System</button>
+          <button data-view="audit">Audit Logs</button>
+        </nav>
+        <button class="ghost" id="themeToggle">Toggle dark mode</button>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Internal administrator dashboard</p>
+            <h1 id="viewTitle">Overview</h1>
+          </div>
+          <div class="top-actions">
+            <label class="global-search">
+              <span>Global search</span>
+              <input id="globalSearch" placeholder="User, VIN, email, phone, listing ID, report ID">
+            </label>
+            <button id="refreshButton">Refresh</button>
+          </div>
+        </header>
+
+        <section class="notifications" id="notifications"></section>
+        <section class="search-results" id="searchResults" hidden></section>
+
+        <section class="view active" id="overviewView">
+          <div class="metric-grid" id="metricGrid"></div>
+          <div class="two-column">
+            <article class="panel">
+              <div class="panel-heading">
+                <h2>Marketplace Activity</h2>
+                <button data-export="listings">Export CSV</button>
+              </div>
+              <div class="chart" id="visitorChart"></div>
+            </article>
+            <article class="panel">
+              <div class="panel-heading">
+                <h2>Marketplace Funnel</h2>
+              </div>
+              <div class="funnel" id="funnel"></div>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" id="analyticsView">
+          <div class="metric-grid compact" id="websiteMetrics"></div>
+          <div class="three-column">
+            <article class="panel"><h2>Visitors Over Time</h2><div class="chart" id="analyticsVisitors"></div></article>
+            <article class="panel"><h2>Page Views</h2><div class="chart" id="analyticsPages"></div></article>
+            <article class="panel"><h2>Conversions</h2><div class="chart" id="analyticsConversions"></div></article>
+          </div>
+          <div class="two-column">
+            <article class="panel"><h2>Traffic Sources</h2><div class="breakdown" id="trafficSources"></div></article>
+            <article class="panel"><h2>Device and Location</h2><div class="breakdown" id="deviceBreakdown"></div></article>
+          </div>
+        </section>
+
+        <section class="view" id="usersView">
+          <div class="table-toolbar">
+            <input id="userFilter" placeholder="Search users by name, email, phone">
+            <select id="userStatus"><option value="">All statuses</option><option>active</option><option>suspended</option><option>banned</option></select>
+            <button data-export="users">Export CSV</button>
+          </div>
+          <div class="table-wrap"><table id="usersTable"></table></div>
+          <article class="panel detail-panel" id="userDetail"></article>
+        </section>
+
+        <section class="view" id="verificationView">
+          <div class="queue-tabs" data-target="verificationStatus">
+            <button data-status="" class="active">All</button>
+            <button data-status="pending">Pending</button>
+            <button data-status="approved">Approved</button>
+            <button data-status="rejected">Rejected</button>
+            <button data-status="expired">Expired</button>
+          </div>
+          <div class="table-wrap"><table id="verificationTable"></table></div>
+        </section>
+
+        <section class="view" id="listingsView">
+          <div class="queue-tabs" data-target="listingStatus">
+            <button data-status="" class="active">All</button>
+            <button data-status="active">Active</button>
+            <button data-status="sold">Sold</button>
+            <button data-status="pending">Pending</button>
+            <button data-status="flagged">Flagged</button>
+            <button data-status="removed">Removed</button>
+          </div>
+          <div class="table-toolbar">
+            <input id="listingFilter" placeholder="Search listings, VIN, seller">
+            <button data-export="listings">Export CSV</button>
+          </div>
+          <div class="table-wrap"><table id="listingsTable"></table></div>
+        </section>
+
+        <section class="view" id="moderationView">
+          <div class="risk-board" id="riskBoard"></div>
+          <div class="table-wrap"><table id="fraudTable"></table></div>
+        </section>
+
+        <section class="view" id="reportsView">
+          <div class="table-wrap"><table id="reportsTable"></table></div>
+        </section>
+
+        <section class="view" id="messagesView">
+          <div class="two-column">
+            <article class="panel">
+              <h2>Message Governance</h2>
+              <p>Admins can only open message content when a report, fraud investigation, or legal requirement exists. Every access is written to immutable audit logs.</p>
+              <div class="metric-grid compact" id="messageMetrics"></div>
+            </article>
+            <article class="panel">
+              <h2>Investigation Workspace</h2>
+              <div class="workspace-map">
+                <span>Users</span><span>Listings</span><span>Messages</span><span>Reports</span><span>IPs</span><span>Documents</span>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="view" id="financialsView">
+          <div class="table-wrap"><table id="revenueTable"></table></div>
+        </section>
+
+        <section class="view" id="systemView">
+          <div class="metric-grid compact" id="systemMetrics"></div>
+          <div class="two-column">
+            <article class="panel"><h2>Feature Flags</h2><div class="breakdown" id="featureFlags"></div></article>
+            <article class="panel"><h2>Support Tickets</h2><div class="breakdown" id="tickets"></div></article>
+          </div>
+        </section>
+
+        <section class="view" id="auditView">
+          <div class="table-toolbar">
+            <button data-export="audit-logs">Export CSV</button>
+          </div>
+          <div class="table-wrap"><table id="auditTable"></table></div>
+        </section>
+      </section>
+    </main>
+    <script src="/admin.js"></script>
+  </body>
+</html>

@@ -15,6 +15,40 @@ GET /api/events
 GET /api/vin/decode/:vin
 ```
 
+## Admin Routes
+
+The admin dashboard is a separate frontend app and never connects directly to the database. It talks to protected admin-only API routes. Local development uses a demo access-code login; production should replace this with hardened auth, MFA, device checks, and optional IP allowlisting or Cloudflare Access.
+
+```http
+POST /api/admin/auth/login
+GET /api/admin/session
+GET /api/admin/dashboard
+GET /api/admin/analytics
+GET /api/admin/search?q=
+GET /api/admin/users
+GET /api/admin/users/:id
+PATCH /api/admin/users/:id/actions
+GET /api/admin/listings
+PATCH /api/admin/listings/:id/actions
+GET /api/admin/verifications
+PATCH /api/admin/verifications/:id/actions
+GET /api/admin/reports
+PATCH /api/admin/reports/:id/actions
+GET /api/admin/fraud-flags
+PATCH /api/admin/fraud-flags/:id/actions
+GET /api/admin/audit-logs
+GET /api/admin/system
+GET /api/admin/notifications
+GET /api/admin/feature-flags
+GET /api/admin/tickets
+GET /api/admin/export/:collection
+GET /api/admin/events
+```
+
+Admin roles are scaffolded as `support_agent`, `verification_specialist`, `moderator`, `administrator`, and `super_admin`. Every admin mutation records an immutable audit entry with timestamp, admin account, action type, previous value, and new value.
+
+Message-content access must remain gated behind a report, fraud investigation, or legal requirement. The current UI exposes that rule and the API audit-log foundation; production should enforce message-content access with a dedicated permission and investigation record.
+
 ## Listing Query Parameters
 
 - `q` - keyword search across title, make, model, trim, body, fuel, and features.

@@ -1,13 +1,35 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const crypto = require("crypto");
 const { URL } = require("url");
 const store = require("./store");
 
 const PORT = Number(process.env.PORT || 4100);
-const PUBLIC_DIR = path.resolve(__dirname, "../web/public");
+const REACT_DIST_DIR = path.resolve(__dirname, "../web-react/dist");
+const PUBLIC_DIR = fs.existsSync(REACT_DIST_DIR)
+  ? REACT_DIST_DIR
+  : path.resolve(__dirname, "../web/public");
 const users = new Map();
 const sessions = new Map();
+const adminSessions = new Map();
+const oauthStates = new Map();
+const emailVerifications = new Map();
+
+const adminRoles = {
+  support_agent: ["dashboard:read", "users:read", "reports:read", "reports:write", "audit:read"],
+  verification_specialist: ["dashboard:read", "users:read", "verifications:read", "verifications:write", "audit:read"],
+  moderator: ["dashboard:read", "users:read", "listings:read", "listings:write", "reports:read", "reports:write", "fraud:read", "fraud:write", "audit:read"],
+  administrator: ["dashboard:read", "users:read", "users:write", "listings:read", "listings:write", "verifications:read", "verifications:write", "reports:read", "reports:write", "fraud:read", "fraud:write", "analytics:read", "system:read", "audit:read"],
+  super_admin: ["*"]
+};
+
+const adminAccounts = [
+  { id: "adm_001", email: "admin@kerodex.local", name: "Kerodex Admin", role: "super_admin" },
+  { id: "adm_002", email: "moderator@kerodex.local", name: "Marketplace Moderator", role: "moderator" },
+  { id: "adm_003", email: "verify@kerodex.local", name: "Verification Specialist", role: "verification_specialist" },
+  { id: "adm_004", email: "support@kerodex.local", name: "Support Agent", role: "support_agent" }
+];
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -46,6 +68,16 @@ function sendHtml(res, status, html) {
   res.end(html);
 }
 
+function sendCsv(res, fileName, csv) {
+  res.writeHead(200, {
+    "content-type": "text/csv; charset=utf-8",
+    "content-disposition": `attachment; filename="${fileName}"`,
+    "cache-control": "no-store",
+    "access-control-allow-origin": "*"
+  });
+  res.end(csv);
+}
+
 function readJson(req) {
   return new Promise((resolve, reject) => {
     let body = "";
@@ -71,8 +103,112 @@ function readJson(req) {
   });
 }
 
+function readText(req) {
+  return new Promise((resolve, reject) => {
+    let body = "";
+    req.on("data", (chunk) => {
+      body += chunk;
+      if (body.length > 1_000_000) {
+        req.destroy();
+        reject(new Error("Request body too large"));
+      }
+    });
+    req.on("end", () => resolve(body));
+    req.on("error", reject);
+  });
+}
+
+async function readForm(req) {
+  const body = await readText(req);
+  return Object.fromEntries(new URLSearchParams(body));
+}
+
 function makeToken() {
   return `dev_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
+}
+
+function makeCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+function publicAdmin(admin) {
+  return {
+    id: admin.id,
+    email: admin.email,
+    name: admin.name,
+    role: admin.role,
+    permissions: adminRoles[admin.role] || []
+  };
+}
+
+function hasAdminPermission(admin, permission) {
+  const permissions = adminRoles[admin.role] || [];
+  return permissions.includes("*") || permissions.includes(permission);
+}
+
+function getAdminFromRequest(req) {
+  const auth = req.headers.authorization || "";
+  const requestUrl = new URL(req.url, `http://${req.headers.host}`);
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : requestUrl.searchParams.get("token") || "";
+  const adminId = adminSessions.get(token);
+  return adminAccounts.find((account) => account.id === adminId);
+}
+
+function requireAdmin(req, res, permission) {
+  const admin = getAdminFromRequest(req);
+  if (!admin) {
+    sendJson(res, 401, { error: "Admin sign-in required." });
+    return null;
+  }
+  if (permission && !hasAdminPermission(admin, permission)) {
+    sendJson(res, 403, { error: "This admin role cannot access that resource.", requiredPermission: permission });
+    return null;
+  }
+  return admin;
+}
+
+function adminLogin(body) {
+  const email = normalize(body.email);
+  const code = String(body.accessCode || "");
+  const expectedCode = process.env.ADMIN_ACCESS_CODE || "kerodex-admin-local";
+  const admin = adminAccounts.find((account) => account.email === email);
+  if (!admin || code !== expectedCode) return null;
+  const token = makeToken();
+  adminSessions.set(token, admin.id);
+  return { token, admin: publicAdmin(admin) };
+}
+
+function sendAdminEvents(req, res) {
+  const admin = requireAdmin(req, res, "dashboard:read");
+  if (!admin) return;
+
+  res.writeHead(200, {
+    "content-type": "text/event-stream",
+    "cache-control": "no-cache",
+    connection: "keep-alive",
+    "access-control-allow-origin": "*"
+  });
+
+  const priorities = ["medium", "high", "critical"];
+  const types = ["New Verification Submission", "New Ownership Verification", "New Fraud Alert", "New User Report", "Critical System Error", "High-Risk Listing", "High-Risk User"];
+  let count = 0;
+  const send = () => {
+    const event = {
+      id: `live_${Date.now()}`,
+      type: types[count % types.length],
+      priority: priorities[count % priorities.length],
+      message: `${types[count % types.length]} requires admin review.`,
+      createdAt: new Date().toISOString(),
+      adminRole: admin.role
+    };
+    res.write(`event: admin.notification\n`);
+    res.write(`data: ${JSON.stringify(event)}\n\n`);
+    count += 1;
+  };
+
+  send();
+  const timer = setInterval(send, 15000);
+  req.on("close", () => clearInterval(timer));
 }
 
 function publicUser(user) {
@@ -80,8 +216,20 @@ function publicUser(user) {
     id: user.id,
     email: user.email,
     name: user.name,
-    provider: user.provider
+    provider: user.provider,
+    emailVerified: Boolean(user.emailVerified),
+    phoneVerified: Boolean(user.phoneVerified),
+    identityVerified: Boolean(user.identityVerified),
+    selfieVerified: Boolean(user.selfieVerified)
   };
+}
+
+function getAuthUser(req) {
+  const auth = req.headers.authorization || "";
+  const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+  const userId = sessions.get(token);
+  if (!userId) return null;
+  return Array.from(users.values()).find((item) => item.id === userId) || null;
 }
 
 function createSession(user) {
@@ -100,10 +248,172 @@ function upsertSocialUser(provider) {
     email,
     name: provider === "apple" ? "Apple Demo User" : "Google Demo User",
     password: null,
-    provider
+    provider,
+    emailVerified: false,
+    phoneVerified: false,
+    identityVerified: false,
+    selfieVerified: false
   };
   users.set(email, user);
   return user;
+}
+
+function upsertOAuthUser(provider, profile) {
+  const email = normalize(profile.email);
+  if (!email) throw new Error("The provider did not return an email address.");
+  const existing = users.get(email);
+  if (existing) {
+    existing.provider = existing.provider || provider;
+    existing.emailVerified = Boolean(profile.emailVerified || existing.emailVerified);
+    existing.name = existing.name || profile.name || email.split("@")[0];
+    return existing;
+  }
+
+  const user = {
+    id: `usr_${users.size + 1}`,
+    email,
+    name: profile.name || email.split("@")[0],
+    password: null,
+    provider,
+    emailVerified: Boolean(profile.emailVerified),
+    phoneVerified: false,
+    identityVerified: false,
+    selfieVerified: false
+  };
+  users.set(email, user);
+  return user;
+}
+
+function appOrigin(req) {
+  const proto = req.headers["x-forwarded-proto"] || "http";
+  return `${proto}://${req.headers.host}`;
+}
+
+function makeOAuthState(provider) {
+  const state = crypto.randomBytes(24).toString("hex");
+  oauthStates.set(state, { provider, createdAt: Date.now() });
+  return state;
+}
+
+function consumeOAuthState(state, provider) {
+  const record = oauthStates.get(state);
+  oauthStates.delete(state);
+  return record && record.provider === provider && Date.now() - record.createdAt < 10 * 60 * 1000;
+}
+
+function base64Url(input) {
+  return Buffer.from(input).toString("base64").replace(/=/g, "").replace(/\+/g, "-").replace(/\//g, "_");
+}
+
+function makeAppleClientSecret() {
+  const clientId = process.env.APPLE_CLIENT_ID;
+  const teamId = process.env.APPLE_TEAM_ID;
+  const keyId = process.env.APPLE_KEY_ID;
+  const privateKey = (process.env.APPLE_PRIVATE_KEY || "").replace(/\\n/g, "\n");
+  if (!clientId || !teamId || !keyId || !privateKey) {
+    throw new Error("Apple sign in needs APPLE_CLIENT_ID, APPLE_TEAM_ID, APPLE_KEY_ID, and APPLE_PRIVATE_KEY.");
+  }
+  const now = Math.floor(Date.now() / 1000);
+  const header = base64Url(JSON.stringify({ alg: "ES256", kid: keyId }));
+  const payload = base64Url(JSON.stringify({
+    iss: teamId,
+    iat: now,
+    exp: now + 60 * 60 * 24 * 30,
+    aud: "https://appleid.apple.com",
+    sub: clientId
+  }));
+  const signature = crypto.createSign("SHA256").update(`${header}.${payload}`).sign(privateKey);
+  return `${header}.${payload}.${base64Url(signature)}`;
+}
+
+function decodeJwtPayload(jwt) {
+  const payload = String(jwt || "").split(".")[1];
+  if (!payload) return {};
+  const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+  return JSON.parse(Buffer.from(normalized, "base64").toString("utf8"));
+}
+
+async function exchangeGoogleCode({ code, redirectUri }) {
+  const response = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      code,
+      client_id: process.env.GOOGLE_CLIENT_ID,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET,
+      redirect_uri: redirectUri,
+      grant_type: "authorization_code"
+    })
+  });
+  const tokenBody = await response.json();
+  if (!response.ok) throw new Error(tokenBody.error_description || tokenBody.error || "Google token exchange failed.");
+  const userInfoResponse = await fetch("https://openidconnect.googleapis.com/v1/userinfo", {
+    headers: { authorization: `Bearer ${tokenBody.access_token}` }
+  });
+  const profile = await userInfoResponse.json();
+  if (!userInfoResponse.ok) throw new Error(profile.error_description || profile.error || "Google profile lookup failed.");
+  return {
+    email: profile.email,
+    name: profile.name,
+    emailVerified: profile.email_verified === true
+  };
+}
+
+async function exchangeAppleCode({ code, redirectUri }) {
+  const response = await fetch("https://appleid.apple.com/auth/token", {
+    method: "POST",
+    headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      code,
+      client_id: process.env.APPLE_CLIENT_ID,
+      client_secret: makeAppleClientSecret(),
+      redirect_uri: redirectUri,
+      grant_type: "authorization_code"
+    })
+  });
+  const tokenBody = await response.json();
+  if (!response.ok) throw new Error(tokenBody.error_description || tokenBody.error || "Apple token exchange failed.");
+  const payload = decodeJwtPayload(tokenBody.id_token);
+  return {
+    email: payload.email,
+    name: payload.email ? String(payload.email).split("@")[0] : "Apple user",
+    emailVerified: payload.email_verified === true || payload.email_verified === "true"
+  };
+}
+
+async function sendVerificationEmail({ email, code, req }) {
+  const expiresAt = Date.now() + 15 * 60 * 1000;
+  emailVerifications.set(email, { code, expiresAt });
+
+  const verifyUrl = `${appOrigin(req)}/verify?email=${encodeURIComponent(email)}`;
+  const text = `Your Kerodex verification code is ${code}. It expires in 15 minutes. Open ${verifyUrl} to continue.`;
+
+  if (process.env.RESEND_API_KEY && process.env.AUTH_EMAIL_FROM) {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        from: process.env.AUTH_EMAIL_FROM,
+        to: email,
+        subject: "Verify your Kerodex email",
+        text
+      })
+    });
+    if (!response.ok) {
+      const detail = await response.text().catch(() => "");
+      throw new Error(`Verification email failed: ${detail || response.status}`);
+    }
+    return { sent: true, devCode: undefined };
+  }
+
+  console.log(`[Kerodex email verification] ${email}: ${code}`);
+  return {
+    sent: false,
+    devCode: process.env.NODE_ENV === "production" ? undefined : code
+  };
 }
 
 function sendAuthSetup(res, provider) {
@@ -189,7 +499,7 @@ function numberFrom(value, fallback = 0) {
   return Number.isFinite(number) ? number : fallback;
 }
 
-function createSellerListing(body = {}) {
+function createSellerListing(body = {}, user = null) {
   const year = numberFrom(body.year, new Date().getFullYear());
   const make = String(body.make || "").trim() || "Unknown make";
   const model = String(body.model || "").trim() || "Unknown model";
@@ -198,9 +508,12 @@ function createSellerListing(body = {}) {
   const id = body.id && String(body.id).startsWith("seller_") ? String(body.id) : `seller_${Date.now()}`;
   const mileage = numberFrom(body.mileage, 0);
   const price = numberFrom(body.price, 0);
-  const image = String(body.image || "").trim() || "https://images.unsplash.com/photo-1549924231-f129b911e442?auto=format&fit=crop&w=1600&q=80";
+  const images = Array.isArray(body.images)
+    ? body.images.filter(Boolean).map(String)
+    : [];
+  const image = String(body.image || images[0] || "").trim() || "https://images.unsplash.com/photo-1549924231-f129b911e442?auto=format&fit=crop&w=1600&q=80";
 
-  return {
+  const listing = {
     id,
     title,
     make,
@@ -230,7 +543,7 @@ function createSellerListing(body = {}) {
       body.damage && !/^none$/i.test(String(body.damage)) ? "Damage disclosed" : "Damage disclosure ready",
       body.maintenanceNames?.length ? "Maintenance records uploaded" : "Maintenance records pending"
     ],
-    images: [image],
+    images: images.length ? images : [image],
     seller: {
       name: String(body.sellerName || "Kerodex seller").trim(),
       responseTime: "New listing",
@@ -239,6 +552,45 @@ function createSellerListing(body = {}) {
     },
     description: String(body.description || "").trim(),
     updatedAt: new Date().toISOString()
+  };
+
+  if (user) {
+    listing.userId = user.id;
+    listing.seller = {
+      name: user.name || user.email.split("@")[0] || "Kerodex seller",
+      responseTime: "New listing",
+      completedSales: 0,
+      verified: Boolean(user.identityVerified)
+    };
+  }
+
+  return listing;
+}
+
+function createConversationRecord({ listing, buyer, message }) {
+  const sellerId = listing.userId || listing.seller?.id || `seller_${listing.id}`;
+  const id = `conv_${buyer.id}_${listing.id}`;
+  return {
+    id,
+    listingId: listing.id,
+    buyerId: buyer.id,
+    sellerId,
+    buyerName: buyer.name || buyer.email.split("@")[0],
+    sellerName: listing.seller?.name || "Kerodex seller",
+    vehicleTitle: listing.title || `${listing.year} ${listing.make} ${listing.model}`,
+    lastMessage: String(message || "Hi, is this still available?").trim(),
+    unread: 0,
+    updatedAt: new Date().toISOString(),
+    messages: [
+      {
+        id: `msg_${Date.now()}`,
+        senderId: buyer.id,
+        receiverId: sellerId,
+        vehicleId: listing.id,
+        content: String(message || "Hi, is this still available?").trim(),
+        createdAt: new Date().toISOString()
+      }
+    ]
   };
 }
 
@@ -348,7 +700,7 @@ const server = http.createServer((req, res) => {
   if (req.method === "OPTIONS") {
     res.writeHead(204, {
       "access-control-allow-origin": "*",
-      "access-control-allow-methods": "GET,POST,OPTIONS",
+      "access-control-allow-methods": "GET,POST,PATCH,OPTIONS",
       "access-control-allow-headers": "content-type,authorization"
     });
     res.end();
@@ -360,60 +712,216 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (url.pathname === "/api/admin/auth/login" && req.method === "POST") {
+    readJson(req)
+      .then((body) => {
+        const session = adminLogin(body);
+        if (!session) {
+          sendJson(res, 401, { error: "Invalid admin email or access code." });
+          return;
+        }
+        store.recordAdminAction({
+          adminAccount: session.admin.email,
+          actionType: "admin.login",
+          targetType: "admin_account",
+          targetId: session.admin.id,
+          previousValue: null,
+          newValue: "session_created"
+        }).catch(() => {});
+        sendJson(res, 200, session);
+      })
+      .catch(() => sendJson(res, 400, { error: "Invalid request body." }));
+    return;
+  }
+
+  if (url.pathname === "/api/admin/session" && req.method === "GET") {
+    const admin = requireAdmin(req, res, "dashboard:read");
+    if (!admin) return;
+    sendJson(res, 200, { admin: publicAdmin(admin) });
+    return;
+  }
+
+  if (url.pathname === "/api/admin/dashboard" && req.method === "GET") {
+    const admin = requireAdmin(req, res, "dashboard:read");
+    if (!admin) return;
+    store.getAdminDashboard()
+      .then((dashboard) => sendJson(res, 200, dashboard))
+      .catch((error) => sendJson(res, 500, { error: "Unable to load admin dashboard.", detail: error.message }));
+    return;
+  }
+
+  if (url.pathname === "/api/admin/analytics" && req.method === "GET") {
+    const admin = requireAdmin(req, res, "analytics:read");
+    if (!admin) return;
+    store.getAdminDashboard()
+      .then((dashboard) => sendJson(res, 200, { website: dashboard.website, charts: dashboard.charts, funnel: dashboard.funnel }))
+      .catch((error) => sendJson(res, 500, { error: "Unable to load analytics.", detail: error.message }));
+    return;
+  }
+
+  if (url.pathname === "/api/admin/search" && req.method === "GET") {
+    const admin = requireAdmin(req, res, "dashboard:read");
+    if (!admin) return;
+    store.searchAdmin(url.searchParams.get("q"))
+      .then((results) => sendJson(res, 200, results))
+      .catch((error) => sendJson(res, 500, { error: "Unable to search admin data.", detail: error.message }));
+    return;
+  }
+
+  if (url.pathname === "/api/admin/system" && req.method === "GET") {
+    const admin = requireAdmin(req, res, "system:read");
+    if (!admin) return;
+    store.getAdminSystem()
+      .then((system) => sendJson(res, 200, system))
+      .catch((error) => sendJson(res, 500, { error: "Unable to load system health.", detail: error.message }));
+    return;
+  }
+
+  if (url.pathname === "/api/admin/events") {
+    sendAdminEvents(req, res);
+    return;
+  }
+
+  const adminCollectionMatch = url.pathname.match(/^\/api\/admin\/(users|listings|verifications|reports|fraud-flags|audit-logs|notifications|tickets|feature-flags)$/);
+  if (adminCollectionMatch && req.method === "GET") {
+    const routeName = adminCollectionMatch[1];
+    const collection = routeName.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+    const permissionMap = {
+      users: "users:read",
+      listings: "listings:read",
+      verifications: "verifications:read",
+      reports: "reports:read",
+      fraudFlags: "fraud:read",
+      auditLogs: "audit:read",
+      notifications: "dashboard:read",
+      tickets: "reports:read",
+      featureFlags: "system:read"
+    };
+    const admin = requireAdmin(req, res, permissionMap[collection]);
+    if (!admin) return;
+    store.getAdminCollection(collection, url.searchParams)
+      .then((body) => sendJson(res, 200, body))
+      .catch((error) => sendJson(res, 500, { error: `Unable to load ${routeName}.`, detail: error.message }));
+    return;
+  }
+
+  const adminItemMatch = url.pathname.match(/^\/api\/admin\/(users|listings|verifications|reports|fraud-flags)\/([^/]+)$/);
+  if (adminItemMatch && req.method === "GET") {
+    const routeName = adminItemMatch[1];
+    const collection = routeName.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+    const permissionMap = {
+      users: "users:read",
+      listings: "listings:read",
+      verifications: "verifications:read",
+      reports: "reports:read",
+      fraudFlags: "fraud:read"
+    };
+    const admin = requireAdmin(req, res, permissionMap[collection]);
+    if (!admin) return;
+    store.getAdminItem(collection, decodeURIComponent(adminItemMatch[2]))
+      .then((item) => sendJson(res, item ? 200 : 404, item || { error: "Admin record not found." }))
+      .catch((error) => sendJson(res, 500, { error: `Unable to load ${routeName}.`, detail: error.message }));
+    return;
+  }
+
+  const adminActionMatch = url.pathname.match(/^\/api\/admin\/(users|listings|verifications|reports|fraud-flags)\/([^/]+)\/actions$/);
+  if (adminActionMatch && req.method === "PATCH") {
+    const routeName = adminActionMatch[1];
+    const collection = routeName.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+    const permissionMap = {
+      users: "users:write",
+      listings: "listings:write",
+      verifications: "verifications:write",
+      reports: "reports:write",
+      fraudFlags: "fraud:write"
+    };
+    const admin = requireAdmin(req, res, permissionMap[collection]);
+    if (!admin) return;
+    readJson(req)
+      .then((body) => store.applyAdminAction(collection, decodeURIComponent(adminActionMatch[2]), String(body.action || ""), admin.email, String(body.notes || "")))
+      .then((result) => sendJson(res, result ? 200 : 404, result || { error: "Admin record not found." }))
+      .catch((error) => sendJson(res, 400, { error: "Unable to apply admin action.", detail: error.message }));
+    return;
+  }
+
+  const adminExportMatch = url.pathname.match(/^\/api\/admin\/export\/(users|listings|verifications|reports|fraud-flags|audit-logs)$/);
+  if (adminExportMatch && req.method === "GET") {
+    const routeName = adminExportMatch[1];
+    const collection = routeName.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+    const admin = requireAdmin(req, res, "audit:read");
+    if (!admin) return;
+    store.exportAdminCollection(collection)
+      .then((csv) => sendCsv(res, `${routeName}.csv`, csv))
+      .catch((error) => sendJson(res, 500, { error: "Unable to export CSV.", detail: error.message }));
+    return;
+  }
+
   if (url.pathname === "/api/auth/google") {
     const clientId = process.env.GOOGLE_CLIENT_ID;
-    if (!clientId) {
-      const session = createSession(upsertSocialUser("google"));
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    if (!clientId || !clientSecret) {
       if ((req.headers.accept || "").includes("application/json")) {
-        sendJson(res, 200, session);
+        sendJson(res, 503, { error: "Google sign in needs GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET." });
         return;
       }
-      redirect(res, `/?v=14#browse&auth=google&token=${encodeURIComponent(session.token)}`);
+      sendAuthSetup(res, "google");
       return;
     }
-    const redirectUri = `http://${req.headers.host}/api/auth/callback/google`;
+    const redirectUri = `${appOrigin(req)}/api/auth/callback/google`;
     const authUrl = new URL("https://accounts.google.com/o/oauth2/v2/auth");
     authUrl.searchParams.set("client_id", clientId);
     authUrl.searchParams.set("redirect_uri", redirectUri);
     authUrl.searchParams.set("response_type", "code");
     authUrl.searchParams.set("scope", "openid email profile");
     authUrl.searchParams.set("prompt", "select_account");
+    authUrl.searchParams.set("state", makeOAuthState("google"));
     redirect(res, authUrl.toString());
     return;
   }
 
   if (url.pathname === "/api/auth/apple") {
     const clientId = process.env.APPLE_CLIENT_ID;
-    if (!clientId) {
-      const session = createSession(upsertSocialUser("apple"));
+    if (!clientId || !process.env.APPLE_TEAM_ID || !process.env.APPLE_KEY_ID || !process.env.APPLE_PRIVATE_KEY) {
       if ((req.headers.accept || "").includes("application/json")) {
-        sendJson(res, 200, session);
+        sendJson(res, 503, { error: "Apple sign in needs APPLE_CLIENT_ID, APPLE_TEAM_ID, APPLE_KEY_ID, and APPLE_PRIVATE_KEY." });
         return;
       }
-      redirect(res, `/?v=14#browse&auth=apple&token=${encodeURIComponent(session.token)}`);
+      sendAuthSetup(res, "apple");
       return;
     }
-    const redirectUri = `http://${req.headers.host}/api/auth/callback/apple`;
+    const redirectUri = `${appOrigin(req)}/api/auth/callback/apple`;
     const authUrl = new URL("https://appleid.apple.com/auth/authorize");
     authUrl.searchParams.set("client_id", clientId);
     authUrl.searchParams.set("redirect_uri", redirectUri);
-    authUrl.searchParams.set("response_type", "code");
+    authUrl.searchParams.set("response_type", "code id_token");
     authUrl.searchParams.set("scope", "name email");
     authUrl.searchParams.set("response_mode", "form_post");
+    authUrl.searchParams.set("state", makeOAuthState("apple"));
     redirect(res, authUrl.toString());
     return;
   }
 
   if (url.pathname.startsWith("/api/auth/callback/")) {
-    sendHtml(res, 200, `<!doctype html>
-      <html lang="en">
-        <head><meta charset="utf-8"><title>Kerodex Auth</title></head>
-        <body style="font-family:system-ui;margin:48px;max-width:680px">
-          <h1>Kerodex authentication callback</h1>
-          <p>The provider returned to the local development app. A production build would exchange the code for tokens here.</p>
-          <p><a href="/?v=9#browse">Return to Kerodex</a></p>
-        </body>
-      </html>`);
+    const provider = url.pathname.endsWith("/apple") ? "apple" : "google";
+    const readPayload = req.method === "POST" ? readForm(req) : Promise.resolve(Object.fromEntries(url.searchParams));
+    readPayload
+      .then(async (payload) => {
+        const code = String(payload.code || "");
+        const state = String(payload.state || "");
+        if (!code || !consumeOAuthState(state, provider)) {
+          throw new Error("OAuth state is invalid or expired. Try signing in again.");
+        }
+        const redirectUri = `${appOrigin(req)}/api/auth/callback/${provider}`;
+        const profile = provider === "apple"
+          ? await exchangeAppleCode({ code, redirectUri })
+          : await exchangeGoogleCode({ code, redirectUri });
+        const user = upsertOAuthUser(provider, profile);
+        const session = createSession(user);
+        redirect(res, `/?auth=success&token=${encodeURIComponent(session.token)}&user=${encodeURIComponent(JSON.stringify(session.user))}`);
+      })
+      .catch((error) => {
+        redirect(res, `/?auth=error&message=${encodeURIComponent(error.message || "Authentication failed.")}`);
+      });
     return;
   }
 
@@ -428,10 +936,11 @@ const server = http.createServer((req, res) => {
 
   if (url.pathname === "/api/auth/email" && req.method === "POST") {
     readJson(req)
-      .then((body) => {
+      .then(async (body) => {
         const mode = body.mode === "create" ? "create" : "signin";
         const email = normalize(body.email);
         const password = String(body.password || "");
+        const name = String(body.name || "").trim();
 
         if (!email || !email.includes("@") || password.length < 6) {
           sendJson(res, 400, { error: "Use a valid email and a password with at least 6 characters." });
@@ -448,12 +957,24 @@ const server = http.createServer((req, res) => {
           const user = {
             id: `usr_${users.size + 1}`,
             email,
-            name: email.split("@")[0],
+            name: name || email.split("@")[0],
             password,
-            provider: "email"
+            provider: "email",
+            emailVerified: false,
+            phoneVerified: false,
+            identityVerified: false,
+            selfieVerified: false
           };
           users.set(email, user);
-          sendJson(res, 201, createSession(user));
+          const mail = await sendVerificationEmail({ email, code: makeCode(), req });
+          sendJson(res, 201, {
+            requiresVerification: true,
+            email,
+            devCode: mail.devCode,
+            message: mail.sent
+              ? "Check your email for the Kerodex verification code."
+              : "Email sending is not configured yet. Use the local development code to verify this account."
+          });
           return;
         }
 
@@ -462,7 +983,39 @@ const server = http.createServer((req, res) => {
           return;
         }
 
+        if (!existing.emailVerified) {
+          const mail = await sendVerificationEmail({ email, code: makeCode(), req });
+          sendJson(res, 200, {
+            requiresVerification: true,
+            email,
+            devCode: mail.devCode,
+            error: mail.sent
+              ? "Verify your email before signing in. We sent you a new code."
+              : "Verify your email before signing in. Email sending is not configured, so use the local development code."
+          });
+          return;
+        }
+
         sendJson(res, 200, createSession(existing));
+      })
+      .catch(() => sendJson(res, 400, { error: "Invalid request body." }));
+    return;
+  }
+
+  if (url.pathname === "/api/auth/email/verify" && req.method === "POST") {
+    readJson(req)
+      .then((body) => {
+        const email = normalize(body.email);
+        const code = String(body.code || "").trim();
+        const record = emailVerifications.get(email);
+        const user = users.get(email);
+        if (!user || !record || record.code !== code || record.expiresAt < Date.now()) {
+          sendJson(res, 400, { error: "Verification code is invalid or expired." });
+          return;
+        }
+        emailVerifications.delete(email);
+        user.emailVerified = true;
+        sendJson(res, 200, createSession(user));
       })
       .catch(() => sendJson(res, 400, { error: "Invalid request body." }));
     return;
@@ -475,14 +1028,31 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (url.pathname === "/api/me/listings" && req.method === "GET") {
+    const user = getAuthUser(req);
+    if (!user) {
+      sendJson(res, 401, { error: "Sign in to view your listings." });
+      return;
+    }
+    store.getListings()
+      .then((listings) => sendJson(res, 200, { listings: listings.filter((listing) => listing.userId === user.id) }))
+      .catch((error) => sendJson(res, 500, { error: "Unable to load your listings.", detail: error.message }));
+    return;
+  }
+
   if (url.pathname === "/api/listings" && req.method === "POST") {
+    const user = getAuthUser(req);
+    if (!user) {
+      sendJson(res, 401, { error: "Sign in to publish a listing." });
+      return;
+    }
     readJson(req)
       .then((body) => {
         if (!String(body.make || "").trim() || !String(body.model || "").trim() || !Number(body.year) || !Number(body.price)) {
           sendJson(res, 400, { error: "Add year, make, model, and asking price before publishing locally." });
           return;
         }
-        const listing = createSellerListing(body);
+        const listing = createSellerListing(body, user);
         return store.createListing(listing).then((created) => sendJson(res, 201, { listing: created }));
       })
       .catch((error) => sendJson(res, 400, { error: "Unable to create listing.", detail: error.message }));
@@ -509,10 +1079,48 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  if (url.pathname === "/api/conversations") {
+  if (url.pathname === "/api/conversations" && req.method === "GET") {
+    const user = getAuthUser(req);
+    if (!user) {
+      sendJson(res, 401, { error: "Sign in to view conversations." });
+      return;
+    }
     store.getConversations()
-      .then((conversations) => sendJson(res, 200, { conversations }))
+      .then((conversations) => sendJson(res, 200, {
+        conversations: conversations.filter((conversation) =>
+          conversation.buyerId === user.id || conversation.sellerId === user.id
+        )
+      }))
       .catch((error) => sendJson(res, 500, { error: "Unable to load conversations.", detail: error.message }));
+    return;
+  }
+
+  if (url.pathname === "/api/conversations" && req.method === "POST") {
+    const user = getAuthUser(req);
+    if (!user) {
+      sendJson(res, 401, { error: "Sign in to message a seller." });
+      return;
+    }
+    readJson(req)
+      .then(async (body) => {
+        const listing = await store.getListingById(String(body.listingId || ""));
+        if (!listing) {
+          sendJson(res, 404, { error: "Listing not found." });
+          return;
+        }
+        if (listing.userId === user.id) {
+          sendJson(res, 400, { error: "You cannot message yourself about your own listing." });
+          return;
+        }
+        const conversation = createConversationRecord({
+          listing,
+          buyer: user,
+          message: body.message
+        });
+        const created = await store.createConversation(conversation);
+        sendJson(res, 201, { conversation: created });
+      })
+      .catch((error) => sendJson(res, 400, { error: "Unable to start conversation.", detail: error.message }));
     return;
   }
 

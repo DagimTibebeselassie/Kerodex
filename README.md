@@ -12,6 +12,7 @@ The product goal is simple: help real owners sell real cars directly to buyers w
 - Dedicated search results experience with grid and map modes.
 - Local Node.js API with realistic seed listings.
 - Local authentication demo flow for email, Google, and Apple placeholders.
+- Separate local admin dashboard app with protected admin API routes, role-based access, analytics, moderation queues, verification review, CSV exports, and immutable audit-log scaffolding.
 - Leaflet/CARTO map browsing with grid/map search modes, clickable vehicle pins, and theme-aware map tiles.
 - Removable beta/demo inventory notice for public launch preparation.
 - Postgres-ready store adapter with local JSON seed fallback.
@@ -27,6 +28,9 @@ apps/
     server.js        # Dependency-free local API/static server
     store.js         # JSON fallback or Postgres-backed listing store
     seed/            # Demo listing and conversation JSON
+  admin/
+    server.js        # Separate local admin frontend server
+    public/          # Admin dashboard UI
   web/
     public/
       index.html     # Homepage
@@ -61,6 +65,27 @@ Open:
 ```text
 http://localhost:4100
 ```
+
+Run the separate admin app in another terminal:
+
+```powershell
+npm.cmd run dev:admin
+```
+
+Open:
+
+```text
+http://localhost:4101
+```
+
+The local demo admin login is:
+
+```text
+Email: admin@kerodex.local
+Access code: kerodex-admin-local
+```
+
+Set `ADMIN_ACCESS_CODE` before starting the API to change the local admin access code.
 
 Run tests:
 
@@ -163,6 +188,7 @@ Production direction:
 - Rate limiting.
 - Upload scanning.
 - Audit logging.
+- Admin panel isolation at `admin.kerodexofficial.com`, backed by protected `/api/admin/*` routes rather than browser database access.
 - Secrets manager.
 - Least-privilege IAM.
 - WAF and DDoS controls.

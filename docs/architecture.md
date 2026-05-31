@@ -5,7 +5,9 @@
 Start with a modular monolith locally:
 
 - Static responsive web app.
+- Separate static admin app on its own local port.
 - Node API with REST endpoints.
+- Protected admin-only API routes for operations, analytics, verification review, moderation, and audit logs.
 - JSON-backed local seed store behind the API.
 - Server-sent events for live listing updates.
 - No cloud bill.
@@ -27,6 +29,7 @@ This keeps the product moving while preserving boundaries for later extraction.
 ```mermaid
 flowchart LR
   Web["Next.js Web"] --> Gateway["API Gateway"]
+  Admin["Admin App"] --> Gateway
   IOS["React Native iOS"] --> Gateway
   Android["React Native Android"] --> Gateway
   Gateway --> Auth["Auth Service"]
@@ -43,6 +46,8 @@ flowchart LR
   Listings --> Events["Kafka/MSK"]
   Offers --> Events
   Trust --> Events
+  Admin --> Trust
+  Admin --> Auth
   Events --> AI["AI Workers"]
 ```
 
@@ -56,6 +61,7 @@ flowchart LR
 - Offers: offers, counters, expirations, audit trail.
 - Payments: boosts, subscriptions, refunds, Stripe events.
 - Trust: reports, fraud scoring, moderation workflows.
+- Admin: separate frontend at `admin.kerodexofficial.com`, role-based access, protected API routes, audit logs, secure document review, support tickets, announcements, feature flags, fraud investigations, and marketplace analytics.
 - Vehicle intelligence: VIN decode, recalls, market value, history providers.
 - AI: descriptions, recommendations, pricing, image moderation, scam detection.
 

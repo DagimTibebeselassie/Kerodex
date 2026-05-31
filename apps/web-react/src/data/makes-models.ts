@@ -1,0 +1,47 @@
+export const MAKES_MODELS: Record<string, string[]> = {
+  Acura: ['ILX', 'MDX', 'RDX', 'TLX', 'NSX', 'Integra'],
+  Alfa_Romeo: ['Giulia', 'Stelvio', 'Tonale', '4C'],
+  Audi: ['A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'Q3', 'Q5', 'Q7', 'Q8', 'e-tron', 'e-tron GT', 'RS3', 'RS5', 'RS6', 'RS7', 'S4', 'S5', 'TT', 'R8'],
+  BMW: ['2 Series', '3 Series', '4 Series', '5 Series', '7 Series', '8 Series', 'X1', 'X2', 'X3', 'X4', 'X5', 'X6', 'X7', 'i3', 'i4', 'iX', 'Z4', 'M2', 'M3', 'M4', 'M5', 'M8'],
+  Buick: ['Enclave', 'Encore', 'Encore GX', 'Envision', 'Envista'],
+  Cadillac: ['CT4', 'CT5', 'Escalade', 'Lyriq', 'XT4', 'XT5', 'XT6'],
+  Chevrolet: ['Blazer', 'Bolt EV', 'Camaro', 'Colorado', 'Corvette', 'Equinox', 'Malibu', 'Silverado 1500', 'Silverado 2500', 'Suburban', 'Tahoe', 'Traverse', 'Trax'],
+  Chrysler: ['300', 'Pacifica', 'Voyager'],
+  Dodge: ['Challenger', 'Charger', 'Durango', 'Hornet'],
+  Ferrari: ['296 GTB', '812', 'F8', 'Roma', 'SF90', 'Purosangue'],
+  Ford: ['Bronco', 'Edge', 'Escape', 'Explorer', 'F-150', 'F-250', 'Maverick', 'Mustang', 'Mustang Mach-E', 'Ranger', 'Transit'],
+  Genesis: ['G70', 'G80', 'G90', 'GV70', 'GV80', 'GV90'],
+  GMC: ['Acadia', 'Canyon', 'Sierra 1500', 'Sierra 2500', 'Terrain', 'Yukon'],
+  Honda: ['Accord', 'Civic', 'CR-V', 'HR-V', 'Odyssey', 'Passport', 'Pilot', 'Ridgeline'],
+  Hyundai: ['Elantra', 'Ioniq 5', 'Ioniq 6', 'Kona', 'Palisade', 'Santa Cruz', 'Santa Fe', 'Sonata', 'Tucson', 'Venue'],
+  Infiniti: ['Q50', 'Q60', 'QX50', 'QX55', 'QX60', 'QX80'],
+  Jaguar: ['E-Pace', 'F-Pace', 'F-Type', 'I-Pace', 'XE', 'XF'],
+  Jeep: ['Cherokee', 'Compass', 'Gladiator', 'Grand Cherokee', 'Grand Wagoneer', 'Renegade', 'Wrangler'],
+  Kia: ['Carnival', 'EV6', 'EV9', 'K5', 'Niro', 'Seltos', 'Sorento', 'Soul', 'Sportage', 'Stinger', 'Telluride'],
+  Lamborghini: ['Huracan', 'Urus', 'Revuelto'],
+  Land_Rover: ['Defender', 'Discovery', 'Range Rover', 'Range Rover Evoque', 'Range Rover Sport', 'Range Rover Velar'],
+  Lexus: ['ES', 'GX', 'IS', 'LC', 'LS', 'LX', 'NX', 'RX', 'RZ', 'UX'],
+  Lincoln: ['Aviator', 'Corsair', 'Navigator'],
+  Maserati: ['Ghibli', 'Grecale', 'GranTurismo', 'Levante', 'Quattroporte'],
+  Mazda: ['CX-30', 'CX-5', 'CX-50', 'CX-90', 'Mazda3', 'Mazda6', 'MX-30', 'MX-5 Miata'],
+  McLaren: ['570S', '720S', '765LT', 'Artura', 'GT'],
+  Mercedes: ['A-Class', 'C-Class', 'CLA', 'CLE', 'E-Class', 'G-Class', 'GLA', 'GLB', 'GLC', 'GLE', 'GLS', 'S-Class', 'AMG GT', 'EQB', 'EQE', 'EQS', 'G 63 AMG', 'AMG C 63', 'AMG E 63'],
+  Mini: ['Clubman', 'Convertible', 'Cooper', 'Countryman', 'Paceman'],
+  Mitsubishi: ['Eclipse Cross', 'Outlander', 'Outlander PHEV'],
+  Nissan: ['Altima', 'Ariya', 'Frontier', 'GT-R', 'Kicks', 'Leaf', 'Murano', 'Pathfinder', 'Rogue', 'Sentra', 'Titan', 'Versa', 'Z'],
+  Porsche: ['718 Boxster', '718 Cayman', '911', 'Cayenne', 'Macan', 'Panamera', 'Taycan', '911 GT3'],
+  Ram: ['1500', '2500', 'ProMaster'],
+  Rivian: ['R1S', 'R1T', 'R2'],
+  Rolls_Royce: ['Cullinan', 'Ghost', 'Phantom', 'Spectre', 'Wraith'],
+  Subaru: ['Ascent', 'BRZ', 'Crosstrek', 'Forester', 'Impreza', 'Legacy', 'Outback', 'Solterra', 'WRX'],
+  Tesla: ['Cybertruck', 'Model 3', 'Model S', 'Model S Plaid', 'Model X', 'Model Y', 'Roadster'],
+  Toyota: ['4Runner', 'Avalon', 'bZ4X', 'Camry', 'Corolla', 'GR86', 'GR Supra', 'Highlander', 'Land Cruiser', 'Prius', 'RAV4', 'Sequoia', 'Sienna', 'Tacoma', 'Tundra', 'Venza'],
+  Volkswagen: ['Arteon', 'Atlas', 'Golf', 'ID.4', 'ID.Buzz', 'Jetta', 'Passat', 'Taos', 'Tiguan'],
+  Volvo: ['C40', 'EX30', 'EX90', 'S60', 'S90', 'V60', 'V90', 'XC40', 'XC60', 'XC90'],
+};
+
+export const MAKES = Object.keys(MAKES_MODELS).sort();
+
+export function getModelsForMake(make: string): string[] {
+  return MAKES_MODELS[make] || [];
+}

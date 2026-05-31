@@ -1,0 +1,537 @@
+:root {
+  color-scheme: light;
+  --bg: #f7f7f5;
+  --surface: #ffffff;
+  --surface-soft: #f0f1f1;
+  --text: #111111;
+  --muted: #666c75;
+  --line: #dfe2e5;
+  --accent: #111111;
+  --good: #137a3f;
+  --warn: #b7791f;
+  --bad: #b42318;
+  --info: #3157d5;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body.dark {
+  color-scheme: dark;
+  --bg: #0b0c0f;
+  --surface: #14161a;
+  --surface-soft: #202329;
+  --text: #f7f8fb;
+  --muted: #a7adb7;
+  --line: rgba(255, 255, 255, 0.13);
+  --accent: #f7f8fb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  margin: 0;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+button {
+  background: var(--accent);
+  border: 0;
+  border-radius: 8px;
+  color: var(--bg);
+  cursor: pointer;
+  font-weight: 760;
+  min-height: 40px;
+  padding: 0 14px;
+}
+
+button.ghost,
+.panel button,
+.table-toolbar button,
+.queue-tabs button {
+  background: var(--surface-soft);
+  color: var(--text);
+}
+
+input,
+select {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  min-height: 42px;
+  padding: 0 12px;
+  width: 100%;
+}
+
+code {
+  background: var(--surface-soft);
+  border-radius: 5px;
+  padding: 2px 5px;
+}
+
+.login-shell {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+}
+
+.login-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 16px;
+  max-width: 520px;
+  padding: 28px;
+  width: 100%;
+}
+
+.login-card h1 {
+  font-size: clamp(2.2rem, 5vw, 4.2rem);
+  letter-spacing: 0;
+  line-height: 0.96;
+  margin: 18px 0 8px;
+}
+
+.login-card label,
+.global-search {
+  color: var(--muted);
+  display: grid;
+  gap: 7px;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.brand-row {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+}
+
+.brand-row div {
+  display: grid;
+  gap: 2px;
+}
+
+.brand-row span,
+.eyebrow,
+.metric span,
+.panel p,
+td small {
+  color: var(--muted);
+}
+
+.brand-mark {
+  align-items: center;
+  background: var(--text);
+  border-radius: 8px;
+  color: var(--bg) !important;
+  display: inline-flex;
+  font-weight: 900;
+  height: 38px;
+  justify-content: center;
+  width: 38px;
+}
+
+.admin-shell {
+  display: grid;
+  grid-template-columns: 274px minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 22px;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+nav {
+  display: grid;
+  gap: 5px;
+}
+
+nav button {
+  background: transparent;
+  border-radius: 8px;
+  color: var(--muted);
+  justify-content: flex-start;
+  text-align: left;
+}
+
+nav button.active,
+nav button:hover {
+  background: var(--surface-soft);
+  color: var(--text);
+}
+
+.workspace {
+  display: grid;
+  gap: 18px;
+  padding: 24px clamp(18px, 3vw, 42px) 56px;
+}
+
+.topbar,
+.panel-heading,
+.table-toolbar,
+.queue-tabs,
+.top-actions {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.topbar h1 {
+  font-size: clamp(2rem, 4vw, 4.4rem);
+  line-height: 0.98;
+  margin: 0;
+}
+
+.eyebrow {
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+
+.top-actions {
+  min-width: min(640px, 48vw);
+}
+
+.global-search {
+  flex: 1;
+}
+
+.view {
+  display: none;
+}
+
+.view.active {
+  display: grid;
+  gap: 18px;
+}
+
+.metric-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.metric-grid.compact {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.metric,
+.panel,
+.notifications article,
+.search-results,
+.risk-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.metric {
+  display: grid;
+  gap: 7px;
+  min-height: 116px;
+  padding: 16px;
+}
+
+.metric strong {
+  font-size: clamp(1.6rem, 3vw, 2.7rem);
+  line-height: 1;
+}
+
+.metric em {
+  color: var(--good);
+  font-style: normal;
+  font-weight: 820;
+}
+
+.two-column,
+.three-column {
+  display: grid;
+  gap: 18px;
+}
+
+.two-column {
+  grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.7fr);
+}
+
+.three-column {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.panel {
+  min-width: 0;
+  padding: 18px;
+}
+
+.panel h2 {
+  font-size: 1rem;
+  margin: 0 0 14px;
+}
+
+.panel p {
+  line-height: 1.55;
+}
+
+.chart {
+  align-items: end;
+  display: grid;
+  gap: 4px;
+  grid-auto-flow: column;
+  height: 220px;
+  overflow: hidden;
+}
+
+.bar {
+  background: var(--text);
+  border-radius: 5px 5px 0 0;
+  min-height: 8px;
+}
+
+.funnel,
+.breakdown,
+.workspace-map,
+.risk-board,
+.notifications {
+  display: grid;
+  gap: 10px;
+}
+
+.funnel-row,
+.breakdown-row {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(130px, 0.5fr) minmax(0, 1fr) auto;
+}
+
+.track {
+  background: var(--surface-soft);
+  border-radius: 999px;
+  height: 9px;
+  overflow: hidden;
+}
+
+.track span {
+  background: var(--text);
+  display: block;
+  height: 100%;
+}
+
+.notifications {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.notifications article {
+  border-left: 4px solid var(--info);
+  padding: 12px;
+}
+
+.notifications .critical {
+  border-left-color: var(--bad);
+}
+
+.notifications .high {
+  border-left-color: var(--warn);
+}
+
+.search-results {
+  padding: 14px;
+}
+
+.search-results h3 {
+  margin: 0 0 10px;
+}
+
+.search-columns {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.table-toolbar {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.queue-tabs {
+  justify-content: flex-start;
+  overflow-x: auto;
+}
+
+.queue-tabs button.active {
+  background: var(--text);
+  color: var(--bg);
+}
+
+.table-wrap {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: auto;
+}
+
+table {
+  border-collapse: collapse;
+  min-width: 940px;
+  width: 100%;
+}
+
+th,
+td {
+  border-bottom: 1px solid var(--line);
+  padding: 12px;
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  color: var(--muted);
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+td {
+  font-size: 0.92rem;
+}
+
+.status,
+.risk {
+  background: var(--surface-soft);
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 0.75rem;
+  font-weight: 850;
+  padding: 5px 9px;
+}
+
+.risk.high,
+.risk.critical,
+.status.banned,
+.status.rejected,
+.status.flagged {
+  color: var(--bad);
+}
+
+.status.approved,
+.status.active,
+.status.verified {
+  color: var(--good);
+}
+
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.row-actions button {
+  min-height: 32px;
+  padding: 0 9px;
+}
+
+.detail-panel {
+  display: none;
+}
+
+.detail-panel.active {
+  display: block;
+}
+
+.risk-board {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.risk-card {
+  padding: 16px;
+}
+
+.workspace-map {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.workspace-map span {
+  background: var(--surface-soft);
+  border-radius: 8px;
+  font-weight: 780;
+  min-height: 74px;
+  padding: 18px;
+}
+
+@media (max-width: 1180px) {
+  .admin-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    height: auto;
+    position: relative;
+  }
+
+  nav {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .metric-grid,
+  .metric-grid.compact,
+  .two-column,
+  .three-column,
+  .notifications,
+  .risk-board,
+  .search-columns {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .workspace {
+    padding: 18px;
+  }
+
+  .topbar,
+  .top-actions,
+  .table-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .top-actions {
+    min-width: 0;
+    width: 100%;
+  }
+
+  nav,
+  .metric-grid,
+  .metric-grid.compact,
+  .two-column,
+  .three-column,
+  .notifications,
+  .risk-board,
+  .search-columns,
+  .workspace-map {
+    grid-template-columns: 1fr;
+  }
+}

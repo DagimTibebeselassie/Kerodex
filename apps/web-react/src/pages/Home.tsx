@@ -1,0 +1,630 @@
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from '@tanstack/react-router';
+import { Vehicle } from '@/types';
+import { MAKES, getModelsForMake } from '@/data/makes-models';
+import { VehicleCard } from '@/components/VehicleCard';
+import { MapView } from '@/components/MapView';
+import { Button } from '@blinkdotnew/ui';
+import {
+  Search,
+  X,
+  ArrowRight,
+  MapPin,
+  BadgeCheck,
+  FileText,
+  ShieldCheck,
+  Lock,
+  Navigation,
+  MessageCircle,
+} from 'lucide-react';
+
+// ── Mock Data ────────────────────────────────────────────────────────────────
+const BEST_DEALS: Vehicle[] = [
+  { id: 'bd1', userId: 'u1', make: 'Honda', model: 'Civic', year: 2020, price: 15900, mileage: 52000, location: 'Austin, TX', description: '', images: ['https://images.unsplash.com/photo-1606016159991-dfe4f2746ad5?q=80&w=400'], status: 'available' as const, createdAt: '2026-05-10' },
+  { id: 'bd2', userId: 'u2', make: 'Toyota', model: 'Corolla', year: 2019, price: 14200, mileage: 68000, location: 'Dallas, TX', description: '', images: ['https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?q=80&w=400'], status: 'available' as const, createdAt: '2026-05-08' },
+  { id: 'bd3', userId: 'u3', make: 'Hyundai', model: 'Elantra', year: 2021, price: 17400, mileage: 39000, location: 'Houston, TX', description: '', images: ['https://images.unsplash.com/photo-1494976388531-d1058494cdd8?q=80&w=400'], status: 'available' as const, createdAt: '2026-05-06' },
+  { id: 'bd4', userId: 'u4', make: 'Ford', model: 'Fusion', year: 2018, price: 12800, mileage: 74000, location: 'Atlanta, GA', description: '', images: ['https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?q=80&w=400'], status: 'available' as const, createdAt: '2026-05-04' },
+];
+
+const EV_HYBRID: Vehicle[] = [
+  { id: 'ev1', userId: 'u5', make: 'Tesla', model: 'Model 3', year: 2022, price: 34500, mileage: 28000, location: 'San Francisco, CA', description: '', images: ['https://images.unsplash.com/photo-1560958089-b8a1929cea89?q=80&w=400'], status: 'available' as const, createdAt: '2026-05-09' },
+  { id: 'ev2', userId: 'u6', make: 'Toyota', model: 'Prius', year: 2021, price: 23900, mileage: 31000, location: 'Portland, OR', description: '', images: ['https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=400'], status: 'available' as const, createdAt: '2026-05-07' },
+  { id: 'ev3', userId: 'u7', make: 'Hyundai', model: 'Ioniq 5', year: 2023, price: 41000, mileage: 12000, location: 'Seattle, WA', description: '', images: ['https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?q=80&w=400'], status: 'available' as const, createdAt: '2026-05-05' },
+  { id: 'ev4', userId: 'u8', make: 'Ford', model: 'Mustang Mach-E', year: 2022, price: 38200, mileage: 22000, location: 'Denver, CO', description: '', images: ['https://images.unsplash.com/photo-1617814076229-a2284e8c5a29?q=80&w=400'], status: 'available' as const, createdAt: '2026-05-03' },
+];
+
+const LOW_MILEAGE: Vehicle[] = [
+  { id: 'lm1', userId: 'u9', make: 'BMW', model: '3 Series', year: 2022, price: 48000, mileage: 8000, location: 'Miami, FL', description: '', images: ['https://images.unsplash.com/photo-1555215695-3004980ad54e?q=80&w=400'], status: 'available' as const, createdAt: '2026-05-11' },
+  { id: 'lm2', userId: 'u10', make: 'Mercedes', model: 'C-Class', year: 2021, price: 46000, mileage: 11000, location: 'Chicago, IL', description: '', images: ['https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?q=80&w=400'], status: 'available' as const, createdAt: '2026-05-09' },
+  { id: 'lm3', userId: 'u11', make: 'Lexus', model: 'IS', year: 2023, price: 44000, mileage: 6000, location: 'Boston, MA', description: '', images: ['https://images.unsplash.com/photo-1544636331-e26879cd4d9b?q=80&w=400'], status: 'available' as const, createdAt: '2026-05-07' },
+  { id: 'lm4', userId: 'u12', make: 'Audi', model: 'A4', year: 2022, price: 39000, mileage: 9500, location: 'Seattle, WA', description: '', images: ['https://images.unsplash.com/photo-1594736797933-d0401ba2fe65?q=80&w=400'], status: 'available' as const, createdAt: '2026-05-05' },
+];
+
+const UNDER_20K: Vehicle[] = [
+  { id: 'u20k1', userId: 'u13', make: 'Toyota', model: 'Camry', year: 2018, price: 17500, mileage: 61000, location: 'Nashville, TN', description: '', images: ['https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?q=80&w=400'], status: 'available' as const, createdAt: '2026-05-02' },
+  { id: 'u20k2', userId: 'u14', make: 'Honda', model: 'Accord', year: 2017, price: 15200, mileage: 78000, location: 'Phoenix, AZ', description: '', images: ['https://images.unsplash.com/photo-1606016159991-dfe4f2746ad5?q=80&w=400'], status: 'available' as const, createdAt: '2026-04-30' },
+  { id: 'u20k3', userId: 'u15', make: 'Mazda', model: 'Mazda3', year: 2019, price: 18900, mileage: 44000, location: 'Minneapolis, MN', description: '', images: ['https://images.unsplash.com/photo-1494976388531-d1058494cdd8?q=80&w=400'], status: 'available' as const, createdAt: '2026-04-28' },
+  { id: 'u20k4', userId: 'u16', make: 'Subaru', model: 'Impreza', year: 2020, price: 19400, mileage: 33000, location: 'Salt Lake City, UT', description: '', images: ['https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?q=80&w=400'], status: 'available' as const, createdAt: '2026-04-26' },
+];
+
+// ── Beta Notice Banner ───────────────────────────────────────────────────────
+function BetaBanner() {
+  const [dismissed, setDismissed] = useState(() =>
+    localStorage.getItem('kerodex_beta_dismissed') === 'true'
+  );
+
+  if (dismissed) return null;
+
+  const dismiss = () => {
+    localStorage.setItem('kerodex_beta_dismissed', 'true');
+    setDismissed(true);
+  };
+
+  return (
+    <div
+      id="beta-notice"
+      data-dismissible="true"
+      className="bg-amber-50 dark:bg-amber-950/40 border-b border-amber-200 dark:border-amber-800 px-4 py-2.5 flex items-center justify-between gap-4"
+      role="alert"
+    >
+      <p className="text-[12px] text-amber-800 dark:text-amber-300 font-medium flex-1 text-center">
+        <span className="font-bold">⚠ Kerodex is in beta</span> — listings are demo data. Some features may be incomplete.
+      </p>
+      <button
+        onClick={dismiss}
+        aria-label="Dismiss beta notice"
+        className="shrink-0 text-amber-600 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-200 transition-colors"
+      >
+        <X className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
+// ── Skeleton Card ────────────────────────────────────────────────────────────
+function SkeletonCard() {
+  return (
+    <div className="space-y-3">
+      <div className="aspect-[4/3] bg-muted animate-pulse" />
+      <div className="space-y-2 p-1">
+        <div className="h-3.5 w-3/4 bg-muted animate-pulse" />
+        <div className="h-3 w-1/2 bg-muted animate-pulse" />
+        <div className="h-3 w-1/3 bg-muted animate-pulse" />
+      </div>
+    </div>
+  );
+}
+
+// ── Trust Pillar ─────────────────────────────────────────────────────────────
+interface TrustPillarProps {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+}
+
+function TrustPillar({ icon, title, description }: TrustPillarProps) {
+  return (
+    <div className="space-y-4">
+      <div className="w-10 h-10 border border-border flex items-center justify-center">
+        {icon}
+      </div>
+      <h4 className="text-[12px] font-bold uppercase tracking-[0.15em]">{title}</h4>
+      <p className="text-[13px] text-muted-foreground leading-relaxed">{description}</p>
+    </div>
+  );
+}
+
+// ── Vehicle Row Section ───────────────────────────────────────────────────────
+interface VehicleRowSectionProps {
+  label: string;
+  heading: string;
+  vehicles: Vehicle[];
+  viewAllHref?: string;
+}
+
+function VehicleRowSection({ label, heading, vehicles, viewAllHref = '/search' }: VehicleRowSectionProps) {
+  return (
+    <section className="px-4 md:px-6 py-12 md:py-16 border-t border-border">
+      <div className="max-w-screen-xl mx-auto">
+        {/* Section header */}
+        <div className="flex items-end justify-between mb-8 md:mb-10">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground mb-2">
+              {label}
+            </p>
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight">
+              {heading}
+            </h2>
+          </div>
+          <Link
+            to={viewAllHref as any}
+            className="group flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-wider hover:text-muted-foreground transition-colors shrink-0"
+          >
+            View all
+            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+          </Link>
+        </div>
+
+        {/* Mobile: horizontal scroll; Desktop: 4-col grid */}
+        <div className="md:hidden flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-mandatory">
+          {vehicles.map((vehicle) => (
+            <div key={vehicle.id} className="w-[260px] shrink-0 snap-start">
+              <VehicleCard vehicle={vehicle} />
+            </div>
+          ))}
+        </div>
+        <div className="hidden md:grid grid-cols-4 gap-6">
+          {vehicles.map((vehicle) => (
+            <VehicleCard key={vehicle.id} vehicle={vehicle} />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ── Chatbot Button + Panel ────────────────────────────────────────────────────
+const CHAT_CHIPS = [
+  'Help me price my car',
+  'Detect potential scams',
+  'Write my listing',
+  'Compare vehicles',
+];
+
+function ChatbotWidget() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-3">
+      {/* Panel */}
+      {open && (
+        <div className="w-72 bg-background border border-border shadow-xl overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+            <div className="flex items-center gap-2">
+              <span className="text-[13px] font-bold">Kerodex Assistant</span>
+              <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 bg-primary/10 text-primary border border-primary/20">
+                Coming Soon
+              </span>
+            </div>
+            <button
+              onClick={() => setOpen(false)}
+              aria-label="Close assistant panel"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Body */}
+          <div className="px-4 py-4 space-y-3">
+            <p className="text-[12px] text-muted-foreground leading-relaxed">
+              AI-powered help is on its way. Until then, try:
+            </p>
+            <div className="flex flex-col gap-2">
+              {CHAT_CHIPS.map((chip) => (
+                <button
+                  key={chip}
+                  className="text-left text-[12px] px-3 py-2 border border-border hover:border-foreground/30 hover:bg-muted/50 transition-colors text-foreground"
+                >
+                  {chip}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="px-4 py-3 border-t border-border bg-muted/30">
+            <p className="text-[11px] text-muted-foreground text-center">
+              Full AI assistant launching soon
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Trigger button */}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Open Kerodex Assistant"
+        className="h-14 w-14 rounded-full bg-foreground text-background shadow-lg flex items-center justify-center hover:opacity-90 transition-opacity"
+      >
+        <MessageCircle className="h-6 w-6" />
+      </button>
+    </div>
+  );
+}
+
+// ── Main Home Page ────────────────────────────────────────────────────────────
+export function HomePage() {
+  const navigate = useNavigate();
+
+  // Hero search state
+  const [heroCity, setHeroCity] = useState('');
+  const [heroMake, setHeroMake] = useState('');
+  const [heroModel, setHeroModel] = useState('');
+  const heroModels = heroMake ? getModelsForMake(heroMake) : [];
+
+  // Reset model when make changes
+  useEffect(() => {
+    setHeroModel('');
+  }, [heroMake]);
+
+  // Location section state
+  const [locationEnabled, setLocationEnabled] = useState(false);
+  const [locationError, setLocationError] = useState('');
+
+  // Dark mode detection for map
+  const [isDark, setIsDark] = useState(() =>
+    document.documentElement.classList.contains('dark')
+  );
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDark(document.documentElement.classList.contains('dark'));
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => observer.disconnect();
+  }, []);
+
+  const handleEnableLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation is not supported by your browser.');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      () => {
+        setLocationEnabled(true);
+        setLocationError('');
+      },
+      () => {
+        setLocationError('Unable to retrieve your location. Please try again.');
+      }
+    );
+  };
+
+  const handleHeroSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    const params: Record<string, string> = {};
+    if (heroCity) params.q = heroCity;
+    if (heroMake) params.make = heroMake;
+    if (heroModel) params.model = heroModel;
+    navigate({ to: '/search', search: params as any });
+  };
+
+  return (
+    <div>
+      <BetaBanner />
+
+      {/* ── HERO ──────────────────────────────────────────────────────────── */}
+      <section className="px-4 md:px-6 py-16 md:py-24 border-b border-border">
+        <div className="max-w-screen-xl mx-auto">
+          {/* Label */}
+          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground mb-5">
+            Private-Party Marketplace
+          </p>
+
+          <h1 className="text-4xl md:text-[56px] lg:text-[68px] font-black tracking-tighter leading-[0.95] mb-5 max-w-3xl">
+            Private-party cars.<br />
+            <span className="text-muted-foreground">Verified by Kerodex.</span>
+          </h1>
+
+          <p className="text-[14px] md:text-[15px] text-muted-foreground leading-relaxed mb-10 max-w-xl">
+            Browse real listings from real owners. Priced fairly, verified honestly. No dealers. No surprises.
+          </p>
+
+          {/* Hero search form */}
+          <form
+            id="hero-search-form"
+            onSubmit={handleHeroSearch}
+            className="flex flex-col md:flex-row gap-0 border border-border w-full max-w-3xl"
+          >
+            {/* City / ZIP */}
+            <div className="relative flex-1 border-b md:border-b-0 md:border-r border-border">
+              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+              <input
+                id="hero-city-input"
+                type="text"
+                placeholder="City or ZIP code"
+                value={heroCity}
+                onChange={(e) => setHeroCity(e.target.value)}
+                className="w-full h-12 pl-9 pr-3 text-[13px] bg-background text-foreground placeholder:text-muted-foreground outline-none border-none"
+              />
+            </div>
+
+            {/* Make */}
+            <div className="border-b md:border-b-0 md:border-r border-border min-w-[140px]">
+              <select
+                id="hero-make-select"
+                value={heroMake}
+                onChange={(e) => setHeroMake(e.target.value)}
+                className="w-full h-12 px-3 text-[13px] bg-background text-foreground outline-none border-none appearance-none cursor-pointer"
+              >
+                <option value="">Any Make</option>
+                {MAKES.map((m) => (
+                  <option key={m} value={m}>{m.replace(/_/g, ' ')}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Model */}
+            <div className="border-b md:border-b-0 md:border-r border-border min-w-[140px]">
+              <select
+                id="hero-model-select"
+                value={heroModel}
+                onChange={(e) => setHeroModel(e.target.value)}
+                disabled={!heroMake}
+                className="w-full h-12 px-3 text-[13px] bg-background text-foreground outline-none border-none appearance-none cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <option value="">Any Model</option>
+                {heroModels.map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Search button */}
+            <button
+              id="hero-search-btn"
+              type="submit"
+              className="h-12 px-6 bg-foreground text-background text-[12px] font-bold uppercase tracking-wider hover:opacity-90 transition-opacity flex items-center gap-2 justify-center shrink-0"
+            >
+              <Search className="h-4 w-4" />
+              <span className="hidden sm:inline">Search</span>
+            </button>
+          </form>
+
+          {/* Quick link */}
+          <div className="mt-4 flex items-center gap-4">
+            <Link
+              to="/search"
+              className="text-[12px] text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2 flex items-center gap-1"
+            >
+              <Navigation className="h-3 w-3" /> Browse nearby cars
+            </Link>
+            <span className="text-border">·</span>
+            <Link
+              to="/search"
+              className="text-[12px] text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
+            >
+              View all listings
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── JUST LISTED ───────────────────────────────────────────────────── */}
+      <section className="px-4 md:px-6 py-16 md:py-20">
+        <div className="max-w-screen-xl mx-auto">
+          {/* Section header */}
+          <div className="flex items-end justify-between mb-8 md:mb-12">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground mb-2">
+                Latest Arrivals
+              </p>
+              <h2 className="text-2xl md:text-3xl font-black tracking-tight">
+                Just listed
+              </h2>
+            </div>
+            <Link
+              to="/search"
+              className="group flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-wider hover:text-muted-foreground transition-colors"
+            >
+              View all
+              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          </div>
+
+          {/* Mobile: horizontal scroll; Desktop: 4-col grid */}
+          <>
+            <div className="md:hidden flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-mandatory">
+              {BEST_DEALS.map((vehicle) => (
+                <div key={vehicle.id} className="w-[260px] shrink-0 snap-start">
+                  <VehicleCard vehicle={vehicle} />
+                </div>
+              ))}
+            </div>
+            <div className="hidden md:grid grid-cols-4 gap-6">
+              {BEST_DEALS.map((vehicle) => (
+                <VehicleCard key={vehicle.id} vehicle={vehicle} />
+              ))}
+            </div>
+          </>
+        </div>
+      </section>
+
+      {/* ── BEST DEALS ────────────────────────────────────────────────────── */}
+      <VehicleRowSection
+        label="Best Deals"
+        heading="Priced below market"
+        vehicles={BEST_DEALS}
+      />
+
+      {/* ── EV & HYBRID ───────────────────────────────────────────────────── */}
+      <VehicleRowSection
+        label="Electric & Hybrid"
+        heading="Go electric"
+        vehicles={EV_HYBRID}
+      />
+
+      {/* ── LOW MILEAGE ───────────────────────────────────────────────────── */}
+      <VehicleRowSection
+        label="Low Mileage"
+        heading="Nearly new"
+        vehicles={LOW_MILEAGE}
+      />
+
+      {/* ── UNDER $20K ────────────────────────────────────────────────────── */}
+      <VehicleRowSection
+        label="Budget Picks"
+        heading="Under $20,000"
+        vehicles={UNDER_20K}
+      />
+
+      {/* ── MAP PREVIEW ─────────────────────────────────────────────────────── */}
+      <section
+        id="location-section"
+        className="px-4 md:px-6 py-16 border-t border-b border-border bg-muted/30"
+      >
+        <div className="max-w-screen-xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground mb-3">
+                Near You
+              </p>
+              <h2 className="text-2xl md:text-3xl font-black tracking-tight mb-4">
+                Listings near you
+              </h2>
+              <p className="text-[13px] text-muted-foreground leading-relaxed mb-8 max-w-sm">
+                Enable location access to see cars available within your area. Browse hundreds of verified private-party listings within driving distance.
+              </p>
+
+              {locationError && (
+                <p className="text-[12px] text-destructive mb-4">{locationError}</p>
+              )}
+
+              {locationEnabled ? (
+                <div className="flex items-center gap-2 text-[12px] font-medium">
+                  <div className="w-2 h-2 bg-foreground" />
+                  Location enabled — showing nearby results
+                </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <Button
+                    onClick={handleEnableLocation}
+                    className="h-10 px-5 text-[11px] font-bold uppercase tracking-wider"
+                  >
+                    <Navigation className="h-3.5 w-3.5 mr-2" />
+                    Enable Location
+                  </Button>
+                  <Link to="/search">
+                    <Button
+                      variant="outline"
+                      className="h-10 px-5 text-[11px] font-bold uppercase tracking-wider"
+                    >
+                      Browse All Cities
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </div>
+
+            {/* Real Leaflet map */}
+            <div className="relative h-64 md:h-80 lg:h-96 border border-border overflow-hidden">
+              <MapView
+                vehicles={BEST_DEALS}
+                isDark={isDark}
+                className="w-full h-full"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── TRUST / SAFETY ──────────────────────────────────────────────────── */}
+      <section className="px-4 md:px-6 py-16 md:py-24">
+        <div className="max-w-screen-xl mx-auto">
+          <div className="mb-12 md:mb-16">
+            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground mb-3">
+              Built for Safety
+            </p>
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight max-w-xl">
+              Private-party buying, made safer.
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 md:gap-12">
+            <TrustPillar
+              icon={<BadgeCheck className="h-4 w-4" />}
+              title="Verified Sellers"
+              description="Every seller goes through our ID and phone verification process. You always know who you're dealing with before you show up."
+            />
+            <TrustPillar
+              icon={<FileText className="h-4 w-4" />}
+              title="Title Confidence"
+              description="We check for salvage titles, open liens, and branded titles automatically. Every listing discloses title history upfront."
+            />
+            <TrustPillar
+              icon={<ShieldCheck className="h-4 w-4" />}
+              title="Scam Screening"
+              description="Our automated systems detect and remove suspicious listings before they ever reach you. Real cars, real owners only."
+            />
+            <TrustPillar
+              icon={<Lock className="h-4 w-4" />}
+              title="Safer Private-Party"
+              description="Meet safely with public meetup location suggestions and real-time messaging. We never share your personal contact details."
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* ── HOW IT WORKS ─────────────────────────────────────────────────────── */}
+      <section className="px-4 md:px-6 py-16 md:py-24 bg-foreground text-background">
+        <div className="max-w-screen-xl mx-auto">
+          <div className="mb-12 md:mb-16">
+            <p className="text-[10px] font-bold uppercase tracking-[0.22em] opacity-50 mb-3">
+              How It Works
+            </p>
+            <h2 className="text-2xl md:text-3xl font-black tracking-tight">
+              Three steps to your next car.
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-0 md:gap-px border border-background/20">
+            {[
+              {
+                step: '01',
+                title: 'List',
+                sub: 'Sellers',
+                description: 'Create your listing in minutes. Upload photos, enter VIN, and set your price. We walk you through everything.',
+              },
+              {
+                step: '02',
+                title: 'Verify',
+                sub: 'Kerodex',
+                description: 'We review your listing, run title checks, and apply a verified badge. Buyers see your car with full confidence.',
+              },
+              {
+                step: '03',
+                title: 'Connect',
+                sub: 'Buyers & Sellers',
+                description: 'Serious buyers message directly through our platform. No spam, no bots. Schedule viewings and close the deal.',
+              },
+            ].map((item, idx) => (
+              <div
+                key={idx}
+                className="p-8 md:p-12 border-b md:border-b-0 md:border-r border-background/20 last:border-0"
+              >
+                <div className="text-[10px] font-bold uppercase tracking-[0.25em] opacity-40 mb-6">
+                  {item.step} · {item.sub}
+                </div>
+                <h3 className="text-4xl md:text-5xl font-black tracking-tighter mb-4 leading-none">
+                  {item.title}
+                </h3>
+                <p className="text-[13px] opacity-70 leading-relaxed">{item.description}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-12 flex flex-col sm:flex-row gap-4">
+            <Link to="/search">
+              <Button
+                variant="outline"
+                className="h-11 px-8 text-[11px] font-bold uppercase tracking-wider border-background/40 text-background hover:bg-background hover:text-foreground"
+              >
+                Browse Cars
+              </Button>
+            </Link>
+            <Link to="/sell">
+              <Button className="h-11 px-8 text-[11px] font-bold uppercase tracking-wider bg-background text-foreground hover:bg-background/90">
+                Sell Your Car
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── FLOATING CHATBOT ─────────────────────────────────────────────────── */}
+      <ChatbotWidget />
+    </div>
+  );
+}
