@@ -225,48 +225,72 @@ function TimelineTab() {
   );
 }
 
-function SellerCard() {
+function SellerCard({ vehicle }: { vehicle: any }) {
+  const seller = vehicle.seller || {};
+  const sellerName = seller.name || 'Private seller';
+  const initials = seller.initials || sellerName.split(' ').map((part: string) => part[0]).join('').slice(0, 2).toUpperCase();
+  const memberSince = seller.memberSince
+    ? new Date(seller.memberSince).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    : 'Recently joined';
+  const badges = [
+    seller.verified ? 'Identity' : '',
+    vehicle.verificationStatus?.includes('ownership') ? 'Ownership' : '',
+    vehicle.vin ? 'VIN' : '',
+    seller.responseRate ? 'Phone' : '',
+  ].filter(Boolean);
   return (
     <div className="border border-border p-6 space-y-5 bg-background">
       <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">About the Seller</h3>
       <div className="flex items-start gap-5">
         <div className="h-14 w-14 bg-foreground text-background flex items-center justify-center font-bold text-[16px] shrink-0 rounded-full">
-          JD
+          {initials}
         </div>
         <div className="space-y-2 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <div className="text-[15px] font-bold">Verified Seller</div>
-            <div className="flex items-center gap-1 text-[12px] text-amber-500 font-bold">
-              <Star className="h-3.5 w-3.5 fill-current" /> 4.9
-              <span className="text-muted-foreground font-normal">(12 reviews)</span>
-            </div>
+            <div className="text-[15px] font-bold">{sellerName}</div>
+            {seller.reviewCount > 0 && (
+              <div className="flex items-center gap-1 text-[12px] text-amber-500 font-bold">
+                <Star className="h-3.5 w-3.5 fill-current" /> {Number(seller.rating || 0).toFixed(1)}
+                <span className="text-muted-foreground font-normal">({seller.reviewCount} review{seller.reviewCount === 1 ? '' : 's'})</span>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            <Clock className="h-3.5 w-3.5" /> Member since 2024
+            <Clock className="h-3.5 w-3.5" /> Member since {memberSince}
           </div>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-muted/50 border border-border text-[11px] font-bold uppercase tracking-wider">
-            <Zap className="h-3.5 w-3.5 text-amber-500" /> Responds in ~2 hours
+            <Zap className="h-3.5 w-3.5 text-amber-500" /> {seller.responseTime || 'Response time not available'}
           </div>
           <div className="flex flex-wrap gap-1.5 pt-1">
-            {['Identity', 'Ownership', 'VIN', 'Phone'].map((v) => (
+            {badges.map((v) => (
               <Badge key={v} className="bg-background border border-foreground text-foreground text-[10px] uppercase tracking-widest font-bold gap-1 py-1 px-2">
                 <CheckCircle2 className="h-3 w-3" /> {v}
               </Badge>
             ))}
+            {!badges.length && (
+              <Badge className="bg-background border border-border text-muted-foreground text-[10px] uppercase tracking-widest font-bold py-1 px-2">
+                Verification pending
+              </Badge>
+            )}
           </div>
           <div className="flex items-center gap-6 text-[12px] text-muted-foreground pt-1">
-            <span>Response rate: <strong className="text-foreground">94%</strong></span>
-            <span>Listings: <strong className="text-foreground">3</strong></span>
-            <span>Completed: <strong className="text-foreground">8</strong></span>
+            <span>Response rate: <strong className="text-foreground">{seller.responseRate ? `${seller.responseRate}%` : 'New'}</strong></span>
+            <span>Completed: <strong className="text-foreground">{seller.completedSales || 0}</strong></span>
           </div>
         </div>
       </div>
       <Separator {...({} as any)} />
-      <Link to="/profile">
-        <Button variant="outline" size="sm" className="text-[11px] font-bold uppercase tracking-widest">
-          <User className="h-3.5 w-3.5 mr-2" /> View Seller Profile
+      {seller.id ? (
+        <Link to="/seller/$id" params={{ id: seller.id }}>
+          <Button variant="outline" size="sm" className="text-[11px] font-bold uppercase tracking-widest">
+            <User className="h-3.5 w-3.5 mr-2" /> View Seller Profile
+          </Button>
+        </Link>
+      ) : (
+        <Button variant="outline" size="sm" disabled className="text-[11px] font-bold uppercase tracking-widest">
+          <User className="h-3.5 w-3.5 mr-2" /> Seller Profile Pending
         </Button>
-      </Link>
+      )}
     </div>
   );
 }
@@ -625,7 +649,7 @@ export function VehicleDetailPage() {
             </div>
           </div>
 
-          <SellerCard />
+          <SellerCard vehicle={vehicle} />
           <RiskMeter />
           <ScamWarnings />
         </div>

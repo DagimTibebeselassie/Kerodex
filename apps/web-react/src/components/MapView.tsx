@@ -9,6 +9,7 @@ interface MapViewProps {
   onSelectPin?: (id: string | null) => void;
   className?: string;
   isDark?: boolean;
+  userLocation?: { lat: number; lng: number } | null;
 }
 
 function pseudoGeo(id: string): [number, number] {
@@ -21,6 +22,13 @@ function pseudoGeo(id: string): [number, number] {
   return [lat, lng];
 }
 
+function vehicleCoords(vehicle: Vehicle): [number, number] {
+  const lat = Number(vehicle.lat);
+  const lng = Number(vehicle.lng);
+  if (Number.isFinite(lat) && Number.isFinite(lng)) return [lat, lng];
+  return pseudoGeo(vehicle.id);
+}
+
 function getImageUrl(vehicle: Vehicle): string {
   try {
     const p = typeof vehicle.images === 'string' ? JSON.parse(vehicle.images as unknown as string) : vehicle.images;
@@ -29,6 +37,18 @@ function getImageUrl(vehicle: Vehicle): string {
 }
 
 function fmt(n: number) { return n.toLocaleString(); }
+
+function tileUrlForTheme(isDark: boolean) {
+  return isDark
+    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+    : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+}
+
+function fallbackTileUrlForTheme(isDark: boolean) {
+  return isDark
+    ? 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png'
+    : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+}
 
 // ── Popup Card ────────────────────────────────────────────────────────────────
 function PopupCard({
@@ -49,7 +69,7 @@ function PopupCard({
   return (
     <div
       className={[
-        'popup-card absolute z-20 overflow-hidden',
+        'popup-card absolute z-[1200] overflow-hidden',
         'rounded-xl border shadow-2xl',
         isDark
           ? 'bg-zinc-900 border-zinc-700 text-zinc-100'
@@ -163,6 +183,7 @@ export function MapView({
   onSelectPin,
   className = '',
   isDark = false,
+  userLocation = null,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
@@ -171,6 +192,8 @@ export function MapView({
 
   const [activeVehicle, setActiveVehicle] = useState<Vehicle | null>(null);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [mapReady, setMapReady] = useState(false);
+  const [tileFailed, setTileFailed] = useState(false);
 
   // Sync active vehicle with selectedId prop
   useEffect(() => {
@@ -203,14 +226,25 @@ export function MapView({
       L.control.zoom({ position: 'bottomright' }).addTo(map);
       L.control.attribution({ position: 'bottomleft', prefix: '© OpenStreetMap' }).addTo(map);
 
-      const tileUrl = isDark
-        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-        : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+      const tileUrl = tileUrlForTheme(isDark);
       const tile = L.tileLayer(tileUrl, { subdomains: 'abcd', maxZoom: 20, minZoom: 2 });
+      tile.on('tileerror', () => {
+        setTileFailed(true);
+        if (!tileLayerRef.current || tileLayerRef.current !== tile) return;
+        const fallback = L.tileLayer(fallbackTileUrlForTheme(isDark), { maxZoom: 20, minZoom: 2 });
+        fallback.on('tileload', () => setTileFailed(false));
+        tile.remove();
+        fallback.addTo(map);
+        tileLayerRef.current = fallback;
+      });
+      tile.on('tileload', () => setTileFailed(false));
       tile.addTo(map);
 
       mapRef.current = map;
       tileLayerRef.current = tile;
+      setMapReady(true);
+      setTimeout(() => map.invalidateSize(), 0);
+      setTimeout(() => map.invalidateSize(), 250);
     });
 
     return () => {
@@ -219,6 +253,7 @@ export function MapView({
         mapRef.current = null;
         tileLayerRef.current = null;
         markersRef.current = [];
+        setMapReady(false);
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -229,19 +264,52 @@ export function MapView({
     if (!mapRef.current || !tileLayerRef.current) return;
     import('leaflet').then((L) => {
       tileLayerRef.current.remove();
-      const tileUrl = isDark
-        ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-        : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+      const tileUrl = tileUrlForTheme(isDark);
       const tile = L.tileLayer(tileUrl, { subdomains: 'abcd', maxZoom: 20, minZoom: 2 });
+      tile.on('tileerror', () => {
+        setTileFailed(true);
+        if (!tileLayerRef.current || tileLayerRef.current !== tile) return;
+        const fallback = L.tileLayer(fallbackTileUrlForTheme(isDark), { maxZoom: 20, minZoom: 2 });
+        fallback.on('tileload', () => setTileFailed(false));
+        tile.remove();
+        fallback.addTo(mapRef.current);
+        tileLayerRef.current = fallback;
+      });
+      tile.on('tileload', () => setTileFailed(false));
       tile.addTo(mapRef.current);
       tileLayerRef.current = tile;
+      setTimeout(() => mapRef.current?.invalidateSize(), 0);
     });
   }, [isDark]);
+
+  useEffect(() => {
+    if (!mapRef.current || !mapReady) return;
+    const map = mapRef.current;
+    const refresh = () => map.invalidateSize();
+    refresh();
+    const shortTimer = window.setTimeout(refresh, 150);
+    const longTimer = window.setTimeout(refresh, 450);
+    return () => {
+      window.clearTimeout(shortTimer);
+      window.clearTimeout(longTimer);
+    };
+  }, [className, mapReady, vehicles.length]);
+
+  useEffect(() => {
+    if (!mapRef.current || !mapReady) return;
+    const refresh = () => mapRef.current?.invalidateSize();
+    window.addEventListener('resize', refresh);
+    window.addEventListener('orientationchange', refresh);
+    return () => {
+      window.removeEventListener('resize', refresh);
+      window.removeEventListener('orientationchange', refresh);
+    };
+  }, [mapReady]);
 
   // ── Refresh markers when vehicles / selectedId change ─────────────────────
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !mapReady) return;
 
     import('leaflet').then((L) => {
       markersRef.current.forEach((m) => m.remove());
@@ -252,7 +320,7 @@ export function MapView({
       const bounds: [number, number][] = [];
 
       vehicles.forEach((v) => {
-        const [lat, lng] = pseudoGeo(v.id);
+        const [lat, lng] = vehicleCoords(v);
         bounds.push([lat, lng]);
         const isSelected = v.id === selectedId;
 
@@ -263,14 +331,23 @@ export function MapView({
         const scale = isSelected ? 'scale(1.12)' : 'scale(1)';
 
         const html = `<div style="
+          position:relative;display:inline-flex;align-items:center;justify-content:center;
           background:${bg};color:${fg};border:1.5px solid ${bdr};
-          padding:4px 8px;font-size:11px;font-weight:700;
+          min-width:48px;padding:5px 10px;box-sizing:border-box;
+          font-size:12px;font-weight:800;line-height:1;
           font-family:Inter,sans-serif;white-space:nowrap;cursor:pointer;
-          border-radius:4px;box-shadow:${shadow};transform:${scale};
+          border-radius:999px;box-shadow:${shadow};transform:${scale};
           transition:transform .12s,box-shadow .12s;
-        ">$${v.price.toLocaleString()}</div>`;
+        ">
+          $${v.price.toLocaleString()}
+          <span style="
+            position:absolute;left:50%;bottom:-5px;width:9px;height:9px;
+            background:${bg};border-right:1.5px solid ${bdr};border-bottom:1.5px solid ${bdr};
+            transform:translateX(-50%) rotate(45deg);
+          "></span>
+        </div>`;
 
-        const icon = L.divIcon({ html, className: '', iconAnchor: [0, 0] });
+        const icon = L.divIcon({ html, className: 'kerodex-price-pin', iconSize: [76, 34], iconAnchor: [38, 34] });
 
         const marker = L.marker([lat, lng], { icon }).addTo(map).on('click', () => {
           setActiveVehicle(v);
@@ -280,13 +357,17 @@ export function MapView({
         markersRef.current.push(marker);
       });
 
-      if (bounds.length > 0) {
+      if (bounds.length > 0 && !selectedId) {
         try {
-          map.fitBounds(L.latLngBounds(bounds), { padding: [40, 40], maxZoom: 10 });
+          if (userLocation) {
+            map.setView([userLocation.lat, userLocation.lng], 11, { animate: true });
+          } else {
+            map.fitBounds(L.latLngBounds(bounds), { padding: [40, 40], maxZoom: 10 });
+          }
         } catch { /* ignore */ }
       }
     });
-  }, [vehicles, selectedId, isDark, onSelectPin]);
+  }, [vehicles, selectedId, isDark, onSelectPin, mapReady, userLocation]);
 
   const handleClose = () => {
     setActiveVehicle(null);
@@ -307,8 +388,28 @@ export function MapView({
       className={`w-full h-full relative z-0 isolate overflow-hidden ${className}`}
       aria-label="Vehicle listings map"
       role="region"
-      style={{ minHeight: 300 }}
+      style={{
+        minHeight: 300,
+        backgroundColor: isDark ? '#101317' : '#eef1ed',
+        backgroundImage: isDark
+          ? 'linear-gradient(30deg, rgba(255,255,255,.05) 1px, transparent 1px), linear-gradient(120deg, rgba(255,255,255,.035) 1px, transparent 1px)'
+          : 'linear-gradient(30deg, rgba(17,24,39,.08) 1px, transparent 1px), linear-gradient(120deg, rgba(17,24,39,.06) 1px, transparent 1px)',
+        backgroundSize: '120px 120px, 180px 180px',
+      }}
     >
+      {tileFailed && (
+        <div
+          className="pointer-events-none absolute inset-0 z-[1] opacity-80"
+          aria-hidden="true"
+          style={{
+            backgroundColor: isDark ? '#101317' : '#eef1ed',
+            backgroundImage: isDark
+              ? 'linear-gradient(24deg, transparent 46%, rgba(255,255,255,.08) 47%, rgba(255,255,255,.08) 49%, transparent 50%), linear-gradient(112deg, transparent 48%, rgba(255,255,255,.06) 49%, rgba(255,255,255,.06) 51%, transparent 52%)'
+              : 'linear-gradient(24deg, transparent 46%, rgba(31,41,55,.14) 47%, rgba(31,41,55,.14) 49%, transparent 50%), linear-gradient(112deg, transparent 48%, rgba(31,41,55,.10) 49%, rgba(31,41,55,.10) 51%, transparent 52%)',
+            backgroundSize: '150px 150px, 210px 210px',
+          }}
+        />
+      )}
       {activeVehicle && (
         <PopupCard
           vehicle={activeVehicle}

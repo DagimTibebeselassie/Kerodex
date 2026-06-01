@@ -1,5 +1,6 @@
-import { useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { submitVerificationRequest } from '@/lib/api';
 import { Button, Input, toast } from '@blinkdotnew/ui';
 import {
   Shield, BadgeCheck, Phone, Mail, FileText, Camera,
@@ -343,18 +344,39 @@ export function VerificationPage() {
 
   const [modal, setModal] = useState<string | null>(null);
 
+  useEffect(() => {
+    setSteps((prev) => prev.map((step) => {
+      if (step.id === 'email') return { ...step, status: user?.emailVerified ? 'verified' : 'not_started' };
+      if (step.id === 'phone') return { ...step, status: user?.phoneVerified ? 'verified' : step.status };
+      if (step.id === 'id') return { ...step, status: user?.identityVerified ? 'verified' : step.status };
+      if (step.id === 'selfie') return { ...step, status: user?.selfieVerified ? 'verified' : step.status };
+      return step;
+    }));
+  }, [user?.emailVerified, user?.phoneVerified, user?.identityVerified, user?.selfieVerified]);
+
   const setStatus = (id: string, status: VerifStatus) => {
     setSteps((prev) => prev.map((s) => s.id === id ? { ...s, status } : s));
   };
 
   const handleStart = (id: string) => {
+    if (id === 'email' && user?.emailVerified) {
+      setStatus(id, 'verified');
+      return;
+    }
     setStatus(id, 'in_progress');
     setModal(id);
   };
 
-  const handleDone = (id: string, finalStatus: VerifStatus) => {
+  const handleDone = async (id: string, finalStatus: VerifStatus) => {
     setModal(null);
     setStatus(id, finalStatus);
+    if (id === 'id' || id === 'selfie') {
+      try {
+        await submitVerificationRequest(id === 'id' ? 'identity' : 'selfie');
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Unable to send verification to admin review.');
+      }
+    }
   };
 
   const handleModalClose = (id: string) => {

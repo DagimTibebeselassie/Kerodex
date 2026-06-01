@@ -31,6 +31,11 @@ const sessions = new Map();
 const adminSessions = new Map();
 const oauthStates = new Map();
 const emailVerifications = new Map();
+const passwordResets = new Map();
+
+if (typeof store.setRuntimeUserProvider === "function") {
+  store.setRuntimeUserProvider(() => Array.from(users.values()).map(adminRuntimeUser));
+}
 
 const adminRoles = {
   support_agent: ["dashboard:read", "users:read", "reports:read", "reports:write", "audit:read"],
@@ -143,8 +148,10 @@ function makeToken() {
   return `dev_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
 }
 
-function makeCode() {
-  return String(Math.floor(100000 + Math.random() * 900000));
+function makeCode(length = 6) {
+  const min = 10 ** (length - 1);
+  const max = 9 * min;
+  return String(Math.floor(min + Math.random() * max));
 }
 
 function publicAdmin(admin) {
@@ -205,26 +212,9 @@ function sendAdminEvents(req, res) {
     "access-control-allow-origin": "*"
   });
 
-  const priorities = ["medium", "high", "critical"];
-  const types = ["New Verification Submission", "New Ownership Verification", "New Fraud Alert", "New User Report", "Critical System Error", "High-Risk Listing", "High-Risk User"];
-  let count = 0;
-  const send = () => {
-    const event = {
-      id: `live_${Date.now()}`,
-      type: types[count % types.length],
-      priority: priorities[count % priorities.length],
-      message: `${types[count % types.length]} requires admin review.`,
-      createdAt: new Date().toISOString(),
-      adminRole: admin.role
-    };
-    res.write(`event: admin.notification\n`);
-    res.write(`data: ${JSON.stringify(event)}\n\n`);
-    count += 1;
-  };
-
-  send();
-  const timer = setInterval(send, 15000);
-  req.on("close", () => clearInterval(timer));
+  res.write(`: admin event stream connected for ${admin.role}\n\n`);
+  const heartbeat = setInterval(() => res.write(`: heartbeat ${Date.now()}\n\n`), 30000);
+  req.on("close", () => clearInterval(heartbeat));
 }
 
 function publicUser(user) {
@@ -240,6 +230,37 @@ function publicUser(user) {
   };
 }
 
+function adminRuntimeUser(user) {
+  const createdAt = user.createdAt || new Date().toISOString();
+  const lastLoginAt = user.lastLoginAt || createdAt;
+  return {
+    id: user.id,
+    fullName: user.name || user.email.split("@")[0],
+    email: user.email,
+    phone: user.phone || "",
+    role: "buyer",
+    status: "active",
+    accountCreatedAt: createdAt,
+    lastLoginAt,
+    verificationStatus: user.emailVerified ? "approved" : "pending",
+    profileCompletion: user.emailVerified ? 35 : 15,
+    listingCount: 0,
+    messagesSent: 0,
+    reportsReceived: 0,
+    shadowBanned: false,
+    messagingDisabled: false,
+    listingCreationDisabled: false,
+    internalNotes: user.provider === "email" && !user.emailVerified ? "Email verification pending." : "",
+    loginHistory: [{ at: lastLoginAt, ip: "local", region: "Local development" }],
+    ipHistory: ["local"],
+    deviceHistory: [user.provider || "email"],
+    timeline: [
+      { at: createdAt, event: "Account created", detail: user.provider || "email" },
+      { at: lastLoginAt, event: "Signed in", detail: user.emailVerified ? "verified account" : "verification pending" }
+    ]
+  };
+}
+
 function getAuthUser(req) {
   const auth = req.headers.authorization || "";
   const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
@@ -250,6 +271,7 @@ function getAuthUser(req) {
 
 function createSession(user) {
   const token = makeToken();
+  user.lastLoginAt = new Date().toISOString();
   sessions.set(token, user.id);
   return { token, user: publicUser(user) };
 }
@@ -268,7 +290,9 @@ function upsertSocialUser(provider) {
     emailVerified: false,
     phoneVerified: false,
     identityVerified: false,
-    selfieVerified: false
+    selfieVerified: false,
+    createdAt: new Date().toISOString(),
+    lastLoginAt: null
   };
   users.set(email, user);
   return user;
@@ -294,7 +318,9 @@ function upsertOAuthUser(provider, profile) {
     emailVerified: Boolean(profile.emailVerified),
     phoneVerified: false,
     identityVerified: false,
-    selfieVerified: false
+    selfieVerified: false,
+    createdAt: new Date().toISOString(),
+    lastLoginAt: null
   };
   users.set(email, user);
   return user;
@@ -378,30 +404,83 @@ async function sendVerificationEmail({ email, code, req }) {
   emailVerifications.set(email, { code, expiresAt });
 
   const verifyUrl = `${appOrigin(req)}/verify?email=${encodeURIComponent(email)}`;
-  const text = `Your Kerodex verification code is ${code}. It expires in 15 minutes. Open ${verifyUrl} to continue.`;
+  return sendCodeEmail({
+    email,
+    code,
+    req,
+    subject: "[Kerodex] Email verification code",
+    heading: "Please verify your email",
+    intro: "Here is your Kerodex email verification code:",
+    reason: "a verification code was requested for your Kerodex account.",
+    fallbackText: `Your Kerodex verification code is ${code}. It expires in 15 minutes. Open ${verifyUrl} to continue.`
+  });
+}
+
+async function sendPasswordResetEmail({ email, code, req }) {
+  const expiresAt = Date.now() + 15 * 60 * 1000;
+  passwordResets.set(email, { code, expiresAt });
+
+  return sendCodeEmail({
+    email,
+    code,
+    req,
+    subject: "[Kerodex] Password reset code",
+    heading: "Reset your password",
+    intro: "Here is your Kerodex password reset code:",
+    reason: "a password reset code was requested for your Kerodex account.",
+    fallbackText: `Your Kerodex password reset code is ${code}. It expires in 15 minutes.`
+  });
+}
+
+async function sendCodeEmail({ email, code, subject, heading, intro, reason, fallbackText }) {
+  const html = `<!doctype html>
+  <html>
+    <body style="margin:0;background:#ffffff;color:#24292f;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+      <div style="max-width:640px;margin:0 auto;padding:56px 24px 40px;text-align:center;">
+        <div style="font-size:28px;font-weight:700;letter-spacing:-0.03em;margin-bottom:28px;">Kerodex</div>
+        <h1 style="font-size:24px;font-weight:400;line-height:1.35;margin:0 0 24px;">${heading}</h1>
+        <div style="border:1px solid #d0d7de;border-radius:6px;text-align:left;padding:24px 28px;margin:0 auto 24px;max-width:480px;">
+          <p style="font-size:15px;line-height:1.5;margin:0 0 24px;color:#24292f;">${intro}</p>
+          <div style="font-size:32px;letter-spacing:0.35em;text-align:center;margin:0 0 24px;color:#24292f;">${code}</div>
+          <p style="font-size:15px;line-height:1.5;margin:0 0 18px;color:#24292f;">This code is valid for <strong>15 minutes</strong> and can only be used once.</p>
+          <p style="font-size:15px;line-height:1.5;margin:0;color:#24292f;"><strong>Please don't share this code with anyone:</strong> Kerodex will never ask for it by phone or email.</p>
+          <p style="font-size:15px;line-height:1.5;margin:28px 0 0;color:#24292f;">Thanks,<br/>The Kerodex Team</p>
+        </div>
+        <p style="max-width:480px;margin:0 auto 24px;text-align:left;font-size:14px;line-height:1.6;color:#57606a;">You're receiving this email because ${reason} If this wasn't you, you can ignore this email.</p>
+        <hr style="border:0;border-top:1px solid #d8dee4;margin:28px auto 0;max-width:480px;" />
+      </div>
+    </body>
+  </html>`;
 
   if (process.env.RESEND_API_KEY && process.env.AUTH_EMAIL_FROM) {
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${process.env.RESEND_API_KEY}`,
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({
-        from: process.env.AUTH_EMAIL_FROM,
-        to: email,
-        subject: "Verify your Kerodex email",
-        text
-      })
-    });
-    if (!response.ok) {
+    try {
+      const response = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+          "content-type": "application/json"
+        },
+        body: JSON.stringify({
+          from: process.env.AUTH_EMAIL_FROM,
+          to: email,
+          subject,
+          text: fallbackText,
+          html
+        })
+      });
+      if (response.ok) return { sent: true, devCode: undefined };
+
       const detail = await response.text().catch(() => "");
-      throw new Error(`Verification email failed: ${detail || response.status}`);
+      console.warn(`[Kerodex email verification failed] ${detail || response.status}`);
+    } catch (error) {
+      console.warn(`[Kerodex email verification failed] ${error.message}`);
     }
-    return { sent: true, devCode: undefined };
+    emailVerifications.delete(email);
+    passwordResets.delete(email);
+    throw new Error("We could not send the email code. Check the Resend sender/domain settings and try again.");
   }
 
-  console.log(`[Kerodex email verification] ${email}: ${code}`);
+  console.log(`[Kerodex email code] ${email}: ${code}`);
   return {
     sent: false,
     devCode: process.env.NODE_ENV === "production" ? undefined : code
@@ -725,7 +804,7 @@ const server = http.createServer((req, res) => {
         }).catch(() => {});
         sendJson(res, 200, session);
       })
-      .catch(() => sendJson(res, 400, { error: "Invalid request body." }));
+      .catch((error) => sendJson(res, 400, { error: error.message || "Invalid request body." }));
     return;
   }
 
@@ -961,10 +1040,12 @@ const server = http.createServer((req, res) => {
             emailVerified: false,
             phoneVerified: false,
             identityVerified: false,
-            selfieVerified: false
+            selfieVerified: false,
+            createdAt: new Date().toISOString(),
+            lastLoginAt: null
           };
-          users.set(email, user);
           const mail = await sendVerificationEmail({ email, code: makeCode(), req });
+          users.set(email, user);
           sendJson(res, 201, {
             requiresVerification: true,
             email,
@@ -996,7 +1077,7 @@ const server = http.createServer((req, res) => {
 
         sendJson(res, 200, createSession(existing));
       })
-      .catch(() => sendJson(res, 400, { error: "Invalid request body." }));
+      .catch((error) => sendJson(res, 400, { error: error.message || "Invalid request body." }));
     return;
   }
 
@@ -1015,7 +1096,65 @@ const server = http.createServer((req, res) => {
         user.emailVerified = true;
         sendJson(res, 200, createSession(user));
       })
-      .catch(() => sendJson(res, 400, { error: "Invalid request body." }));
+      .catch((error) => sendJson(res, 400, { error: error.message || "Invalid request body." }));
+    return;
+  }
+
+  if (url.pathname === "/api/auth/password/forgot" && req.method === "POST") {
+    readJson(req)
+      .then(async (body) => {
+        const email = normalize(body.email);
+        if (!email || !email.includes("@")) {
+          sendJson(res, 400, { error: "Use a valid email address." });
+          return;
+        }
+
+        const existing = users.get(email);
+        if (!existing || existing.provider !== "email") {
+          sendJson(res, 200, {
+            requiresResetCode: true,
+            email,
+            message: "If an email account exists, we sent a password reset code."
+          });
+          return;
+        }
+
+        const mail = await sendPasswordResetEmail({ email, code: makeCode(), req });
+        sendJson(res, 200, {
+          requiresResetCode: true,
+          email,
+          devCode: mail.devCode,
+          message: mail.sent
+            ? "Check your email for the Kerodex password reset code."
+            : "Email sending is not configured yet. Use the local development code to reset your password."
+        });
+      })
+      .catch((error) => sendJson(res, 400, { error: error.message || "Invalid request body." }));
+    return;
+  }
+
+  if (url.pathname === "/api/auth/password/reset" && req.method === "POST") {
+    readJson(req)
+      .then((body) => {
+        const email = normalize(body.email);
+        const code = String(body.code || "").trim();
+        const password = String(body.password || "");
+        const record = passwordResets.get(email);
+        const user = users.get(email);
+        if (!user || !record || record.code !== code || record.expiresAt < Date.now()) {
+          sendJson(res, 400, { error: "Reset code is invalid or expired." });
+          return;
+        }
+        if (password.length < 6) {
+          sendJson(res, 400, { error: "Use a password with at least 6 characters." });
+          return;
+        }
+        user.password = password;
+        user.emailVerified = true;
+        passwordResets.delete(email);
+        sendJson(res, 200, createSession(user));
+      })
+      .catch((error) => sendJson(res, 400, { error: error.message || "Invalid request body." }));
     return;
   }
 
@@ -1035,6 +1174,26 @@ const server = http.createServer((req, res) => {
     store.getListings()
       .then((listings) => sendJson(res, 200, { listings: listings.filter((listing) => listing.userId === user.id) }))
       .catch((error) => sendJson(res, 500, { error: "Unable to load your listings.", detail: error.message }));
+    return;
+  }
+
+  if (url.pathname === "/api/me/verifications" && req.method === "POST") {
+    const user = getAuthUser(req);
+    if (!user) {
+      sendJson(res, 401, { error: "Sign in to submit verification." });
+      return;
+    }
+    readJson(req)
+      .then(async (body) => {
+        const type = String(body.type || "").trim();
+        if (!["identity", "selfie", "ownership", "phone"].includes(type)) {
+          sendJson(res, 400, { error: "Choose a valid verification type." });
+          return;
+        }
+        const verification = await store.createVerificationRequest(user, type);
+        sendJson(res, 201, { verification });
+      })
+      .catch((error) => sendJson(res, 400, { error: "Unable to submit verification.", detail: error.message }));
     return;
   }
 
@@ -1074,6 +1233,14 @@ const server = http.createServer((req, res) => {
     store.getListingById(id)
       .then((listing) => sendJson(res, listing ? 200 : 404, listing || { error: "Listing not found" }))
       .catch((error) => sendJson(res, 500, { error: "Unable to load listing.", detail: error.message }));
+    return;
+  }
+
+  if (url.pathname.startsWith("/api/sellers/")) {
+    const id = decodeURIComponent(url.pathname.split("/").pop() || "");
+    store.getSellerById(id)
+      .then((seller) => sendJson(res, seller ? 200 : 404, seller || { error: "Seller not found" }))
+      .catch((error) => sendJson(res, 500, { error: "Unable to load seller.", detail: error.message }));
     return;
   }
 

@@ -26,8 +26,8 @@ The product goal is simple: help real owners sell real cars directly to buyers w
 apps/
   api/
     server.js        # Dependency-free local API/static server
-    store.js         # JSON fallback or Postgres-backed listing store
-    seed/            # Demo listing and conversation JSON
+    store.js         # JSON fallback or Postgres-backed marketplace store
+    seed/            # Demo seller, listing, and conversation JSON
   admin/
     server.js        # Separate local admin frontend server
     public/          # Admin dashboard UI
@@ -116,7 +116,7 @@ npm.cmd test
 This prototype stays close to $0:
 
 - Local development can run from JSON seed files without a database.
-- Hosted environments can set `DATABASE_URL` to read listings/conversations from Postgres.
+- Hosted environments can set `DATABASE_URL` to read sellers, listings, and conversations from Postgres.
 - No paid AWS infrastructure yet.
 - No build step required.
 - Local static assets and demo seed data.
@@ -126,8 +126,9 @@ This keeps iteration fast while the product, UX, and data model are still changi
 
 ## Database Prep
 
-The current beta database bridge uses two Postgres record tables:
+The current beta database bridge uses three Postgres record tables:
 
+- `seller_records`
 - `listing_records`
 - `conversation_records`
 
@@ -137,6 +138,8 @@ Run this after setting `DATABASE_URL`:
 npm.cmd install
 npm.cmd run db:seed
 ```
+
+`npm.cmd run db:seed` clears and reloads the demo sellers, listings, and conversations so the local JSON seed and hosted database stay aligned.
 
 The normalized long-term schema remains in `docs/database-schema.sql`.
 

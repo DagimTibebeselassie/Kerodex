@@ -21,10 +21,16 @@ export interface Vehicle {
   badges?: string[];
   features?: string[];
   seller?: {
+    id?: string;
     name?: string;
+    initials?: string;
     verified?: boolean;
     responseTime?: string;
+    responseRate?: number;
     completedSales?: number;
+    memberSince?: string;
+    rating?: number | null;
+    reviewCount?: number;
   };
 }
 

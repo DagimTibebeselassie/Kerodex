@@ -2,7 +2,7 @@
 
 The current prototype exposes a tiny local API. It is shaped so it can later become REST routes behind an API gateway.
 
-Listings and conversations now load through `apps/api/store.js`. Local development uses the seed JSON files, and hosted environments can set `DATABASE_URL` to read the same records from Postgres tables (`listing_records` and `conversation_records`). Run `npm run db:seed` after creating the database tables to copy the current demo inventory into Postgres.
+Listings, sellers, and conversations now load through `apps/api/store.js`. Local development uses the seed JSON files, and hosted environments can set `DATABASE_URL` to read the same records from Postgres tables (`seller_records`, `listing_records`, and `conversation_records`). Run `npm run db:seed` after creating the database tables to reset and copy the current demo marketplace into Postgres.
 
 ## Current Routes
 
@@ -10,6 +10,7 @@ Listings and conversations now load through `apps/api/store.js`. Local developme
 GET /api/health
 GET /api/listings
 GET /api/listings/:id
+GET /api/sellers/:id
 GET /api/conversations
 POST /api/conversations
 GET /api/events
@@ -20,6 +21,8 @@ GET /api/auth/callback/google
 GET /api/auth/callback/microsoft
 POST /api/auth/email
 POST /api/auth/email/verify
+POST /api/auth/password/forgot
+POST /api/auth/password/reset
 ```
 
 ## Admin Routes

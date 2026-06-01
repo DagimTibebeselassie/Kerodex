@@ -1,0 +1,122 @@
+[
+  {
+    "id": "seller_maya_rivera",
+    "name": "Maya Rivera",
+    "initials": "MR",
+    "city": "Brooklyn",
+    "state": "NY",
+    "memberSince": "2026-02-18T14:20:00.000Z",
+    "bio": "Private seller listing a family-owned SUV after moving closer to transit.",
+    "responseTime": "Usually replies same day",
+    "responseRate": 86,
+    "completedSales": 0,
+    "rating": null,
+    "reviewCount": 0,
+    "verification": {
+      "email": true,
+      "phone": true,
+      "identity": true,
+      "selfie": true
+    }
+  },
+  {
+    "id": "seller_andre_turner",
+    "name": "Andre Turner",
+    "initials": "AT",
+    "city": "Jersey City",
+    "state": "NJ",
+    "memberSince": "2026-03-04T09:10:00.000Z",
+    "bio": "Outdoor enthusiast selling a truck after ordering a smaller daily driver.",
+    "responseTime": "Replies within a few hours",
+    "responseRate": 78,
+    "completedSales": 0,
+    "rating": null,
+    "reviewCount": 0,
+    "verification": {
+      "email": true,
+      "phone": true,
+      "identity": true,
+      "selfie": false
+    }
+  },
+  {
+    "id": "seller_lena_kim",
+    "name": "Lena Kim",
+    "initials": "LK",
+    "city": "Hoboken",
+    "state": "NJ",
+    "memberSince": "2026-01-27T18:45:00.000Z",
+    "bio": "EV owner switching to a larger vehicle. Service records and charging history are uploaded.",
+    "responseTime": "Usually replies in 1 day",
+    "responseRate": 72,
+    "completedSales": 1,
+    "rating": 5,
+    "reviewCount": 1,
+    "verification": {
+      "email": true,
+      "phone": true,
+      "identity": true,
+      "selfie": true
+    }
+  },
+  {
+    "id": "seller_omar_williams",
+    "name": "Omar Williams",
+    "initials": "OW",
+    "city": "Atlanta",
+    "state": "GA",
+    "memberSince": "2026-04-02T11:05:00.000Z",
+    "bio": "Listing a commuter sedan after receiving a company vehicle.",
+    "responseTime": "Usually replies same day",
+    "responseRate": 80,
+    "completedSales": 0,
+    "rating": null,
+    "reviewCount": 0,
+    "verification": {
+      "email": true,
+      "phone": true,
+      "identity": false,
+      "selfie": false
+    }
+  },
+  {
+    "id": "seller_priya_shah",
+    "name": "Priya Shah",
+    "initials": "PS",
+    "city": "Dallas",
+    "state": "TX",
+    "memberSince": "2026-02-09T16:30:00.000Z",
+    "bio": "Selling a well-kept hybrid because the household no longer needs two cars.",
+    "responseTime": "Replies within a few hours",
+    "responseRate": 88,
+    "completedSales": 0,
+    "rating": null,
+    "reviewCount": 0,
+    "verification": {
+      "email": true,
+      "phone": true,
+      "identity": true,
+      "selfie": true
+    }
+  },
+  {
+    "id": "seller_chris_bennett",
+    "name": "Chris Bennett",
+    "initials": "CB",
+    "city": "Seattle",
+    "state": "WA",
+    "memberSince": "2026-03-22T08:35:00.000Z",
+    "bio": "First-time Kerodex seller. Ownership documents are uploaded and waiting for review.",
+    "responseTime": "Usually replies in 1 day",
+    "responseRate": 64,
+    "completedSales": 0,
+    "rating": null,
+    "reviewCount": 0,
+    "verification": {
+      "email": true,
+      "phone": true,
+      "identity": false,
+      "selfie": false
+    }
+  }
+]

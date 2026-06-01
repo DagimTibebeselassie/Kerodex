@@ -27,6 +27,14 @@ export interface EmailVerificationRequired {
   devCode?: string;
 }
 
+export interface PasswordResetRequired {
+  requiresResetCode: true;
+  email: string;
+  message?: string;
+  error?: string;
+  devCode?: string;
+}
+
 export interface ConversationRecord {
   id: string;
   listingId: string;
@@ -46,6 +54,23 @@ export interface ConversationRecord {
     content: string;
     createdAt: string;
   }>;
+}
+
+export interface SellerProfileRecord {
+  id: string;
+  name: string;
+  initials?: string;
+  city?: string;
+  state?: string;
+  memberSince?: string;
+  bio?: string;
+  responseTime?: string;
+  responseRate?: number;
+  completedSales?: number;
+  rating?: number | null;
+  reviewCount?: number;
+  verification?: Record<string, boolean>;
+  listings?: ListingPayload[];
 }
 
 type ListingPayload = Record<string, any>;
@@ -152,6 +177,30 @@ export async function socialAuth(provider: 'google' | 'microsoft') {
   window.location.assign(apiUrl(`/api/auth/${provider}`));
 }
 
+export async function requestPasswordReset(email: string) {
+  return request<PasswordResetRequired>('/api/auth/password/forgot', {
+    method: 'POST',
+    body: JSON.stringify({ email }),
+  });
+}
+
+export async function resetPassword(email: string, code: string, password: string) {
+  const session = await request<AuthSession>('/api/auth/password/reset', {
+    method: 'POST',
+    body: JSON.stringify({ email, code, password }),
+  });
+  saveSession(session);
+  return session;
+}
+
+export async function submitVerificationRequest(type: 'identity' | 'selfie' | 'ownership' | 'phone') {
+  return request<{ verification: Record<string, any> }>('/api/me/verifications', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ type }),
+  });
+}
+
 export function consumeAuthRedirect() {
   const params = new URLSearchParams(window.location.search);
   const token = params.get('token');
@@ -187,6 +236,14 @@ export async function listVehicles(params: Record<string, string | number | bool
 export async function getVehicle(id: string) {
   const listing = await request<ListingPayload>(`/api/listings/${encodeURIComponent(id)}`);
   return toVehicle(listing);
+}
+
+export async function getSellerProfile(id: string): Promise<Omit<SellerProfileRecord, 'listings'> & { listings: Vehicle[] }> {
+  const seller = await request<SellerProfileRecord>(`/api/sellers/${encodeURIComponent(id)}`);
+  return {
+    ...seller,
+    listings: (seller.listings || []).map(toVehicle),
+  };
 }
 
 export async function createVehicle(payload: ListingPayload) {

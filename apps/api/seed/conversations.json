@@ -1,11 +1,41 @@
 [
   {
-    "id": "cnv_201",
-    "listingId": "lst_103",
-    "buyerName": "You",
-    "sellerName": "Lena K.",
-    "lastMessage": "Yes, it is still available. I can do Saturday morning.",
-    "unread": 1,
-    "updatedAt": "2026-05-22T14:02:00.000Z"
+    "id": "conv_demo_001",
+    "listingId": "lst_203",
+    "buyerId": "buyer_demo_alex",
+    "sellerId": "seller_lena_kim",
+    "buyerName": "Alex Carter",
+    "sellerName": "Lena Kim",
+    "vehicleTitle": "2022 Tesla Model 3 Long Range",
+    "lastMessage": "Thanks. I can meet Saturday afternoon if the car is still available.",
+    "unread": 0,
+    "updatedAt": "2026-05-30T18:10:00.000Z",
+    "participants": ["Alex Carter", "Lena Kim"],
+    "messages": [
+      {
+        "id": "msg_demo_001",
+        "senderId": "buyer_demo_alex",
+        "receiverId": "seller_lena_kim",
+        "vehicleId": "lst_203",
+        "content": "Hi Lena, is the Model 3 still available?",
+        "createdAt": "2026-05-30T17:55:00.000Z"
+      },
+      {
+        "id": "msg_demo_002",
+        "senderId": "seller_lena_kim",
+        "receiverId": "buyer_demo_alex",
+        "vehicleId": "lst_203",
+        "content": "Yes, it is. I uploaded the charging history and service summary today.",
+        "createdAt": "2026-05-30T18:02:00.000Z"
+      },
+      {
+        "id": "msg_demo_003",
+        "senderId": "buyer_demo_alex",
+        "receiverId": "seller_lena_kim",
+        "vehicleId": "lst_203",
+        "content": "Thanks. I can meet Saturday afternoon if the car is still available.",
+        "createdAt": "2026-05-30T18:10:00.000Z"
+      }
+    ]
   }
 ]

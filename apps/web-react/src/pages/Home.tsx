@@ -4,6 +4,7 @@ import { Vehicle } from '@/types';
 import { MAKES, getModelsForMake } from '@/data/makes-models';
 import { VehicleCard } from '@/components/VehicleCard';
 import { MapView } from '@/components/MapView';
+import { listVehicles } from '@/lib/api';
 import { Button } from '@blinkdotnew/ui';
 import {
   Search,
@@ -17,35 +18,6 @@ import {
   Navigation,
   MessageCircle,
 } from 'lucide-react';
-
-// ── Mock Data ────────────────────────────────────────────────────────────────
-const BEST_DEALS: Vehicle[] = [
-  { id: 'bd1', userId: 'u1', make: 'Honda', model: 'Civic', year: 2020, price: 15900, mileage: 52000, location: 'Austin, TX', description: '', images: ['https://images.unsplash.com/photo-1606016159991-dfe4f2746ad5?q=80&w=400'], status: 'available' as const, createdAt: '2026-05-10' },
-  { id: 'bd2', userId: 'u2', make: 'Toyota', model: 'Corolla', year: 2019, price: 14200, mileage: 68000, location: 'Dallas, TX', description: '', images: ['https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?q=80&w=400'], status: 'available' as const, createdAt: '2026-05-08' },
-  { id: 'bd3', userId: 'u3', make: 'Hyundai', model: 'Elantra', year: 2021, price: 17400, mileage: 39000, location: 'Houston, TX', description: '', images: ['https://images.unsplash.com/photo-1494976388531-d1058494cdd8?q=80&w=400'], status: 'available' as const, createdAt: '2026-05-06' },
-  { id: 'bd4', userId: 'u4', make: 'Ford', model: 'Fusion', year: 2018, price: 12800, mileage: 74000, location: 'Atlanta, GA', description: '', images: ['https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?q=80&w=400'], status: 'available' as const, createdAt: '2026-05-04' },
-];
-
-const EV_HYBRID: Vehicle[] = [
-  { id: 'ev1', userId: 'u5', make: 'Tesla', model: 'Model 3', year: 2022, price: 34500, mileage: 28000, location: 'San Francisco, CA', description: '', images: ['https://images.unsplash.com/photo-1560958089-b8a1929cea89?q=80&w=400'], status: 'available' as const, createdAt: '2026-05-09' },
-  { id: 'ev2', userId: 'u6', make: 'Toyota', model: 'Prius', year: 2021, price: 23900, mileage: 31000, location: 'Portland, OR', description: '', images: ['https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=400'], status: 'available' as const, createdAt: '2026-05-07' },
-  { id: 'ev3', userId: 'u7', make: 'Hyundai', model: 'Ioniq 5', year: 2023, price: 41000, mileage: 12000, location: 'Seattle, WA', description: '', images: ['https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?q=80&w=400'], status: 'available' as const, createdAt: '2026-05-05' },
-  { id: 'ev4', userId: 'u8', make: 'Ford', model: 'Mustang Mach-E', year: 2022, price: 38200, mileage: 22000, location: 'Denver, CO', description: '', images: ['https://images.unsplash.com/photo-1617814076229-a2284e8c5a29?q=80&w=400'], status: 'available' as const, createdAt: '2026-05-03' },
-];
-
-const LOW_MILEAGE: Vehicle[] = [
-  { id: 'lm1', userId: 'u9', make: 'BMW', model: '3 Series', year: 2022, price: 48000, mileage: 8000, location: 'Miami, FL', description: '', images: ['https://images.unsplash.com/photo-1555215695-3004980ad54e?q=80&w=400'], status: 'available' as const, createdAt: '2026-05-11' },
-  { id: 'lm2', userId: 'u10', make: 'Mercedes', model: 'C-Class', year: 2021, price: 46000, mileage: 11000, location: 'Chicago, IL', description: '', images: ['https://images.unsplash.com/photo-1606664515524-ed2f786a0bd6?q=80&w=400'], status: 'available' as const, createdAt: '2026-05-09' },
-  { id: 'lm3', userId: 'u11', make: 'Lexus', model: 'IS', year: 2023, price: 44000, mileage: 6000, location: 'Boston, MA', description: '', images: ['https://images.unsplash.com/photo-1544636331-e26879cd4d9b?q=80&w=400'], status: 'available' as const, createdAt: '2026-05-07' },
-  { id: 'lm4', userId: 'u12', make: 'Audi', model: 'A4', year: 2022, price: 39000, mileage: 9500, location: 'Seattle, WA', description: '', images: ['https://images.unsplash.com/photo-1594736797933-d0401ba2fe65?q=80&w=400'], status: 'available' as const, createdAt: '2026-05-05' },
-];
-
-const UNDER_20K: Vehicle[] = [
-  { id: 'u20k1', userId: 'u13', make: 'Toyota', model: 'Camry', year: 2018, price: 17500, mileage: 61000, location: 'Nashville, TN', description: '', images: ['https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?q=80&w=400'], status: 'available' as const, createdAt: '2026-05-02' },
-  { id: 'u20k2', userId: 'u14', make: 'Honda', model: 'Accord', year: 2017, price: 15200, mileage: 78000, location: 'Phoenix, AZ', description: '', images: ['https://images.unsplash.com/photo-1606016159991-dfe4f2746ad5?q=80&w=400'], status: 'available' as const, createdAt: '2026-04-30' },
-  { id: 'u20k3', userId: 'u15', make: 'Mazda', model: 'Mazda3', year: 2019, price: 18900, mileage: 44000, location: 'Minneapolis, MN', description: '', images: ['https://images.unsplash.com/photo-1494976388531-d1058494cdd8?q=80&w=400'], status: 'available' as const, createdAt: '2026-04-28' },
-  { id: 'u20k4', userId: 'u16', make: 'Subaru', model: 'Impreza', year: 2020, price: 19400, mileage: 33000, location: 'Salt Lake City, UT', description: '', images: ['https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?q=80&w=400'], status: 'available' as const, createdAt: '2026-04-26' },
-];
 
 // ── Beta Notice Banner ───────────────────────────────────────────────────────
 function BetaBanner() {
@@ -243,15 +215,31 @@ export function HomePage() {
   const [heroMake, setHeroMake] = useState('');
   const [heroModel, setHeroModel] = useState('');
   const heroModels = heroMake ? getModelsForMake(heroMake) : [];
+  const [marketVehicles, setMarketVehicles] = useState<Vehicle[]>([]);
 
   // Reset model when make changes
   useEffect(() => {
     setHeroModel('');
   }, [heroMake]);
 
+  useEffect(() => {
+    let mounted = true;
+    listVehicles()
+      .then((vehicles) => {
+        if (mounted) setMarketVehicles(vehicles);
+      })
+      .catch(() => {
+        if (mounted) setMarketVehicles([]);
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   // Location section state
   const [locationEnabled, setLocationEnabled] = useState(false);
   const [locationError, setLocationError] = useState('');
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   // Dark mode detection for map
   const [isDark, setIsDark] = useState(() =>
@@ -272,13 +260,18 @@ export function HomePage() {
       return;
     }
     navigator.geolocation.getCurrentPosition(
-      () => {
+      (position) => {
+        setUserLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
         setLocationEnabled(true);
         setLocationError('');
       },
       () => {
         setLocationError('Unable to retrieve your location. Please try again.');
-      }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
     );
   };
 
@@ -290,6 +283,45 @@ export function HomePage() {
     if (heroModel) params.model = heroModel;
     navigate({ to: '/search', search: params as any });
   };
+
+  const handleBrowseNearby = () => {
+    if (!navigator.geolocation) {
+      navigate({ to: '/search', search: { nearby: '1', radius: '100', sort: 'closest' } as any });
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        navigate({
+          to: '/search',
+          search: {
+            nearby: '1',
+            radius: '100',
+            sort: 'closest',
+            lat: String(position.coords.latitude),
+            lng: String(position.coords.longitude),
+          } as any,
+        });
+      },
+      () => {
+        navigate({ to: '/search', search: { nearby: '1', radius: '100', sort: 'closest' } as any });
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  };
+
+  const latestVehicles = marketVehicles.slice(0, 4);
+  const bestDealVehicles = marketVehicles
+    .filter((vehicle) => Number((vehicle as any).fairValueDelta || 0) <= 0)
+    .slice(0, 4);
+  const evHybridVehicles = marketVehicles
+    .filter((vehicle) => ['electric', 'hybrid'].includes(String(vehicle.fuelType || '').toLowerCase()))
+    .slice(0, 4);
+  const lowMileageVehicles = [...marketVehicles]
+    .sort((a, b) => Number(a.mileage || 0) - Number(b.mileage || 0))
+    .slice(0, 4);
+  const budgetVehicles = marketVehicles
+    .filter((vehicle) => Number(vehicle.price || 0) <= 25000)
+    .slice(0, 4);
 
   return (
     <div>
@@ -375,12 +407,13 @@ export function HomePage() {
 
           {/* Quick link */}
           <div className="mt-4 flex items-center gap-4">
-            <Link
-              to="/search"
+            <button
+              type="button"
+              onClick={handleBrowseNearby}
               className="text-[12px] text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2 flex items-center gap-1"
             >
               <Navigation className="h-3 w-3" /> Browse nearby cars
-            </Link>
+            </button>
             <span className="text-border">·</span>
             <Link
               to="/search"
@@ -417,14 +450,14 @@ export function HomePage() {
           {/* Mobile: horizontal scroll; Desktop: 4-col grid */}
           <>
             <div className="md:hidden flex gap-4 overflow-x-auto pb-4 -mx-4 px-4 snap-x snap-mandatory">
-              {BEST_DEALS.map((vehicle) => (
+              {latestVehicles.map((vehicle) => (
                 <div key={vehicle.id} className="w-[260px] shrink-0 snap-start">
                   <VehicleCard vehicle={vehicle} />
                 </div>
               ))}
             </div>
             <div className="hidden md:grid grid-cols-4 gap-6">
-              {BEST_DEALS.map((vehicle) => (
+              {latestVehicles.map((vehicle) => (
                 <VehicleCard key={vehicle.id} vehicle={vehicle} />
               ))}
             </div>
@@ -436,28 +469,28 @@ export function HomePage() {
       <VehicleRowSection
         label="Best Deals"
         heading="Priced below market"
-        vehicles={BEST_DEALS}
+        vehicles={bestDealVehicles}
       />
 
       {/* ── EV & HYBRID ───────────────────────────────────────────────────── */}
       <VehicleRowSection
         label="Electric & Hybrid"
         heading="Go electric"
-        vehicles={EV_HYBRID}
+        vehicles={evHybridVehicles}
       />
 
       {/* ── LOW MILEAGE ───────────────────────────────────────────────────── */}
       <VehicleRowSection
         label="Low Mileage"
         heading="Nearly new"
-        vehicles={LOW_MILEAGE}
+        vehicles={lowMileageVehicles}
       />
 
       {/* ── UNDER $20K ────────────────────────────────────────────────────── */}
       <VehicleRowSection
         label="Budget Picks"
-        heading="Under $20,000"
-        vehicles={UNDER_20K}
+        heading="Under $25,000"
+        vehicles={budgetVehicles}
       />
 
       {/* ── MAP PREVIEW ─────────────────────────────────────────────────────── */}
@@ -511,8 +544,9 @@ export function HomePage() {
             {/* Real Leaflet map */}
             <div className="relative h-64 md:h-80 lg:h-96 border border-border overflow-hidden">
               <MapView
-                vehicles={BEST_DEALS}
+                vehicles={marketVehicles}
                 isDark={isDark}
+                userLocation={userLocation}
                 className="w-full h-full"
               />
             </div>

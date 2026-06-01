@@ -21,6 +21,18 @@ const CONDITION_OPTIONS = ['Excellent', 'Good', 'Fair', 'Needs Work'] as const;
 const TRANSMISSION_OPTIONS = ['Automatic', 'Manual', 'CVT'] as const;
 const FUEL_OPTIONS = ['Gasoline', 'Diesel', 'Hybrid', 'Plug-in Hybrid', 'Electric', 'Flex Fuel'] as const;
 const DRIVE_OPTIONS = ['FWD', 'RWD', 'AWD', '4WD'] as const;
+const LOCATION_OPTIONS = [
+  { label: 'Brooklyn, NY', lat: 40.6782, lng: -73.9442 },
+  { label: 'Hoboken, NJ', lat: 40.7433, lng: -74.0324 },
+  { label: 'Jersey City, NJ', lat: 40.7178, lng: -74.0431 },
+  { label: 'Atlanta, GA', lat: 33.7490, lng: -84.3880 },
+  { label: 'Dallas, TX', lat: 32.7767, lng: -96.7970 },
+  { label: 'Seattle, WA', lat: 47.6062, lng: -122.3321 },
+  { label: 'Los Angeles, CA', lat: 34.0522, lng: -118.2437 },
+  { label: 'Miami, FL', lat: 25.7617, lng: -80.1918 },
+  { label: 'Chicago, IL', lat: 41.8781, lng: -87.6298 },
+  { label: 'Phoenix, AZ', lat: 33.4484, lng: -112.0740 },
+];
 
 // ── Schema ────────────────────────────────────────────────────────────────
 const vehicleSchema = z.object({
@@ -75,6 +87,18 @@ function normalizeLocation(raw: string): string {
       .join(' ')
     )
     .join(', ');
+}
+
+function geocodeDemoLocation(location: string) {
+  const normalized = normalizeLocation(location);
+  return LOCATION_OPTIONS.find((item) => item.label.toLowerCase() === normalized.toLowerCase()) || null;
+}
+
+function nearestSupportedLocation(lat: number, lng: number) {
+  return LOCATION_OPTIONS.reduce((best, item) => {
+    const distance = Math.hypot(item.lat - lat, item.lng - lng);
+    return distance < best.distance ? { item, distance } : best;
+  }, { item: LOCATION_OPTIONS[0], distance: Number.POSITIVE_INFINITY }).item;
 }
 
 // ── FormField helper ──────────────────────────────────────────────────────
@@ -138,6 +162,9 @@ export function SellPage() {
   const [images, setImages] = useState<string[]>([]);
   const [uploadingIdx, setUploadingIdx] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [listingCoords, setListingCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationError, setLocationError] = useState('');
+  const [locationFocused, setLocationFocused] = useState(false);
 
   // VIN decode state
   const [vin, setVin] = useState('');
@@ -169,10 +196,31 @@ export function SellPage() {
   });
 
   const watchedMake = watch('make');
+  const watchedLocation = watch('location') || '';
   const modelOptions = watchedMake ? (MAKES_MODELS[watchedMake] || []) : [];
+  const locationMatches = LOCATION_OPTIONS
+    .filter((item) => item.label.toLowerCase().startsWith(watchedLocation.trim().toLowerCase()))
+    .slice(0, 6);
 
   // Reset model when make changes
   useEffect(() => { setValue('model', ''); }, [watchedMake, setValue]);
+
+  const useCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationError('Location is not supported by this browser.');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const nearest = nearestSupportedLocation(position.coords.latitude, position.coords.longitude);
+        setListingCoords({ lat: nearest.lat, lng: nearest.lng });
+        setValue('location', nearest.label, { shouldDirty: true, shouldValidate: true });
+        setLocationError('');
+      },
+      () => setLocationError('Unable to access your location. Check browser location permissions and try again.'),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  };
 
   // ── VIN Autofill ─────────────────────────────────────────────────────
   const handleVinDecode = useCallback(async () => {
@@ -252,6 +300,12 @@ export function SellPage() {
     try {
       // Normalize location (e.g. "atlanta georgia" → "Atlanta, Georgia")
       const location = normalizeLocation(data.location);
+      const matchedLocation = geocodeDemoLocation(location);
+      const coords = listingCoords || (matchedLocation ? { lat: matchedLocation.lat, lng: matchedLocation.lng } : null);
+      if (!matchedLocation && !listingCoords) {
+        toast.error('Choose a valid city from the location suggestions.');
+        return;
+      }
 
       const vehicle = await createVehicle({
         userId:      user.id,
@@ -263,6 +317,8 @@ export function SellPage() {
         price:       data.price,
         mileage:     data.mileage,
         location,
+        lat:         coords?.lat,
+        lng:         coords?.lng,
         description: data.description,
         images,
         status:      'available',
@@ -529,13 +585,62 @@ export function SellPage() {
               <FieldLabel required>Location</FieldLabel>
               <div className="relative">
                 <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-                <input
-                  {...register('location')}
-                  placeholder="e.g. Atlanta, Georgia"
-                  className="w-full h-10 pl-9 pr-3 text-[13px] border border-input bg-background text-foreground placeholder:text-muted-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring transition-colors rounded-md"
+                <Controller
+                  name="location"
+                  control={control}
+                  render={({ field }) => (
+                    <input
+                      {...field}
+                      value={field.value || ''}
+                      onChange={(e) => {
+                        setListingCoords(null);
+                        setLocationError('');
+                        field.onChange(e.target.value);
+                      }}
+                      onFocus={() => setLocationFocused(true)}
+                      onBlur={() => setTimeout(() => setLocationFocused(false), 120)}
+                      placeholder="Start typing a city"
+                      className="w-full h-10 pl-9 pr-3 text-[13px] border border-input bg-background text-foreground placeholder:text-muted-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring transition-colors rounded-md"
+                    />
+                  )}
                 />
+                {locationFocused && watchedLocation.trim() && (
+                  <div className="absolute left-0 right-0 top-full mt-1 z-30 border border-border bg-background shadow-lg rounded-md overflow-hidden">
+                    {locationMatches.length ? locationMatches.map((item) => (
+                      <button
+                        key={item.label}
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => {
+                          setValue('location', item.label, { shouldDirty: true, shouldValidate: true });
+                          setListingCoords({ lat: item.lat, lng: item.lng });
+                          setLocationFocused(false);
+                          setLocationError('');
+                        }}
+                        className="w-full h-10 px-3 text-left text-[13px] hover:bg-muted transition-colors flex items-center gap-2"
+                      >
+                        <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                        {item.label}
+                      </button>
+                    )) : (
+                      <div className="px-3 py-3 text-[12px] text-muted-foreground">
+                        No matching city. Choose a supported city from the list.
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-              <p className="text-[11px] text-muted-foreground mt-1">City and state — we'll normalize the format for you.</p>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <p className="text-[11px] text-muted-foreground">Start typing and choose a city, or use your current location.</p>
+                <button
+                  type="button"
+                  onClick={useCurrentLocation}
+                  className="text-[11px] font-bold uppercase tracking-wider underline underline-offset-2"
+                >
+                  Use my location
+                </button>
+              </div>
+              {locationError && <p className="text-[11px] text-destructive mt-1">{locationError}</p>}
               <FieldError msg={errors.location?.message} />
             </div>
           </div>

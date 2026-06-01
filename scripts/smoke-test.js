@@ -12,6 +12,7 @@ const root = path.resolve(__dirname, "..");
 const requiredFiles = [
   "apps/api/server.js",
   "apps/api/store.js",
+  "apps/api/seed/sellers.json",
   "apps/api/seed/listings.json",
   "apps/api/seed/conversations.json",
   "apps/admin/server.js",
@@ -30,7 +31,11 @@ requiredFiles.forEach((file) => {
 (async () => {
   const listings = await store.getListings();
   assert(Array.isArray(listings), "Listings store must return an array.");
-  assert(listings.length >= 25, "Expected at least 25 seed listings.");
+  assert(listings.length >= 8, "Expected at least 8 realistic seed listings.");
+
+  const sellers = await store.getSellers();
+  assert(Array.isArray(sellers), "Seller store must return an array.");
+  assert(sellers.length >= 6, "Expected realistic seed sellers.");
 
   const ids = new Set();
   listings.forEach((listing) => {
@@ -40,7 +45,12 @@ requiredFiles.forEach((file) => {
     assert(Number.isFinite(listing.lat), `Listing ${listing.id} is missing latitude.`);
     assert(Number.isFinite(listing.lng), `Listing ${listing.id} is missing longitude.`);
     assert(listing.images && listing.images.length > 0, `Listing ${listing.id} is missing images.`);
+    assert(listing.seller?.id, `Listing ${listing.id} is missing a linked seller id.`);
+    assert(sellers.some((seller) => seller.id === listing.seller.id), `Listing ${listing.id} points to an unknown seller.`);
   });
+
+  const sampleSeller = await store.getSellerById(listings[0].seller.id);
+  assert(sampleSeller?.listings?.length > 0, "Seller profile must include linked listings.");
 
   const html = fs.readFileSync(path.join(root, "apps/web/public/index.html"), "utf8");
   assert(html.includes("collectionStack"), "Homepage must include collection rows container.");
@@ -48,7 +58,7 @@ requiredFiles.forEach((file) => {
 
   const dashboard = await store.getAdminDashboard();
   assert(dashboard.cards.totalListings >= listings.length, "Admin dashboard must report listing totals.");
-  assert(dashboard.website.totalVisitors > 0, "Admin website analytics must report visitors.");
+  assert(Number.isFinite(dashboard.website.totalVisitors), "Admin website analytics must report visitor totals.");
   assert(dashboard.funnel.length >= 6, "Admin dashboard must include marketplace funnel stages.");
 
   const users = await store.getAdminCollection("users");

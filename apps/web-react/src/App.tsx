@@ -11,6 +11,7 @@ import { SellPage } from './pages/Sell';
 import { SavedVehiclesPage } from './pages/Saved';
 import { ProfilePage } from './pages/Profile';
 import { SellerCockpitPage } from './pages/SellerCockpit';
+import { SellerProfilePage } from './pages/SellerProfile';
 import { VerificationPage } from './pages/Verification';
 import { MessagesPage } from './pages/Messages';
 import { StubPage } from './pages/StubPage';
@@ -49,6 +50,12 @@ const vehicleDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/vehicle/$id',
   component: VehicleDetailPage,
+});
+
+const sellerProfileRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/seller/$id',
+  component: SellerProfilePage,
 });
 
 const legacyListingRoute = createRoute({
@@ -133,6 +140,7 @@ const routeTree = rootRoute.addChildren([
   searchRoute,
   legacySearchRoute,
   vehicleDetailRoute,
+  sellerProfileRoute,
   legacyListingRoute,
   dashboardRoute,
   sellRoute,

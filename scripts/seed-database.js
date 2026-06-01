@@ -15,6 +15,7 @@ async function main() {
   const seedDir = path.resolve(__dirname, "../apps/api/seed");
   const listings = JSON.parse(fs.readFileSync(path.join(seedDir, "listings.json"), "utf8"));
   const conversations = JSON.parse(fs.readFileSync(path.join(seedDir, "conversations.json"), "utf8"));
+  const sellers = JSON.parse(fs.readFileSync(path.join(seedDir, "sellers.json"), "utf8"));
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS listing_records (
@@ -28,7 +29,24 @@ async function main() {
       payload JSONB NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+
+    CREATE TABLE IF NOT EXISTS seller_records (
+      id TEXT PRIMARY KEY,
+      payload JSONB NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
   `);
+
+  await pool.query("TRUNCATE listing_records, conversation_records, seller_records;");
+
+  for (const seller of sellers) {
+    await pool.query(
+      `INSERT INTO seller_records (id, payload, updated_at)
+       VALUES ($1, $2, now())
+       ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload, updated_at = now()`,
+      [seller.id, seller]
+    );
+  }
 
   for (const listing of listings) {
     await pool.query(
@@ -49,7 +67,7 @@ async function main() {
   }
 
   await pool.end();
-  console.log(`Seeded ${listings.length} listings and ${conversations.length} conversations.`);
+  console.log(`Seeded ${sellers.length} sellers, ${listings.length} listings, and ${conversations.length} conversations.`);
 }
 
 main().catch((error) => {

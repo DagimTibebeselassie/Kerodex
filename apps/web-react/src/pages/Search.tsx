@@ -17,17 +17,6 @@ import {
 } from 'lucide-react';
 
 // ── Mock data ─────────────────────────────────────────────────────────────────
-const MOCK_VEHICLES: Vehicle[] = [
-  { id: 'v1', userId: 'u1', make: 'Toyota', model: 'Camry', year: 2022, price: 24500, mileage: 32000, location: 'Austin, TX', description: 'One owner, clean title.', images: ['https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?q=80&w=800'], status: 'available', createdAt: '2026-05-01' },
-  { id: 'v2', userId: 'u2', make: 'Honda', model: 'Civic', year: 2021, price: 19900, mileage: 41000, location: 'Dallas, TX', description: 'Sport trim, clean.', images: ['https://images.unsplash.com/photo-1606016159991-dfe4f2746ad5?q=80&w=800'], status: 'available', createdAt: '2026-04-28' },
-  { id: 'v3', userId: 'u3', make: 'Tesla', model: 'Model 3', year: 2023, price: 38000, mileage: 18000, location: 'Houston, TX', description: 'Long Range AWD.', images: ['https://images.unsplash.com/photo-1560958089-b8a1929cea89?q=80&w=800'], status: 'available', createdAt: '2026-05-10' },
-  { id: 'v4', userId: 'u4', make: 'Ford', model: 'F-150', year: 2020, price: 31200, mileage: 67000, location: 'San Antonio, TX', description: 'XLT 4x4, tow package.', images: ['https://images.unsplash.com/photo-1558618666-fcd25c85cd64?q=80&w=800'], status: 'available', createdAt: '2026-04-15' },
-  { id: 'v5', userId: 'u5', make: 'BMW', model: '3 Series', year: 2021, price: 42000, mileage: 28000, location: 'Nashville, TN', description: 'M Sport package.', images: ['https://images.unsplash.com/photo-1555215695-3004980ad54e?q=80&w=800'], status: 'available', createdAt: '2026-05-05' },
-  { id: 'v6', userId: 'u6', make: 'Chevrolet', model: 'Silverado 1500', year: 2019, price: 28900, mileage: 82000, location: 'Phoenix, AZ', description: 'LT trim, well maintained.', images: ['https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?q=80&w=800'], status: 'available', createdAt: '2026-03-20' },
-  { id: 'v7', userId: 'u7', make: 'Mercedes', model: 'C-Class', year: 2022, price: 51000, mileage: 22000, location: 'Miami, FL', description: 'AMG Line, panoramic roof.', images: ['https://images.unsplash.com/photo-1618843479313-40f8afb4b4d8?q=80&w=800'], status: 'available', createdAt: '2026-05-12' },
-  { id: 'v8', userId: 'u8', make: 'Hyundai', model: 'Tucson', year: 2023, price: 26400, mileage: 15000, location: 'Atlanta, GA', description: 'Hybrid, AWD, loaded.', images: ['https://images.unsplash.com/photo-1494976388531-d1058494cdd8?q=80&w=800'], status: 'available', createdAt: '2026-05-08' },
-];
-
 // ── Constants ─────────────────────────────────────────────────────────────────
 const YEARS: number[] = [];
 for (let y = 2026; y >= 1990; y--) YEARS.push(y);
@@ -156,13 +145,48 @@ function applyFilters(vehicles: Vehicle[], f: FilterState, search: string): Vehi
   });
 }
 
-function applySort(vehicles: Vehicle[], sortBy: string): Vehicle[] {
+function distanceMiles(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+  const toRad = (value: number) => (value * Math.PI) / 180;
+  const radius = 3958.8;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 2 * radius * Math.asin(Math.sqrt(h));
+}
+
+function vehiclePoint(vehicle: Vehicle) {
+  const lat = Number((vehicle as any).lat);
+  const lng = Number((vehicle as any).lng);
+  return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+}
+
+function applyLocationFilter(vehicles: Vehicle[], userLocation: { lat: number; lng: number } | null, radius: string): Vehicle[] {
+  const miles = Number(radius);
+  if (!userLocation || !Number.isFinite(miles) || miles <= 0) return vehicles;
+  return vehicles.filter((vehicle) => {
+    const point = vehiclePoint(vehicle);
+    return point ? distanceMiles(userLocation, point) <= miles : false;
+  });
+}
+
+function applySort(vehicles: Vehicle[], sortBy: string, userLocation: { lat: number; lng: number } | null): Vehicle[] {
   return [...vehicles].sort((a, b) => {
     switch (sortBy) {
       case 'price_asc':    return a.price - b.price;
       case 'price_desc':   return b.price - a.price;
       case 'mileage_asc':  return a.mileage - b.mileage;
       case 'newest':       return b.createdAt.localeCompare(a.createdAt);
+      case 'closest': {
+        if (!userLocation) return 0;
+        const aPoint = vehiclePoint(a);
+        const bPoint = vehiclePoint(b);
+        if (!aPoint || !bPoint) return !aPoint && bPoint ? 1 : aPoint && !bPoint ? -1 : 0;
+        return distanceMiles(userLocation, aPoint) - distanceMiles(userLocation, bPoint);
+      }
       default:             return 0;
     }
   });
@@ -454,38 +478,88 @@ function FilterChips({ filters, setFilters, onClearAll }: { filters: FilterState
 // ── Main SearchPage ───────────────────────────────────────────────────────────
 export function SearchPage() {
   const urlParams = new URLSearchParams(window.location.search);
+  const latParam = urlParams.get('lat');
+  const lngParam = urlParams.get('lng');
+  const initialLat = latParam === null ? NaN : Number(latParam);
+  const initialLng = lngParam === null ? NaN : Number(lngParam);
+  const hasInitialLocation =
+    latParam !== null &&
+    lngParam !== null &&
+    Number.isFinite(initialLat) &&
+    Number.isFinite(initialLng) &&
+    !(initialLat === 0 && initialLng === 0);
+  const nearbyMode = urlParams.get('nearby') === '1';
   const [filters, setFilters]           = useState<FilterState>({
     ...DEFAULT_FILTERS,
     make: urlParams.get('make') || '',
     model: urlParams.get('model') || '',
+    radius: urlParams.get('radius') || (nearbyMode ? '100' : ''),
   });
-  const [sortBy, setSortBy]             = useState('recommended');
+  const [sortBy, setSortBy]             = useState(urlParams.get('sort') || (hasInitialLocation ? 'closest' : 'recommended'));
   const [viewMode, setViewMode]         = useState<'grid' | 'map'>('grid');
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [selectedMapId, setSelectedMapId] = useState<string | null>(null);
   const [searchText, setSearchText]     = useState(urlParams.get('q') || '');
   const [sortOpen, setSortOpen]         = useState(false);
   const [remoteVehicles, setRemoteVehicles] = useState<Vehicle[]>([]);
+  const [vehicleLoadError, setVehicleLoadError] = useState('');
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(
+    hasInitialLocation ? { lat: initialLat, lng: initialLng } : null
+  );
+  const [locationError, setLocationError] = useState('');
   const mapListRef                      = useRef<HTMLDivElement>(null);
   const isDark = document.documentElement.classList.contains('dark');
 
   useEffect(() => {
     let alive = true;
     listVehicles()
-      .then((items) => { if (alive) setRemoteVehicles(items); })
-      .catch(() => { if (alive) setRemoteVehicles([]); });
+      .then((items) => {
+        if (alive) {
+          setRemoteVehicles(items);
+          setVehicleLoadError('');
+        }
+      })
+      .catch((error) => {
+        if (alive) {
+          setRemoteVehicles([]);
+          setVehicleLoadError(error.message || 'Unable to load listings.');
+        }
+      });
     return () => { alive = false; };
   }, []);
 
   // Filtered + sorted vehicles
   const vehicles = useMemo(() => {
-    const source = remoteVehicles.length > 0 ? remoteVehicles : MOCK_VEHICLES;
-    const filtered = applyFilters(source, filters, searchText);
-    return applySort(filtered, sortBy);
-  }, [filters, remoteVehicles, sortBy, searchText]);
+    const filtered = applyLocationFilter(
+      applyFilters(remoteVehicles, filters, searchText),
+      userLocation,
+      filters.radius
+    );
+    return applySort(filtered, sortBy, userLocation);
+  }, [filters, remoteVehicles, sortBy, searchText, userLocation]);
 
   const filterCount = countFilters(filters);
   const clearFilters = () => setFilters(DEFAULT_FILTERS);
+
+  const enableLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationError('Location is not supported by this browser.');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
+        setFilters((current) => ({ ...current, radius: current.radius || '100' }));
+        setSortBy((current) => current === 'recommended' ? 'closest' : current);
+        setLocationError('');
+      },
+      () => setLocationError('Unable to access your location. Check browser location permissions and try again.'),
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  };
 
   // Scroll selected map card into view
   useEffect(() => {
@@ -662,7 +736,7 @@ export function SearchPage() {
                   <SearchIcon className="h-8 w-8 text-muted-foreground mb-4 opacity-30" />
                   <p className="text-[14px] font-bold mb-1.5">No results found</p>
                   <p className="text-[13px] text-muted-foreground mb-6 max-w-xs">
-                    Try adjusting your filters or broadening your search.
+                    {vehicleLoadError || 'Try adjusting your filters or broadening your search.'}
                   </p>
                   <button
                     onClick={clearFilters}
@@ -686,16 +760,25 @@ export function SearchPage() {
             <div className="flex" style={{ height: 'calc(100vh - 7rem)' }}>
 
               {/* Left: scrollable card list */}
-              <div ref={mapListRef} className="w-72 shrink-0 border-r border-border overflow-y-auto flex flex-col">
+              <div ref={mapListRef} className="hidden md:flex w-72 shrink-0 border-r border-border overflow-y-auto flex-col">
                 <div className="px-4 py-2.5 border-b border-border bg-background sticky top-0 z-10 shrink-0">
                   <p className="text-[11px] text-muted-foreground font-medium">
                     {vehicles.length} listing{vehicles.length !== 1 ? 's' : ''}
                   </p>
+                  <button
+                    onClick={enableLocation}
+                    className="mt-2 text-[11px] font-bold uppercase tracking-wider text-foreground underline underline-offset-2"
+                  >
+                    {userLocation ? 'Location enabled' : 'Use my location'}
+                  </button>
+                  {locationError && <p className="mt-1 text-[11px] text-destructive">{locationError}</p>}
                 </div>
 
                 {vehicles.length === 0 ? (
                   <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-                    <p className="text-[12px] text-muted-foreground">No listings match your filters.</p>
+                    <p className="text-[12px] text-muted-foreground">
+                      {vehicleLoadError || 'No listings match your filters.'}
+                    </p>
                     <button onClick={clearFilters} className="mt-3 text-[12px] underline underline-offset-2 text-muted-foreground hover:text-foreground transition-colors">
                       Clear filters
                     </button>
@@ -719,6 +802,7 @@ export function SearchPage() {
                   selectedId={selectedMapId}
                   onSelectPin={setSelectedMapId}
                   isDark={isDark}
+                  userLocation={userLocation}
                   className="w-full h-full"
                 />
               </div>

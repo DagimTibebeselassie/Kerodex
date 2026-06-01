@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { emailAuth, socialAuth, verifyEmail } from '@/lib/api';
+import { emailAuth, requestPasswordReset, resetPassword, socialAuth, verifyEmail } from '@/lib/api';
 import { Button, Input } from '@blinkdotnew/ui';
 import { X, Loader2, Mail, Lock, User } from 'lucide-react';
 
@@ -39,6 +39,11 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
   const [verificationCode, setVerificationCode] = useState('');
   const [verificationMessage, setVerificationMessage] = useState('');
   const [devCode, setDevCode] = useState('');
+  const [resetMode, setResetMode] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetCode, setResetCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [resetMessage, setResetMessage] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -48,6 +53,11 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
       setVerificationCode('');
       setVerificationMessage('');
       setDevCode('');
+      setResetMode(false);
+      setResetEmail('');
+      setResetCode('');
+      setNewPassword('');
+      setResetMessage('');
     }
   }, [defaultTab, isOpen]);
 
@@ -61,6 +71,20 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
       if (pendingEmail) {
         await verifyEmail(pendingEmail, verificationCode);
         onClose();
+        return;
+      }
+
+      if (resetMode) {
+        if (resetEmail && resetCode) {
+          await resetPassword(resetEmail, resetCode, newPassword);
+          onClose();
+          return;
+        }
+        const result = await requestPasswordReset(email);
+        setResetEmail(result.email);
+        setResetMessage(result.message || result.error || 'Enter the reset code we sent to your email.');
+        setDevCode(result.devCode || '');
+        setResetCode(result.devCode || '');
         return;
       }
 
@@ -104,11 +128,15 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
 
         <div className="mb-8">
           <h2 className="text-xl font-bold tracking-tight mb-1">
-            {pendingEmail ? 'Verify email' : tab === 'login' ? 'Welcome back' : 'Create account'}
+            {pendingEmail ? 'Verify email' : resetMode ? (resetEmail ? 'Enter reset code' : 'Reset password') : tab === 'login' ? 'Welcome back' : 'Create account'}
           </h2>
           <p className="text-[13px] text-muted-foreground">
             {pendingEmail
               ? verificationMessage
+              : resetMode
+              ? resetEmail
+                ? resetMessage
+                : 'Enter your email and we will send a password reset code.'
               : tab === 'login'
               ? 'Sign in to your Kerodex account to continue.'
               : 'Join Kerodex to buy and sell vehicles with confidence.'}
@@ -116,7 +144,7 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
         </div>
 
         {/* Tab Toggle */}
-        {!pendingEmail && <div className="flex border border-border mb-8" role="tablist">
+        {!pendingEmail && !resetMode && <div className="flex border border-border mb-8" role="tablist">
           <button
             role="tab"
             aria-selected={tab === 'login'}
@@ -158,6 +186,61 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
                   required
                 />
               </div>
+              {devCode && (
+                <p className="text-[12px] text-muted-foreground">
+                  Local dev code: <span className="font-mono text-foreground">{devCode}</span>
+                </p>
+              )}
+            </>
+          ) : resetMode ? (
+            <>
+              {!resetEmail ? (
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="auth-reset-email"
+                    name="resetEmail"
+                    type="email"
+                    placeholder="Email address"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10 h-11 text-[13px]"
+                    required
+                    autoComplete="email"
+                  />
+                </div>
+              ) : (
+                <>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="auth-reset-code"
+                      name="resetCode"
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="6-digit reset code"
+                      value={resetCode}
+                      onChange={(e) => setResetCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      className="pl-10 h-11 text-[13px]"
+                      required
+                    />
+                  </div>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="auth-new-password"
+                      name="newPassword"
+                      type="password"
+                      placeholder="New password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="pl-10 h-11 text-[13px]"
+                      required
+                      autoComplete="new-password"
+                    />
+                  </div>
+                </>
+              )}
               {devCode && (
                 <p className="text-[12px] text-muted-foreground">
                   Local dev code: <span className="font-mono text-foreground">{devCode}</span>
@@ -208,6 +291,15 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
               autoComplete={tab === 'login' ? 'current-password' : 'new-password'}
             />
           </div>
+          {tab === 'login' && (
+            <button
+              type="button"
+              onClick={() => { setResetMode(true); setError(''); setEmail(email); }}
+              className="text-[12px] text-muted-foreground hover:text-foreground underline underline-offset-2"
+            >
+              Forgot password?
+            </button>
+          )}
           </>}
 
           {error && (
@@ -224,6 +316,8 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
               <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Please wait...</>
             ) : pendingEmail ? (
               'Verify Email'
+            ) : resetMode ? (
+              resetEmail ? 'Reset Password' : 'Send Reset Code'
             ) : tab === 'login' ? (
               'Sign In'
             ) : (
@@ -232,7 +326,24 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
           </Button>
         </form>
 
-        {!pendingEmail && <div className="mt-4 grid grid-cols-2 gap-2">
+        {resetMode && (
+          <button
+            type="button"
+            onClick={() => {
+              setResetMode(false);
+              setResetEmail('');
+              setResetCode('');
+              setNewPassword('');
+              setDevCode('');
+              setError('');
+            }}
+            className="mt-4 text-[12px] text-muted-foreground hover:text-foreground underline underline-offset-2"
+          >
+            Back to sign in
+          </button>
+        )}
+
+        {!pendingEmail && !resetMode && <div className="mt-4 grid grid-cols-2 gap-2">
           <Button
             type="button"
             variant="outline"

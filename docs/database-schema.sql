@@ -11,6 +11,12 @@ CREATE TABLE IF NOT EXISTS listing_records (
 CREATE INDEX IF NOT EXISTS listing_records_deal_score_idx
   ON listing_records (COALESCE((payload->>'dealScore')::int, 0));
 
+CREATE TABLE IF NOT EXISTS seller_records (
+  id TEXT PRIMARY KEY,
+  payload JSONB NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS conversation_records (
   id TEXT PRIMARY KEY,
   payload JSONB NOT NULL,

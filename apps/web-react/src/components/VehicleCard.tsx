@@ -22,6 +22,8 @@ export function VehicleCard({
   className = '',
 }: VehicleCardProps) {
   const [saved, setSaved] = useState(savedIds?.has(vehicle.id) ?? savedVehicleIds().has(vehicle.id));
+  const verified = isVerified || Boolean(vehicle.seller?.verified);
+  const visibleBadges = (vehicle.badges || []).slice(0, 2);
 
   const imageUrl = (() => {
     try {
@@ -99,7 +101,7 @@ export function VehicleCard({
           <h3 className="text-[14px] font-bold tracking-tight leading-tight">
             {vehicle.year} {vehicle.make} {vehicle.model}
           </h3>
-          {isVerified && (
+          {verified && (
             <BadgeCheck className="h-4 w-4 text-foreground shrink-0 mt-0.5" aria-label="Verified seller" />
           )}
         </div>
@@ -117,14 +119,16 @@ export function VehicleCard({
 
         {/* Badges row */}
         <div className="flex flex-wrap gap-1.5 pt-1">
-          {isVerified && (
+          {verified && (
             <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 border border-border text-muted-foreground">
-              <BadgeCheck className="h-2.5 w-2.5" /> Verified
+              <BadgeCheck className="h-2.5 w-2.5" /> Seller checked
             </span>
           )}
-          <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 border border-border text-muted-foreground">
-            Clean Title
-          </span>
+          {visibleBadges.map((badge) => (
+            <span key={badge} className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 border border-border text-muted-foreground">
+              {badge}
+            </span>
+          ))}
         </div>
       </div>
     </Link>

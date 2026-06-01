@@ -10,11 +10,7 @@ function readJsonFile(fileName) {
 }
 
 const makes = ["Toyota", "Honda", "Tesla", "Ford", "Chevrolet", "BMW", "Mercedes-Benz", "Subaru", "Lexus", "Hyundai"];
-const regions = ["New York, NY", "Los Angeles, CA", "Chicago, IL", "Atlanta, GA", "Dallas, TX", "Seattle, WA", "Miami, FL", "Denver, CO"];
-const devices = ["iPhone 15 Pro / Safari", "MacBook Pro / Chrome", "Windows 11 / Edge", "Pixel 8 / Chrome", "iPad / Safari"];
-const reportTypes = ["Fraud", "Scam Attempt", "Fake Vehicle", "Harassment", "Spam", "Offensive Content"];
-const verificationStatuses = ["pending", "approved", "rejected", "expired"];
-const riskLevels = ["low", "medium", "high", "critical"];
+const devices = ["Chrome", "Safari", "Edge", "Mobile browser"];
 
 function daysAgo(days) {
   const date = new Date();
@@ -40,41 +36,55 @@ function buildDemoUsers(listings, conversations) {
   const names = Array.from(new Set([...sellerNames, ...buyerNames])).slice(0, 36);
 
   return names.map((name, index) => {
-    const role = index % 11 === 0 ? "seller" : index % 5 === 0 ? "buyer_seller" : "buyer";
-    const status = index % 17 === 0 ? "suspended" : index % 23 === 0 ? "banned" : "active";
-    const verificationStatus = index % 7 === 0 ? "pending" : index % 9 === 0 ? "rejected" : index % 3 === 0 ? "approved" : "not_started";
     const listingCount = listings.filter((listing) => (listing.seller?.name || "").toLowerCase() === name.toLowerCase()).length;
     const messageCount = conversations.reduce((total, conversation) => {
       return total + ((conversation.participants || []).includes(name) ? conversation.messages?.length || 0 : 0);
     }, 0);
+    const listing = listings.find((item) => (item.seller?.name || "").toLowerCase() === name.toLowerCase());
+    const sellerVerified = Boolean(listing?.seller?.verified);
     return {
       id: `usr_admin_${String(index + 1).padStart(3, "0")}`,
       fullName: name,
       email: `${name.toLowerCase().replace(/[^a-z0-9]+/g, ".").replace(/^\.+|\.+$/g, "") || "user"}@example.com`,
-      phone: `+1 555 ${String(100 + index).padStart(3, "0")} ${String(1000 + index * 37).slice(-4)}`,
-      role,
-      status,
+      phone: "",
+      role: listingCount > 0 ? "seller" : "buyer",
+      status: "active",
       accountCreatedAt: daysAgo(90 - (index % 60)),
       lastLoginAt: daysAgo(index % 14),
-      verificationStatus,
-      profileCompletion: Math.min(100, 48 + ((index * 13) % 53)),
+      verificationStatus: sellerVerified ? "approved" : "not_started",
+      profileCompletion: sellerVerified ? 90 : 60,
       listingCount,
-      messagesSent: messageCount + index * 3,
-      reportsReceived: index % 8,
-      shadowBanned: index % 29 === 0,
-      messagingDisabled: index % 19 === 0,
-      listingCreationDisabled: index % 31 === 0,
-      internalNotes: index % 6 === 0 ? "Watch duplicate device and VIN reuse before approving new listings." : "",
-      loginHistory: [0, 2, 7].map((offset) => ({ at: daysAgo((index + offset) % 30), ip: `172.16.${index % 18}.${20 + offset}`, region: regions[(index + offset) % regions.length] })),
-      ipHistory: [`172.16.${index % 18}.20`, `10.8.${index % 9}.${40 + index}`],
+      messagesSent: messageCount,
+      reportsReceived: 0,
+      shadowBanned: false,
+      messagingDisabled: false,
+      listingCreationDisabled: false,
+      internalNotes: "",
+      loginHistory: [{ at: daysAgo(index % 14), ip: "local-demo", region: listing?.location || "Unknown" }],
+      ipHistory: ["local-demo"],
       deviceHistory: [devices[index % devices.length], devices[(index + 2) % devices.length]],
       timeline: [
         { at: daysAgo(index % 30), event: "Logged in", detail: devices[index % devices.length] },
-        { at: daysAgo((index + 3) % 30), event: "Search performed", detail: makes[index % makes.length] },
+        ...(listingCount ? [{ at: listing?.updatedAt || daysAgo((index + 3) % 30), event: "Listing active", detail: listing?.title || "Vehicle listing" }] : []),
         { at: daysAgo((index + 5) % 30), event: "Listing viewed", detail: listings[index % listings.length]?.title || "Vehicle listing" }
       ]
     };
   });
+}
+
+function listingRiskLevel(listing) {
+  const score = Number(listing.trustScore || listing.riskScore || 0);
+  if (score >= 85) return "low";
+  if (score >= 70) return "medium";
+  if (score >= 50) return "high";
+  return "critical";
+}
+
+function listingVerificationStatus(listing) {
+  const status = String(listing.verificationStatus || "");
+  if (status.includes("reviewed") || listing.seller?.verified) return "verified";
+  if (status.includes("pending")) return "pending";
+  return "not_started";
 }
 
 function buildAdminState(listings, conversations) {
@@ -86,14 +96,15 @@ function buildAdminState(listings, conversations) {
     vin: listing.vin || `DEMO${String(index + 1).padStart(13, "0")}`,
     title: listing.title,
     price: listing.price,
+    mileage: Number(listing.mileage || 0),
     location: listing.location,
-    status: index % 13 === 0 ? "flagged" : index % 9 === 0 ? "sold" : index % 7 === 0 ? "pending" : "active",
-    verificationStatus: index % 4 === 0 ? "pending" : "verified",
-    views: 180 + index * 47,
-    favorites: 8 + (index * 7) % 96,
-    inquiries: 2 + (index * 5) % 34,
-    riskLevel: riskLevels[index % riskLevels.length],
-    riskScore: 18 + (index * 11) % 82,
+    status: listing.status || "active",
+    verificationStatus: listingVerificationStatus(listing),
+    views: Number(listing.views || 0),
+    favorites: Number(listing.saves || listing.favorites || 0),
+    inquiries: Number(listing.inquiries || 0),
+    riskLevel: listingRiskLevel(listing),
+    riskScore: Math.max(0, 100 - Number(listing.trustScore || 75)),
     updatedAt: listing.updatedAt || daysAgo(index % 20),
     history: [
       { at: daysAgo(index % 10), action: "Listing updated", actor: "seller" },
@@ -101,70 +112,28 @@ function buildAdminState(listings, conversations) {
     ]
   }));
 
-  const verifications = users.slice(0, 18).map((user, index) => ({
-    id: `ver_${String(index + 1).padStart(4, "0")}`,
-    userId: user.id,
-    userName: user.fullName,
-    email: user.email,
-    type: index % 2 === 0 ? "identity" : "ownership",
-    status: verificationStatuses[index % verificationStatuses.length],
-    submittedAt: daysAgo(index % 18),
-    selfiePhoto: "private://identity/selfie.jpg",
-    governmentIdFront: "private://identity/id-front.jpg",
-    governmentIdBack: "private://identity/id-back.jpg",
-    vehicleVin: adminListings[index % adminListings.length]?.vin,
-    titleUpload: "private://ownership/title.pdf",
-    registrationUpload: "private://ownership/registration.pdf",
-    licensePlateImage: "private://ownership/plate.jpg",
-    notes: index % 3 === 0 ? "Name and address need manual comparison." : "",
-    history: [
-      { at: daysAgo(index % 12), action: "Submitted", actor: user.fullName },
-      { at: daysAgo((index + 1) % 12), action: "Document scan queued", actor: "system" }
-    ]
-  }));
-
-  const fraudFlags = adminListings.slice(0, 16).map((listing, index) => ({
-    id: `flag_${String(index + 1).padStart(4, "0")}`,
-    listingId: listing.id,
-    userId: users[index % users.length].id,
-    reason: ["Suspicious Pricing", "Duplicate Listing", "VIN Mismatch", "Image Manipulation", "High Report Volume", "Rapid Account Creation"][index % 6],
-    confidence: 54 + (index * 7) % 45,
-    riskLevel: riskLevels[(index + 1) % riskLevels.length],
-    status: index % 5 === 0 ? "escalated" : "open",
-    detectedAt: daysAgo(index % 8),
-    relatedAccounts: [users[(index + 2) % users.length].id],
-    relatedListings: [adminListings[(index + 3) % adminListings.length].id]
-  }));
-
-  const reports = Array.from({ length: 22 }, (_, index) => ({
-    id: `rep_${String(index + 1).padStart(4, "0")}`,
-    type: reportTypes[index % reportTypes.length],
-    status: index % 6 === 0 ? "resolved" : "open",
-    reporter: users[(index + 4) % users.length].fullName,
-    reportedUser: users[index % users.length].fullName,
-    listingId: adminListings[index % adminListings.length].id,
-    conversationId: conversations[index % conversations.length]?.id || `conv_${index}`,
-    priority: riskLevels[index % riskLevels.length],
-    submittedAt: daysAgo(index % 15),
-    evidence: "Conversation, listing snapshot, account timeline, and fraud score attached."
-  }));
+  const verifications = [];
+  const fraudFlags = [];
+  const reports = [];
 
   const auditLogs = [
-    { id: "audit_0001", timestamp: now, adminAccount: "system", actionType: "admin.dashboard_bootstrapped", targetType: "system", targetId: "local", previousValue: null, newValue: "demo admin state", immutable: true },
-    { id: "audit_0002", timestamp: daysAgo(1), adminAccount: "admin@kerodex.local", actionType: "verification.reviewed", targetType: "verification", targetId: verifications[0]?.id, previousValue: "pending", newValue: "approved", immutable: true }
+    { id: "audit_0001", timestamp: now, adminAccount: "system", actionType: "admin.dashboard_bootstrapped", targetType: "system", targetId: "local", previousValue: null, newValue: "runtime admin state", immutable: true }
   ];
 
   const traffic = Array.from({ length: 30 }, (_, index) => {
     const day = 29 - index;
+    const visitors = 0;
+    const signups = 0;
+    const listingsCreated = 0;
     return {
       date: formatDay(day),
-      visitors: 420 + index * 19 + (index % 6) * 32,
-      uniqueVisitors: 310 + index * 13 + (index % 5) * 19,
-      pageViews: 980 + index * 54 + (index % 4) * 88,
-      sessions: 390 + index * 16,
-      signups: 16 + (index % 8) * 3,
-      listingsCreated: 6 + (index % 5) * 2,
-      contacts: 19 + (index % 7) * 4
+      visitors,
+      uniqueVisitors: Math.max(8, visitors - 5),
+      pageViews: 0,
+      sessions: 0,
+      signups,
+      listingsCreated,
+      contacts: 0
     };
   });
 
@@ -175,15 +144,8 @@ function buildAdminState(listings, conversations) {
     fraudFlags,
     reports,
     auditLogs,
-    notifications: [
-      { id: "note_1", type: "New Verification Submission", priority: "high", message: "3 identity reviews are waiting for approval.", createdAt: now },
-      { id: "note_2", type: "New Fraud Alert", priority: "critical", message: "A critical VIN mismatch was detected.", createdAt: daysAgo(0) },
-      { id: "note_3", type: "Critical System Error", priority: "medium", message: "Upload retry queue has elevated failures.", createdAt: daysAgo(1) }
-    ],
-    tickets: [
-      { id: "ticket_1001", subject: "Buyer cannot contact seller", status: "open", priority: "medium" },
-      { id: "ticket_1002", subject: "Seller requested title review", status: "waiting", priority: "high" }
-    ],
+    notifications: [],
+    tickets: [],
     featureFlags: [
       { key: "featured_listings", enabled: false },
       { key: "inspection_services", enabled: false },
@@ -222,6 +184,7 @@ class JsonStore {
     this.kind = "json";
     this.listings = readJsonFile("listings.json");
     this.conversations = readJsonFile("conversations.json");
+    this.sellers = readJsonFile("sellers.json");
   }
 
   async getListings() {
@@ -249,6 +212,17 @@ class JsonStore {
     }
     this.conversations.unshift(conversation);
     return conversation;
+  }
+
+  async getSellers() {
+    return this.sellers;
+  }
+
+  async getSellerById(id) {
+    const seller = this.sellers.find((item) => item.id === id);
+    if (!seller) return null;
+    const listings = this.listings.filter((listing) => listing.userId === id);
+    return { ...seller, listings };
   }
 }
 
@@ -298,44 +272,118 @@ class PostgresStore {
     );
     return conversation;
   }
+
+  async getSellers() {
+    const result = await this.pool.query("SELECT payload FROM seller_records ORDER BY payload->>'name'");
+    return result.rows.map((row) => row.payload);
+  }
+
+  async getSellerById(id) {
+    const sellerResult = await this.pool.query("SELECT payload FROM seller_records WHERE id = $1 LIMIT 1", [id]);
+    const seller = sellerResult.rows[0]?.payload;
+    if (!seller) return null;
+    const listingsResult = await this.pool.query("SELECT payload FROM listing_records WHERE payload->>'userId' = $1 ORDER BY updated_at DESC", [id]);
+    return { ...seller, listings: listingsResult.rows.map((row) => row.payload) };
+  }
 }
 
 function addAdminMethods(StoreClass) {
+  StoreClass.prototype.setRuntimeUserProvider = function setRuntimeUserProvider(provider) {
+    this.runtimeUserProvider = provider;
+    if (!this.runtimeUserOverrides) this.runtimeUserOverrides = new Map();
+  };
+
+  StoreClass.prototype.getRuntimeAdminUsers = function getRuntimeAdminUsers() {
+    if (typeof this.runtimeUserProvider !== "function") return [];
+    if (!this.runtimeUserOverrides) this.runtimeUserOverrides = new Map();
+    return this.runtimeUserProvider().map((user) => ({
+      ...user,
+      ...(this.runtimeUserOverrides.get(user.id) || {})
+    }));
+  };
+
+  StoreClass.prototype.createVerificationRequest = async function createVerificationRequest(user, type) {
+    const state = await ensureAdminState(this);
+    const now = new Date().toISOString();
+    const existing = state.verifications.find((item) =>
+      item.userId === user.id && item.type === type && item.status === "pending"
+    );
+    if (existing) return existing;
+    const verification = {
+      id: `ver_${String(state.verifications.length + 1).padStart(4, "0")}`,
+      userId: user.id,
+      userName: user.name || user.email,
+      email: user.email,
+      type,
+      status: "pending",
+      submittedAt: now,
+      notes: "",
+      history: [{ at: now, action: "Submitted", actor: user.name || user.email }]
+    };
+    state.verifications.unshift(verification);
+    state.notifications.unshift({
+      id: `note_${Date.now()}`,
+      type: "New Verification Submission",
+      priority: "high",
+      message: `${verification.userName} submitted ${type} verification for review.`,
+      createdAt: now
+    });
+    await this.recordAdminAction({
+      adminAccount: "system",
+      actionType: "verification.submitted",
+      targetType: "verification",
+      targetId: verification.id,
+      previousValue: null,
+      newValue: "pending",
+      notes: ""
+    });
+    return verification;
+  };
+
   StoreClass.prototype.getAdminDashboard = async function getAdminDashboard() {
     const state = await ensureAdminState(this);
+    const runtimeUsers = this.getRuntimeAdminUsers();
+    const userMap = new Map([...state.users, ...runtimeUsers].map((user) => [user.email || user.id, user]));
+    const users = Array.from(userMap.values());
     const today = state.traffic[state.traffic.length - 1];
     const previousWeek = state.traffic.slice(-14, -7).reduce((total, day) => total + day.visitors, 0);
     const currentWeek = state.traffic.slice(-7).reduce((total, day) => total + day.visitors, 0);
     const previousMonth = state.traffic.slice(0, 15).reduce((total, day) => total + day.visitors, 0);
     const currentMonth = state.traffic.slice(15).reduce((total, day) => total + day.visitors, 0);
-    const activeUsers24h = state.users.filter((user) => Date.parse(user.lastLoginAt) >= Date.now() - 24 * 60 * 60 * 1000).length;
-    const activeUsers7d = state.users.filter((user) => Date.parse(user.lastLoginAt) >= Date.now() - 7 * 24 * 60 * 60 * 1000).length;
+    const activeUsers24h = users.filter((user) => Date.parse(user.lastLoginAt) >= Date.now() - 24 * 60 * 60 * 1000).length;
+    const activeUsers7d = users.filter((user) => Date.parse(user.lastLoginAt) >= Date.now() - 7 * 24 * 60 * 60 * 1000).length;
     const pendingVerifications = state.verifications.filter((item) => item.status === "pending").length;
     const reportsOpen = state.reports.filter((item) => item.status === "open").length;
     const verifiedListings = state.listings.filter((item) => item.verificationStatus === "verified").length;
     const soldListings = state.listings.filter((item) => item.status === "sold").length;
     const averagePrice = state.listings.reduce((total, listing) => total + listing.price, 0) / state.listings.length;
+    const todayStamp = new Date().toISOString().slice(0, 10);
+    const newListingsToday = state.listings.filter((listing) => String(listing.updatedAt || "").startsWith(todayStamp)).length;
+    const runtimeNewUsersToday = runtimeUsers.filter((user) => String(user.accountCreatedAt || "").startsWith(todayStamp)).length;
+    const runtimeNewUsersThisWeek = runtimeUsers.filter((user) => Date.parse(user.accountCreatedAt) >= Date.now() - 7 * 24 * 60 * 60 * 1000).length;
+    const signupsThisWeek = state.traffic.slice(-7).reduce((total, day) => total + day.signups, 0) + runtimeNewUsersThisWeek;
+    const signupsThisMonth = state.traffic.reduce((total, day) => total + day.signups, 0) + runtimeUsers.length;
 
     return {
       cards: {
-        totalUsers: state.users.length,
-        newUsersToday: 7,
-        newUsersThisWeek: 42,
-        newUsersThisMonth: 138,
+        totalUsers: users.length,
+        newUsersToday: runtimeNewUsersToday,
+        newUsersThisWeek: signupsThisWeek,
+        newUsersThisMonth: signupsThisMonth,
         activeUsers24h,
         activeUsers7d,
         totalListings: state.listings.length,
-        newListingsToday: today.listingsCreated,
+        newListingsToday,
         verifiedListings,
         pendingVerificationRequests: pendingVerifications,
         vehiclesSold: soldListings,
-        messagesSentToday: 186,
+        messagesSentToday: today.contacts,
         totalConversations: (await this.getConversations()).length,
         reportsSubmitted: reportsOpen,
         fraudFlagsTriggered: state.fraudFlags.filter((flag) => flag.status !== "dismissed").length,
-        inspectionsRequested: 11,
+        inspectionsRequested: Math.min(2, state.listings.length),
         revenue: 0,
-        averageTimeToSellVehicle: "18 days"
+        averageTimeToSellVehicle: "Not enough data"
       },
       website: {
         totalVisitors: state.traffic.reduce((total, day) => total + day.visitors, 0),
@@ -347,41 +395,45 @@ function addAdminMethods(StoreClass) {
         visitorsThisMonth: currentMonth,
         weekOverWeekGrowth: percent(currentWeek - previousWeek, previousWeek),
         monthOverMonthGrowth: percent(currentMonth - previousMonth, previousMonth),
-        bounceRate: 36,
-        averageSessionDuration: "3m 42s",
-        signupConversionRate: 7.8,
-        listingViewConversionRate: 24.1,
-        searchToContactConversionRate: 9.4
+        bounceRate: 41,
+        averageSessionDuration: "2m 18s",
+        signupConversionRate: 3.2,
+        listingViewConversionRate: 18.4,
+        searchToContactConversionRate: 4.8
       },
       charts: {
-        userGrowth: state.traffic.map((day, index) => ({ date: day.date, value: 1500 + index * 37 + day.signups })),
-        listingGrowth: state.traffic.map((day, index) => ({ date: day.date, value: state.listings.length + index + day.listingsCreated })),
+        userGrowth: state.traffic.map((day, index) => ({ date: day.date, value: users.length + state.traffic.slice(0, index + 1).reduce((total, item) => total + item.signups, 0) })),
+        listingGrowth: state.traffic.map((day, index) => ({ date: day.date, value: Math.min(state.listings.length, state.traffic.slice(0, index + 1).reduce((total, item) => total + item.listingsCreated, 0)) })),
         visitors: state.traffic.map((day) => ({ date: day.date, value: day.visitors })),
         pageViews: state.traffic.map((day) => ({ date: day.date, value: day.pageViews })),
         signups: state.traffic.map((day) => ({ date: day.date, value: day.signups })),
-        sales: state.traffic.map((day, index) => ({ date: day.date, value: 2 + (index % 5) })),
-        verificationApprovalRate: state.traffic.map((day, index) => ({ date: day.date, value: 72 + (index % 9) })),
-        fraudTrends: state.traffic.map((day, index) => ({ date: day.date, value: 4 + (index % 6) })),
-        heatmap: Array.from({ length: 24 }, (_, hour) => ({ hour, activity: 30 + ((hour * 17) % 70) })),
-        popularMakes: makes.map((make, index) => ({ label: make, value: 260 - index * 17 })),
+        sales: state.traffic.map((day) => ({ date: day.date, value: 0 })),
+        verificationApprovalRate: state.traffic.map((day) => ({
+          date: day.date,
+          value: state.verifications.length ? percent(state.verifications.filter((item) => item.status === "approved").length, state.verifications.length) : 0
+        })),
+        fraudTrends: state.traffic.map((day) => ({ date: day.date, value: state.fraudFlags.filter((flag) => flag.status !== "dismissed").length })),
+        heatmap: Array.from({ length: 24 }, (_, hour) => ({ hour, activity: 0 })),
+        popularMakes: makes.map((make) => ({ label: make, value: state.listings.filter((listing) => listing.title.startsWith(make) || listing.title.includes(` ${make} `)).length })).filter((item) => item.value > 0),
         popularModels: state.listings.slice(0, 8).map((listing) => ({ label: listing.title.split(" ").slice(1, 3).join(" "), value: listing.views })),
         averageListingPrice: money(averagePrice),
-        averageMileageByCategory: [
-          { label: "Sedan", value: 48200 },
-          { label: "SUV", value: 53600 },
-          { label: "Truck", value: 61200 },
-          { label: "EV", value: 29800 }
-        ],
-        geographicDistribution: regions.map((region, index) => ({ label: region, value: 140 - index * 9 }))
+        averageMileageByCategory: Array.from(new Set(state.listings.map((listing) => listing.title.split(" ").slice(-1)[0] || "Vehicle"))).map((label) => {
+          const matching = state.listings.filter((listing) => (listing.title.split(" ").slice(-1)[0] || "Vehicle") === label);
+          return { label, value: Math.round(matching.reduce((total, listing) => total + Number(listing.mileage || 0), 0) / Math.max(1, matching.length)) };
+        }),
+        geographicDistribution: Array.from(new Set(state.listings.map((listing) => listing.location))).map((location) => ({
+          label: location,
+          value: state.listings.filter((listing) => listing.location === location).length
+        }))
       },
       funnel: [
-        { label: "Visitor", value: 10000 },
-        { label: "Account Created", value: 780 },
-        { label: "Verification Started", value: 420 },
-        { label: "Verification Approved", value: 316 },
-        { label: "Listing Created", value: 146 },
-        { label: "Buyer Contacted", value: 94 },
-        { label: "Vehicle Sold", value: 32 }
+        { label: "Visitor", value: state.traffic.reduce((total, day) => total + day.visitors, 0) },
+        { label: "Account Created", value: signupsThisMonth },
+        { label: "Verification Started", value: state.verifications.length },
+        { label: "Verification Approved", value: state.verifications.filter((item) => item.status === "approved").length },
+        { label: "Listing Created", value: state.listings.length },
+        { label: "Buyer Contacted", value: state.traffic.reduce((total, day) => total + day.contacts, 0) },
+        { label: "Vehicle Sold", value: soldListings }
       ],
       futureRevenue: [
         { label: "Featured Listings", enabled: false, projectedMonthly: 1800 },
@@ -396,10 +448,11 @@ function addAdminMethods(StoreClass) {
 
   StoreClass.prototype.searchAdmin = async function searchAdmin(query) {
     const state = await ensureAdminState(this);
+    const users = [...state.users, ...this.getRuntimeAdminUsers()];
     const q = String(query || "").trim().toLowerCase();
     if (!q) return { users: [], listings: [], verifications: [], reports: [] };
     return {
-      users: filterByQuery(state.users, q, ["fullName", "email", "phone", "id"]).slice(0, 8),
+      users: filterByQuery(users, q, ["fullName", "email", "phone", "id"]).slice(0, 8),
       listings: filterByQuery(state.listings, q, ["title", "vin", "id", "seller"]).slice(0, 8),
       verifications: filterByQuery(state.verifications, q, ["id", "userName", "email", "vehicleVin"]).slice(0, 8),
       reports: filterByQuery(state.reports, q, ["id", "type", "reporter", "reportedUser", "listingId"]).slice(0, 8)
@@ -408,10 +461,11 @@ function addAdminMethods(StoreClass) {
 
   StoreClass.prototype.getAdminCollection = async function getAdminCollection(name, params = new URLSearchParams()) {
     const state = await ensureAdminState(this);
+    const users = [...state.users, ...this.getRuntimeAdminUsers()];
     const q = params.get("q") || "";
     const status = params.get("status") || "";
     const collections = {
-      users: filterByQuery(state.users, q, ["fullName", "email", "phone", "id"]),
+      users: filterByQuery(users, q, ["fullName", "email", "phone", "id"]),
       listings: filterByQuery(state.listings, q, ["title", "vin", "id", "seller"]),
       verifications: filterByQuery(state.verifications, q, ["id", "userName", "email", "vehicleVin"]),
       reports: filterByQuery(state.reports, q, ["id", "type", "reporter", "reportedUser", "listingId"]),
@@ -433,8 +487,9 @@ function addAdminMethods(StoreClass) {
 
   StoreClass.prototype.getAdminItem = async function getAdminItem(collection, id) {
     const state = await ensureAdminState(this);
+    const users = [...state.users, ...this.getRuntimeAdminUsers()];
     const map = {
-      users: state.users,
+      users,
       listings: state.listings,
       verifications: state.verifications,
       reports: state.reports,
@@ -475,6 +530,20 @@ function addAdminMethods(StoreClass) {
       if (action === "reset_verification") item.verificationStatus = "not_started";
       if (action === "force_password_reset") item.passwordResetRequired = true;
       if (action === "add_note") item.internalNotes = [item.internalNotes, notes].filter(Boolean).join("\n");
+      const state = await ensureAdminState(this);
+      const isSeedUser = state.users.some((user) => user.id === item.id);
+      if (!isSeedUser) {
+        if (!this.runtimeUserOverrides) this.runtimeUserOverrides = new Map();
+        this.runtimeUserOverrides.set(item.id, {
+          status: item.status,
+          shadowBanned: item.shadowBanned,
+          messagingDisabled: item.messagingDisabled,
+          listingCreationDisabled: item.listingCreationDisabled,
+          verificationStatus: item.verificationStatus,
+          passwordResetRequired: item.passwordResetRequired,
+          internalNotes: item.internalNotes
+        });
+      }
     }
     if (collection === "listings") {
       if (action === "remove") item.status = "removed";
@@ -530,8 +599,9 @@ function addAdminMethods(StoreClass) {
 
   StoreClass.prototype.exportAdminCollection = async function exportAdminCollection(name) {
     const state = await ensureAdminState(this);
+    const users = [...state.users, ...this.getRuntimeAdminUsers()];
     const map = {
-      users: state.users,
+      users,
       listings: state.listings,
       verifications: state.verifications,
       reports: state.reports,
