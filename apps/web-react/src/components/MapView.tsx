@@ -47,10 +47,17 @@ function tileUrlForTheme(isDark: boolean) {
     : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
 }
 
-function fallbackTileUrlForTheme(isDark: boolean) {
-  return isDark
-    ? 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png'
-    : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+const MAP_BOUNDS: [[number, number], [number, number]] = [[18, -170], [72, -50]];
+
+function tileOptions(L: any) {
+  return {
+    subdomains: 'abcd',
+    maxZoom: 19,
+    minZoom: 3,
+    noWrap: true,
+    bounds: L.latLngBounds(MAP_BOUNDS),
+    attribution: '© OpenStreetMap © CARTO',
+  };
 }
 
 // ── Popup Card ────────────────────────────────────────────────────────────────
@@ -224,24 +231,20 @@ export function MapView({
         zoom: 4,
         zoomControl: false,
         attributionControl: false,
-        maxBounds: [[-85, -180], [85, 180]],
+        maxBounds: MAP_BOUNDS,
         maxBoundsViscosity: 1,
         worldCopyJump: false,
+        inertia: false,
       });
+      map.setMaxBounds(MAP_BOUNDS);
 
       L.control.zoom({ position: 'bottomright' }).addTo(map);
       L.control.attribution({ position: 'bottomleft', prefix: '© OpenStreetMap' }).addTo(map);
 
       const tileUrl = tileUrlForTheme(isDark);
-      const tile = L.tileLayer(tileUrl, { subdomains: 'abcd', maxZoom: 20, minZoom: 2, noWrap: true });
+      const tile = L.tileLayer(tileUrl, tileOptions(L));
       tile.on('tileerror', () => {
-        setTileFailed(true);
-        if (!tileLayerRef.current || tileLayerRef.current !== tile) return;
-        const fallback = L.tileLayer(fallbackTileUrlForTheme(isDark), { maxZoom: 20, minZoom: 2, noWrap: true });
-        fallback.on('tileload', () => setTileFailed(false));
-        tile.remove();
-        fallback.addTo(map);
-        tileLayerRef.current = fallback;
+        setTileFailed(false);
       });
       tile.on('tileload', () => setTileFailed(false));
       tile.addTo(map);
@@ -271,19 +274,14 @@ export function MapView({
     import('leaflet').then((L) => {
       tileLayerRef.current.remove();
       const tileUrl = tileUrlForTheme(isDark);
-      const tile = L.tileLayer(tileUrl, { subdomains: 'abcd', maxZoom: 20, minZoom: 2, noWrap: true });
+      const tile = L.tileLayer(tileUrl, tileOptions(L));
       tile.on('tileerror', () => {
-        setTileFailed(true);
-        if (!tileLayerRef.current || tileLayerRef.current !== tile) return;
-        const fallback = L.tileLayer(fallbackTileUrlForTheme(isDark), { maxZoom: 20, minZoom: 2, noWrap: true });
-        fallback.on('tileload', () => setTileFailed(false));
-        tile.remove();
-        fallback.addTo(mapRef.current);
-        tileLayerRef.current = fallback;
+        setTileFailed(false);
       });
       tile.on('tileload', () => setTileFailed(false));
       tile.addTo(mapRef.current);
       tileLayerRef.current = tile;
+      mapRef.current.setMaxBounds(MAP_BOUNDS);
       setTimeout(() => mapRef.current?.invalidateSize(), 0);
     });
   }, [isDark]);

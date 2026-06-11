@@ -44,6 +44,7 @@ let activeRequest;
 let searchTimer;
 let userLocation;
 const listingCache = new Map();
+const MAP_BOUNDS = [[18, -170], [72, -50]];
 
 function enhanceSelects(scope = document) {
   scope.querySelectorAll("select").forEach((select) => {
@@ -362,9 +363,12 @@ function ensureMap() {
     keyboard: false,
     scrollWheelZoom: false,
     touchZoom: false,
-    worldCopyJump: true,
+    worldCopyJump: false,
+    maxBounds: MAP_BOUNDS,
+    maxBoundsViscosity: 1,
     zoomControl: false
   });
+  leafletMap.setMaxBounds(MAP_BOUNDS);
   L.control.zoom({ position: "bottomright" }).addTo(leafletMap);
 
   setMapTileTheme();
@@ -394,6 +398,8 @@ function setMapTileTheme() {
     maxNativeZoom: 20,
     maxZoom: 20,
     minZoom: 3,
+    noWrap: true,
+    bounds: L.latLngBounds(MAP_BOUNDS),
     subdomains: "abc",
     tileSize: 256,
     updateInterval: 80,

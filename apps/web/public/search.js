@@ -18,6 +18,7 @@ let resultsTileThemeName;
 let activeFilterMenu;
 let resultsMapPreviewCard;
 let userLocation;
+const MAP_BOUNDS = [[18, -170], [72, -50]];
 
 function savedListingIds() {
   if (!localStorage.getItem("kerodex-user")) return [];
@@ -675,7 +676,11 @@ function setResultsMapTileTheme() {
     : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
   const nextTileLayer = L.tileLayer(tileUrl, {
     attribution: "&copy; OpenStreetMap contributors &copy; CARTO",
-    maxZoom: 20
+    maxZoom: 20,
+    minZoom: 3,
+    noWrap: true,
+    bounds: L.latLngBounds(MAP_BOUNDS),
+    subdomains: "abcd"
   }).addTo(resultsMap);
 
   window.setTimeout(() => {
@@ -693,9 +698,12 @@ function ensureResultsMap() {
     zoom: 4,
     minZoom: 3,
     scrollWheelZoom: true,
-    worldCopyJump: true,
+    worldCopyJump: false,
+    maxBounds: MAP_BOUNDS,
+    maxBoundsViscosity: 1,
     zoomControl: false
   });
+  resultsMap.setMaxBounds(MAP_BOUNDS);
   L.control.zoom({ position: "bottomright" }).addTo(resultsMap);
   setResultsMapTileTheme();
   resultsMarkerLayer = L.layerGroup().addTo(resultsMap);
