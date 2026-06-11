@@ -196,6 +196,38 @@ nav button:hover {
   justify-content: space-between;
 }
 
+.table-toolbar.stacked {
+  align-items: stretch;
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.message-review {
+  border-top: 1px solid var(--line);
+  margin-top: 16px;
+  padding-top: 16px;
+}
+
+.message-stack {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  max-height: 420px;
+  overflow: auto;
+}
+
+.message-stack article {
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.message-stack p {
+  color: var(--text);
+  margin: 6px 0;
+}
+
 .topbar h1 {
   font-size: clamp(2rem, 4vw, 4.4rem);
   line-height: 0.98;

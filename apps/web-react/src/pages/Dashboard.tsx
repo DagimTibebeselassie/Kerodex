@@ -1,21 +1,27 @@
 import { useQuery } from '@tanstack/react-query';
 import { Vehicle } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
-import { listVehicles } from '@/lib/api';
+import { listConversations, listMyVehicles } from '@/lib/api';
 import { Button, Stat, StatGroup, DataTable, EmptyState } from '@blinkdotnew/ui';
-import { Link } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { Plus, BarChart3, MessageSquare, Car, ExternalLink } from 'lucide-react';
 
 export function DashboardPage() {
   const { user, isLoading: authLoading } = useAuth();
+  const navigate = useNavigate();
 
   const { data: myVehicles, isLoading: vehiclesLoading } = useQuery({
     queryKey: ['my-vehicles', user?.id],
     queryFn: async () => {
       if (!user) return [];
-      const vehicles = await listVehicles();
-      return vehicles.filter((vehicle) => vehicle.userId === user.id || vehicle.seller?.name === user.name) as Vehicle[];
+      return await listMyVehicles() as Vehicle[];
     },
+    enabled: !!user,
+  });
+
+  const { data: conversations = [] } = useQuery({
+    queryKey: ['dashboard-conversations', user?.id],
+    queryFn: async () => user ? listConversations() : [],
     enabled: !!user,
   });
 
@@ -67,6 +73,9 @@ export function DashboardPage() {
       ),
     },
   ];
+  const totalViews = (myVehicles || []).reduce((sum, vehicle: any) => sum + Number(vehicle.views || 0), 0);
+  const totalMessages = conversations.length;
+  const totalSaves = (myVehicles || []).reduce((sum, vehicle: any) => sum + Number(vehicle.favorites || vehicle.saves || 0), 0);
 
   return (
     <div className="animate-fade-in px-6 py-12 max-w-screen-xl mx-auto space-y-12">
@@ -83,27 +92,27 @@ export function DashboardPage() {
       </div>
 
       <StatGroup className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Stat 
-          label="Total Views" 
-          value="1,284" 
+        <Stat
+          label="Total Views"
+          value={totalViews.toLocaleString()}
           icon={<BarChart3 className="h-4 w-4" />}
           className="bg-background border border-border p-6 shadow-none"
         />
-        <Stat 
-          label="Active Listings" 
-          value={myVehicles?.length.toString() || '0'} 
+        <Stat
+          label="Active Listings"
+          value={myVehicles?.length.toString() || '0'}
           icon={<Car className="h-4 w-4" />}
           className="bg-background border border-border p-6 shadow-none"
         />
-        <Stat 
-          label="Messages" 
-          value="12" 
+        <Stat
+          label="Messages"
+          value={totalMessages.toString()}
           icon={<MessageSquare className="h-4 w-4" />}
           className="bg-background border border-border p-6 shadow-none"
         />
-        <Stat 
-          label="Conversion Rate" 
-          value="2.4%" 
+        <Stat
+          label="Saved By Buyers"
+          value={totalSaves.toString()}
           className="bg-background border border-border p-6 shadow-none"
         />
       </StatGroup>
@@ -115,7 +124,7 @@ export function DashboardPage() {
             title="No listings yet"
             description="Start selling your vehicles on Kerodex today."
             icon={<Car className="h-8 w-8 text-muted-foreground" />}
-            action={{ label: 'Create Listing', onClick: () => {} }}
+            action={{ label: 'Create Listing', onClick: () => navigate({ to: '/sell' }) }}
             className="border border-border py-20"
           />
         ) : (

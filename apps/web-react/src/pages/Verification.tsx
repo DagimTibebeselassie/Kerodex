@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { submitVerificationRequest } from '@/lib/api';
+import { savePersonaReturn, startPersonaVerification, startPhoneVerification, submitVerificationRequest, verifyPhoneCode } from '@/lib/api';
 import { Button, Input, toast } from '@blinkdotnew/ui';
 import {
   Shield, BadgeCheck, Phone, Mail, FileText, Camera,
@@ -35,19 +35,30 @@ function PhoneModal({
     const clean = phone.replace(/\D/g, '');
     if (clean.length < 10) { setErr('Enter a valid US phone number'); return; }
     setErr(''); setLoading(true);
-    await new Promise((r) => setTimeout(r, 1000));
-    setLoading(false);
-    setStep('code');
-    toast.success('Code sent! (demo code: 123456)');
+    try {
+      const result = await startPhoneVerification(phone);
+      setLoading(false);
+      setStep('code');
+      if (result.devCode) setCode(result.devCode);
+      toast.success(result.devCode ? 'Code generated for local development.' : 'Verification code sent.');
+    } catch (error: any) {
+      setLoading(false);
+      setErr(error?.message || 'Unable to send code.');
+    }
   };
 
   const verify = async () => {
     if (code.length !== 6) { setErr('Enter the 6-digit code'); return; }
-    if (code !== '123456') { setErr('Invalid code. Demo: use 123456'); return; }
     setErr(''); setLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
-    setLoading(false);
-    onDone();
+    try {
+      await verifyPhoneCode(code);
+      setLoading(false);
+      onDone();
+      toast.success('Phone verified.');
+    } catch (error: any) {
+      setLoading(false);
+      setErr(error?.message || 'Invalid verification code.');
+    }
   };
 
   return (
@@ -314,6 +325,7 @@ function StepCard({ step, onStart }: { step: Step; onStart: (id: string) => void
 // ── Main Page ──────────────────────────────────────────────────────────────
 export function VerificationPage() {
   const { user, login, isLoading: authLoading } = useAuth();
+  const [personaLoading, setPersonaLoading] = useState(false);
 
   const [steps, setSteps] = useState<Step[]>([
     {
@@ -348,11 +360,37 @@ export function VerificationPage() {
     setSteps((prev) => prev.map((step) => {
       if (step.id === 'email') return { ...step, status: user?.emailVerified ? 'verified' : 'not_started' };
       if (step.id === 'phone') return { ...step, status: user?.phoneVerified ? 'verified' : step.status };
-      if (step.id === 'id') return { ...step, status: user?.identityVerified ? 'verified' : step.status };
+      if (step.id === 'id') {
+        const status = user?.identityVerificationStatus;
+        return {
+          ...step,
+          status: user?.identityVerified || status === 'approved'
+            ? 'verified'
+            : status === 'pending'
+              ? 'pending'
+              : step.status,
+        };
+      }
       if (step.id === 'selfie') return { ...step, status: user?.selfieVerified ? 'verified' : step.status };
       return step;
     }));
-  }, [user?.emailVerified, user?.phoneVerified, user?.identityVerified, user?.selfieVerified]);
+  }, [user?.emailVerified, user?.phoneVerified, user?.identityVerified, user?.identityVerificationStatus, user?.selfieVerified]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('persona') !== 'return') return;
+    const inquiryId = params.get('inquiry-id') || params.get('inquiry_id') || params.get('inquiryId') || '';
+    const status = params.get('status');
+    const referenceId = params.get('reference-id') || params.get('reference_id') || params.get('referenceId');
+    window.history.replaceState({}, document.title, window.location.pathname || '/verify');
+    if (!inquiryId) {
+      toast.success('Returned from Persona. Verification is pending review.');
+      return;
+    }
+    savePersonaReturn(inquiryId, status, referenceId)
+      .then(() => toast.success('Persona verification saved. Final status may update after review.'))
+      .catch((error) => toast.error(error instanceof Error ? error.message : 'Unable to save Persona verification result.'));
+  }, []);
 
   const setStatus = (id: string, status: VerifStatus) => {
     setSteps((prev) => prev.map((s) => s.id === id ? { ...s, status } : s));
@@ -361,6 +399,19 @@ export function VerificationPage() {
   const handleStart = (id: string) => {
     if (id === 'email' && user?.emailVerified) {
       setStatus(id, 'verified');
+      return;
+    }
+    if (id === 'id') {
+      setPersonaLoading(true);
+      startPersonaVerification()
+        .then(({ url }) => {
+          setStatus('id', 'pending');
+          window.location.assign(url);
+        })
+        .catch((error) => {
+          toast.error(error instanceof Error ? error.message : 'Unable to start Persona verification.');
+        })
+        .finally(() => setPersonaLoading(false));
       return;
     }
     setStatus(id, 'in_progress');

@@ -129,28 +129,18 @@ async function loadDashboard() {
   renderBars($("#analyticsPages"), state.dashboard.charts.pageViews);
   renderBars($("#analyticsConversions"), state.dashboard.charts.signups);
   renderFunnel($("#funnel"), state.dashboard.funnel);
-  renderBreakdown($("#trafficSources"), [
-    { label: "Direct", value: 4820 },
-    { label: "Search", value: 3180 },
-    { label: "Social", value: 1120 },
-    { label: "Referrals", value: 740 }
-  ]);
-  renderBreakdown($("#deviceBreakdown"), [
-    { label: "Mobile", value: 58 },
-    { label: "Desktop", value: 34 },
-    { label: "Tablet", value: 8 },
-    ...state.dashboard.charts.geographicDistribution.slice(0, 5)
-  ]);
+  renderBreakdown($("#trafficSources"), state.dashboard.charts.geographicDistribution.slice(0, 6));
+  renderBreakdown($("#deviceBreakdown"), state.dashboard.charts.deviceBreakdown?.slice(0, 6) || []);
   renderMetricGrid($("#messageMetrics"), {
     messageVolumeToday: state.dashboard.cards.messagesSentToday,
-    spamDetection: "12 flags",
-    scamDetection: "7 reviews",
+    spamDetection: `${state.dashboard.cards.fraudFlagsTriggered} flags`,
+    scamDetection: `${state.dashboard.cards.reportsSubmitted} reports`,
     moderationFlags: state.dashboard.cards.fraudFlagsTriggered
   });
   renderTable($("#revenueTable"), [
     { key: "label", label: "Revenue Area" },
     { key: "enabled", label: "Enabled", render: (row) => row.enabled ? "Enabled" : "Disabled" },
-    { key: "projectedMonthly", label: "Projected Monthly", render: (row) => money(row.projectedMonthly) }
+    { key: "projectedMonthly", label: "Current Monthly", render: (row) => money(row.projectedMonthly) }
   ], state.dashboard.futureRevenue);
 }
 
@@ -180,7 +170,9 @@ async function loadCollections() {
   ], users.items, [
     { collection: "users", action: "approve", label: "Approve" },
     { collection: "users", action: "suspend", label: "Suspend" },
+    { collection: "users", action: "unsuspend", label: "Unsuspend" },
     { collection: "users", action: "ban", label: "Ban" },
+    { collection: "users", action: "unban", label: "Unban" },
     { collection: "users", action: "shadow_ban", label: "Shadow ban" }
   ]);
 
@@ -195,9 +187,11 @@ async function loadCollections() {
     { key: "inquiries", label: "Inquiries" }
   ], listings.items, [
     { collection: "listings", action: "feature", label: "Feature" },
+    { collection: "listings", action: "unfeature", label: "Unfeature" },
     { collection: "listings", action: "flag", label: "Flag" },
     { collection: "listings", action: "remove", label: "Remove" },
-    { collection: "listings", action: "restore", label: "Restore" }
+    { collection: "listings", action: "restore", label: "Restore" },
+    { collection: "listings", action: "mark_sold", label: "Sold" }
   ]);
 
   renderTable($("#verificationTable"), [
@@ -231,7 +225,9 @@ async function loadCollections() {
     { key: "reporter", label: "Reporter" },
     { key: "reportedUser", label: "Reported User" },
     { key: "listingId", label: "Listing" },
-    { key: "evidence", label: "Evidence" }
+    { key: "conversationId", label: "Conversation" },
+    { key: "status", label: "Status", render: (row) => `<span class="status ${row.status}">${row.status}</span>` },
+    { key: "description", label: "Notes", render: (row) => row.description || row.evidence || "" }
   ], reports.items, [
     { collection: "reports", action: "resolve", label: "Resolve" },
     { collection: "reports", action: "warn_user", label: "Warn" },
@@ -267,12 +263,39 @@ function renderRiskBoard(flags) {
 }
 
 async function runAction(button) {
-  const notes = button.dataset.action === "reject" ? "Rejected from admin review queue." : "";
+  const label = `${titleize(button.dataset.action)} ${button.dataset.collection} ${button.dataset.id}`;
+  const notes = window.prompt(`Reason required for: ${label}`);
+  if (!notes || notes.trim().length < 5) return;
+  if (!window.confirm(`Apply "${titleize(button.dataset.action)}" to ${button.dataset.id}?`)) return;
   await api(`/api/admin/${button.dataset.collection.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}/${encodeURIComponent(button.dataset.id)}/actions`, {
     method: "PATCH",
     body: JSON.stringify({ action: button.dataset.action, notes })
   });
   await loadCollections();
+}
+
+async function reviewConversation() {
+  const conversationId = $("#conversationReviewId").value.trim();
+  const reason = $("#conversationReviewReason").value.trim();
+  if (!conversationId || reason.length < 5) {
+    $("#messageReview").innerHTML = "<p>Conversation ID and review reason are required.</p>";
+    return;
+  }
+  const result = await api(`/api/admin/messages/review?conversationId=${encodeURIComponent(conversationId)}&reason=${encodeURIComponent(reason)}`);
+  const messages = result.conversation.messages || [];
+  $("#messageReview").innerHTML = `
+    <h3>${result.conversation.vehicleTitle || result.conversation.listingId}</h3>
+    <p><strong>Buyer:</strong> ${result.conversation.buyerName || result.conversation.buyerId} / <strong>Seller:</strong> ${result.conversation.sellerName || result.conversation.sellerId}</p>
+    <div class="message-stack">
+      ${messages.map((message) => `
+        <article>
+          <strong>${message.senderId}</strong>
+          <p>${message.content}</p>
+          <small>${new Date(message.createdAt).toLocaleString()} ${message.scamFlags?.length ? `/ Flags: ${message.scamFlags.join(", ")}` : ""}</small>
+        </article>
+      `).join("") || "<p>No messages in this conversation.</p>"}
+    </div>
+  `;
 }
 
 async function runSearch() {
@@ -378,6 +401,9 @@ function bindEvents() {
     await loadCollections();
   });
   $("#themeToggle").addEventListener("click", () => document.body.classList.toggle("dark"));
+  $("#reviewConversationButton").addEventListener("click", () => reviewConversation().catch((error) => {
+    $("#messageReview").innerHTML = `<p>${error.message}</p>`;
+  }));
 }
 
 function startLiveNotifications() {

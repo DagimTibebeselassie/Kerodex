@@ -2,6 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { Heart, X, MapPin, Gauge, BadgeCheck, CheckCircle2 } from 'lucide-react';
 import { Vehicle } from '@/types';
+import { useAuth } from '@/hooks/useAuth';
+import { saveVehicleLocal, savedVehicleIds } from '@/lib/api';
+import { toast } from '@blinkdotnew/ui';
 
 interface MapViewProps {
   vehicles?: Vehicle[];
@@ -74,14 +77,13 @@ function PopupCard({
         isDark
           ? 'bg-zinc-900 border-zinc-700 text-zinc-100'
           : 'bg-white border-zinc-200 text-zinc-900',
-        // Mobile: full-width at bottom; Desktop: fixed width top-right
-        'bottom-3 left-3 right-3 w-auto',
-        'md:bottom-auto md:top-3 md:right-3 md:left-auto md:w-72',
+        'bottom-4 left-4 right-4 max-h-[72%] w-auto',
+        'md:bottom-auto md:top-3 md:right-3 md:left-auto md:w-72 md:max-h-none',
       ].join(' ')}
       style={{ maxWidth: '100%' }}
     >
       {/* Image */}
-      <div className="relative w-full" style={{ height: 160 }}>
+      <div className="relative w-full h-32 md:h-40">
         {img ? (
           <img
             src={img}
@@ -97,24 +99,24 @@ function PopupCard({
         {/* Close */}
         <button
           onClick={onClose}
-          className="absolute top-2 right-2 p-1.5 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors"
+          className="absolute top-2 right-2 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 hover:bg-black/75 text-white transition-colors"
           aria-label="Close"
         >
-          <X className="h-3.5 w-3.5" />
+          <X className="h-4 w-4" />
         </button>
 
         {/* Save / Heart */}
         <button
           onClick={onSave}
           className={[
-            'absolute top-2 left-2 p-1.5 rounded-full transition-colors',
+            'absolute top-2 left-2 flex h-9 w-9 items-center justify-center rounded-full transition-colors',
             saved
               ? 'bg-rose-500 text-white'
               : 'bg-black/50 hover:bg-black/70 text-white',
           ].join(' ')}
           aria-label={saved ? 'Unsave listing' : 'Save listing'}
         >
-          <Heart className={`h-3.5 w-3.5 ${saved ? 'fill-current' : ''}`} />
+          <Heart className={`h-4 w-4 ${saved ? 'fill-current' : ''}`} />
         </button>
       </div>
 
@@ -191,9 +193,10 @@ export function MapView({
   const markersRef = useRef<any[]>([]);
 
   const [activeVehicle, setActiveVehicle] = useState<Vehicle | null>(null);
-  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [savedIds, setSavedIds] = useState<Set<string>>(() => savedVehicleIds());
   const [mapReady, setMapReady] = useState(false);
   const [tileFailed, setTileFailed] = useState(false);
+  const { user, login } = useAuth();
 
   // Sync active vehicle with selectedId prop
   useEffect(() => {
@@ -221,17 +224,20 @@ export function MapView({
         zoom: 4,
         zoomControl: false,
         attributionControl: false,
+        maxBounds: [[-85, -180], [85, 180]],
+        maxBoundsViscosity: 1,
+        worldCopyJump: false,
       });
 
       L.control.zoom({ position: 'bottomright' }).addTo(map);
       L.control.attribution({ position: 'bottomleft', prefix: '© OpenStreetMap' }).addTo(map);
 
       const tileUrl = tileUrlForTheme(isDark);
-      const tile = L.tileLayer(tileUrl, { subdomains: 'abcd', maxZoom: 20, minZoom: 2 });
+      const tile = L.tileLayer(tileUrl, { subdomains: 'abcd', maxZoom: 20, minZoom: 2, noWrap: true });
       tile.on('tileerror', () => {
         setTileFailed(true);
         if (!tileLayerRef.current || tileLayerRef.current !== tile) return;
-        const fallback = L.tileLayer(fallbackTileUrlForTheme(isDark), { maxZoom: 20, minZoom: 2 });
+        const fallback = L.tileLayer(fallbackTileUrlForTheme(isDark), { maxZoom: 20, minZoom: 2, noWrap: true });
         fallback.on('tileload', () => setTileFailed(false));
         tile.remove();
         fallback.addTo(map);
@@ -265,11 +271,11 @@ export function MapView({
     import('leaflet').then((L) => {
       tileLayerRef.current.remove();
       const tileUrl = tileUrlForTheme(isDark);
-      const tile = L.tileLayer(tileUrl, { subdomains: 'abcd', maxZoom: 20, minZoom: 2 });
+      const tile = L.tileLayer(tileUrl, { subdomains: 'abcd', maxZoom: 20, minZoom: 2, noWrap: true });
       tile.on('tileerror', () => {
         setTileFailed(true);
         if (!tileLayerRef.current || tileLayerRef.current !== tile) return;
-        const fallback = L.tileLayer(fallbackTileUrlForTheme(isDark), { maxZoom: 20, minZoom: 2 });
+        const fallback = L.tileLayer(fallbackTileUrlForTheme(isDark), { maxZoom: 20, minZoom: 2, noWrap: true });
         fallback.on('tileload', () => setTileFailed(false));
         tile.remove();
         fallback.addTo(mapRef.current);
@@ -375,9 +381,16 @@ export function MapView({
   };
 
   const handleSave = (id: string) => {
+    if (!user) {
+      login();
+      toast.error('Sign in to save vehicles.');
+      return;
+    }
     setSavedIds((prev) => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      const saved = !next.has(id);
+      saved ? next.add(id) : next.delete(id);
+      saveVehicleLocal(id, saved);
       return next;
     });
   };

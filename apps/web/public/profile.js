@@ -152,7 +152,7 @@ function verificationChecks(state = loadVerification()) {
     { key: "selfie", label: "Selfie/liveness photo uploaded", passed: Boolean(state.selfieName), points: 10 },
     { key: "vinDecode", label: "VIN decoded by NHTSA vPIC", passed: hasDecodedVehicle, points: 15 },
     { key: "ownership", label: "Title or registration uploaded", passed: Boolean(state.ownershipDocumentName), points: 15 },
-    { key: "vinPhoto", label: "VIN plate photo uploaded", passed: Boolean(state.vinPhotoName), points: 10 },
+    { key: "vinPhoto", label: "Windshield VIN proof photo uploaded", passed: Boolean(state.vinPhotoName), points: 10 },
     { key: "odometer", label: "Odometer photo uploaded", passed: Boolean(state.odometerPhotoName), points: 5 },
     { key: "liveProof", label: "Live app-code proof photo uploaded", passed: Boolean(state.liveProofPhotoName), points: 15 }
   ];

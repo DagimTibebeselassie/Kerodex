@@ -24,6 +24,7 @@ for (let y = 2026; y >= 1990; y--) YEARS.push(y);
 const VEHICLE_TYPES = ['Sedan', 'SUV', 'Truck', 'Coupe', 'Convertible', 'Van', 'Wagon'] as const;
 const FUEL_TYPES    = ['Gas', 'Hybrid', 'EV', 'Diesel', 'Plug-in Hybrid'] as const;
 const DRIVE_TYPES   = ['FWD', 'AWD', 'RWD', '4WD'] as const;
+const EXTERIOR_COLORS = ['Black', 'White', 'Silver', 'Gray', 'Blue', 'Red', 'Green', 'Brown', 'Gold'] as const;
 
 const MILEAGE_OPTIONS = [
   { label: 'Any',          value: '' },
@@ -116,6 +117,7 @@ function countFilters(f: FilterState): number {
   if (f.fuelTypes.length)             n += f.fuelTypes.length;
   if (f.driveTypes.length)            n += f.driveTypes.length;
   if (f.transmission)                 n++;
+  if (f.exteriorColor)                n++;
   if (f.cleanTitle)                   n++;
   if (f.noAccidents)                  n++;
   if (f.numOwners)                    n++;
@@ -128,11 +130,128 @@ function countFilters(f: FilterState): number {
   return n;
 }
 
+function normalized(value: unknown): string {
+  return String(value ?? '').trim().toLowerCase();
+}
+
+function vehicleText(vehicle: Vehicle): string {
+  return [
+    vehicle.title,
+    vehicle.make,
+    vehicle.model,
+    vehicle.trim,
+    vehicle.location,
+    vehicle.description,
+    vehicle.bodyType,
+    vehicle.fuelType,
+    vehicle.drivetrain,
+    vehicle.titleStatus,
+    vehicle.accidentHistory,
+    vehicle.ownerCount,
+    vehicle.seller?.name,
+    ...(vehicle.badges || []),
+    ...(vehicle.features || []),
+    ...(vehicle.historyHighlights || []),
+    ...(vehicle.maintenanceNames || []),
+  ].map(normalized).join(' ');
+}
+
+function matchesAny(value: unknown, options: string[]): boolean {
+  const text = normalized(value);
+  return options.some((option) => {
+    const wanted = normalized(option);
+    if (!wanted) return true;
+    if (wanted === 'gas') return text.includes('gas') || text.includes('gasoline');
+    if (wanted === 'ev') return text.includes('ev') || text.includes('electric');
+    if (wanted === '4wd') return text.includes('4wd') || text.includes('4x4') || text.includes('four wheel');
+    return text.includes(wanted);
+  });
+}
+
+function isVerifiedSeller(vehicle: Vehicle): boolean {
+  const text = vehicleText(vehicle);
+  return Boolean(vehicle.seller?.verified) || text.includes('verified seller') || text.includes('identity verified');
+}
+
+function hasOwnershipVerified(vehicle: Vehicle): boolean {
+  const text = vehicleText(vehicle);
+  return (text.includes('ownership') || text.includes('owner document')) && !text.includes('ownership pending');
+}
+
+function hasVehicleVerified(vehicle: Vehicle): boolean {
+  const text = vehicleText(vehicle);
+  return Boolean((vehicle as any).vin || vehicle.marketCheckVin) || text.includes('vehicle verified') || text.includes('vin decoded') || text.includes('vin verified');
+}
+
+function hasInspectionVerified(vehicle: Vehicle): boolean {
+  const text = vehicleText(vehicle);
+  return text.includes('inspection verified') || text.includes('inspection complete');
+}
+
+function hasCleanTitle(vehicle: Vehicle): boolean {
+  const title = normalized(vehicle.titleStatus);
+  return title.includes('clean') || vehicleText(vehicle).includes('clean title');
+}
+
+function hasNoAccidents(vehicle: Vehicle): boolean {
+  const history = normalized(vehicle.accidentHistory);
+  return history.includes('no accident') || vehicleText(vehicle).includes('no accidents');
+}
+
+function hasMaintenanceRecords(vehicle: Vehicle): boolean {
+  const text = vehicleText(vehicle);
+  return Boolean(vehicle.maintenanceNames?.length) || text.includes('maintenance record') || text.includes('service record');
+}
+
+function matchesOwnerCount(vehicle: Vehicle, ownerFilter: string): boolean {
+  const owners = normalized(vehicle.ownerCount);
+  if (!ownerFilter) return true;
+  if (ownerFilter === '3+') return owners.includes('3') || owners.includes('4') || owners.includes('5') || owners.includes('+');
+  return owners.includes(ownerFilter);
+}
+
+function isBelowMarket(vehicle: Vehicle): boolean {
+  const fairValueDelta = Number((vehicle as any).fairValueDelta);
+  if (Number.isFinite(fairValueDelta) && fairValueDelta < 0) return true;
+  const marketValue = Number(vehicle.marketValue);
+  return Number.isFinite(marketValue) && marketValue > 0 && vehicle.price < marketValue;
+}
+
+function trustScore(vehicle: Vehicle): number {
+  const explicit = Number((vehicle as any).trustScore);
+  if (Number.isFinite(explicit)) return explicit;
+  let score = 45;
+  if (isVerifiedSeller(vehicle)) score += 20;
+  if (hasOwnershipVerified(vehicle)) score += 12;
+  if (hasVehicleVerified(vehicle)) score += 10;
+  if (hasInspectionVerified(vehicle)) score += 8;
+  if (hasMaintenanceRecords(vehicle)) score += 5;
+  return score;
+}
+
+function dealScore(vehicle: Vehicle): number {
+  const explicit = Number((vehicle as any).dealScore);
+  if (Number.isFinite(explicit)) return explicit;
+  const fairValueDelta = Number((vehicle as any).fairValueDelta);
+  if (Number.isFinite(fairValueDelta)) return Math.max(0, 100 - Math.max(0, fairValueDelta / 250));
+  return isBelowMarket(vehicle) ? 80 : 60;
+}
+
+function responseSpeed(vehicle: Vehicle): number {
+  const response = normalized(vehicle.seller?.responseTime);
+  if (!response) return 99;
+  if (response.includes('minute')) return 0;
+  if (response.includes('hour')) return 1;
+  if (response.includes('same day')) return 2;
+  if (response.includes('day')) return 3;
+  return 10;
+}
+
 function applyFilters(vehicles: Vehicle[], f: FilterState, search: string): Vehicle[] {
   return vehicles.filter((v) => {
     if (search) {
-      const q = search.toLowerCase();
-      if (!(v.make.toLowerCase().includes(q) || v.model.toLowerCase().includes(q))) return false;
+      const q = normalized(search);
+      if (!vehicleText(v).includes(q)) return false;
     }
     if (f.priceMin && v.price < Number(f.priceMin)) return false;
     if (f.priceMax && v.price > Number(f.priceMax)) return false;
@@ -141,6 +260,20 @@ function applyFilters(vehicles: Vehicle[], f: FilterState, search: string): Vehi
     if (f.yearMin && v.year < Number(f.yearMin)) return false;
     if (f.yearMax && v.year > Number(f.yearMax)) return false;
     if (f.mileageMax && v.mileage > Number(f.mileageMax)) return false;
+    if (f.vehicleTypes.length && !matchesAny(v.bodyType, f.vehicleTypes)) return false;
+    if (f.fuelTypes.length && !matchesAny(v.fuelType, f.fuelTypes)) return false;
+    if (f.driveTypes.length && !matchesAny(`${v.drivetrain || ''} ${(v.features || []).join(' ')}`, f.driveTypes)) return false;
+    if (f.transmission && !normalized(v.transmission).includes(normalized(f.transmission))) return false;
+    if (f.exteriorColor && !matchesAny((v as any).exteriorColor || (v as any).color || vehicleText(v), [f.exteriorColor])) return false;
+    if (f.cleanTitle && !hasCleanTitle(v)) return false;
+    if (f.noAccidents && !hasNoAccidents(v)) return false;
+    if (f.numOwners && !matchesOwnerCount(v, f.numOwners)) return false;
+    if (f.verifiedSeller && !isVerifiedSeller(v)) return false;
+    if (f.ownershipVerified && !hasOwnershipVerified(v)) return false;
+    if (f.vehicleVerified && !hasVehicleVerified(v)) return false;
+    if (f.inspectionVerified && !hasInspectionVerified(v)) return false;
+    if (f.belowMarket && !isBelowMarket(v)) return false;
+    if (f.hasMaintenanceRecords && !hasMaintenanceRecords(v)) return false;
     return true;
   });
 }
@@ -176,10 +309,20 @@ function applyLocationFilter(vehicles: Vehicle[], userLocation: { lat: number; l
 function applySort(vehicles: Vehicle[], sortBy: string, userLocation: { lat: number; lng: number } | null): Vehicle[] {
   return [...vehicles].sort((a, b) => {
     switch (sortBy) {
+      case 'recommended': return dealScore(b) - dealScore(a) || trustScore(b) - trustScore(a) || b.createdAt.localeCompare(a.createdAt);
       case 'price_asc':    return a.price - b.price;
       case 'price_desc':   return b.price - a.price;
       case 'mileage_asc':  return a.mileage - b.mileage;
       case 'newest':       return b.createdAt.localeCompare(a.createdAt);
+      case 'best_deal': {
+        const aDelta = Number((a as any).fairValueDelta);
+        const bDelta = Number((b as any).fairValueDelta);
+        const aDeal = Number.isFinite(aDelta) ? aDelta : a.price - Number(a.marketValue || a.price);
+        const bDeal = Number.isFinite(bDelta) ? bDelta : b.price - Number(b.marketValue || b.price);
+        return aDeal - bDeal;
+      }
+      case 'trust_score': return trustScore(b) - trustScore(a);
+      case 'response_time': return responseSpeed(a) - responseSpeed(b);
       case 'closest': {
         if (!userLocation) return 0;
         const aPoint = vehiclePoint(a);
@@ -255,6 +398,9 @@ function FilterSidebarContent({
                 onChange={(e) => setFilters({ ...filters, priceMax: e.target.value })}
                 className={`${INPUT_CLS} pl-5`} />
             </div>
+          </div>
+          <div className="mt-2">
+            <CheckboxItem id="f-below-market" label="Below market only" checked={filters.belowMarket} onChange={(v) => setFilters({ ...filters, belowMarket: v })} />
           </div>
         </div>
 
@@ -377,10 +523,22 @@ function FilterSidebarContent({
 
         {/* 11. Trust Filters */}
         <div>
+          <p className={SECTION_LBL}>Exterior Color</p>
+          <div className="relative">
+            <select value={filters.exteriorColor} onChange={(e) => setFilters({ ...filters, exteriorColor: e.target.value })} className={SELECT_CLS}>
+              <option value="">Any color</option>
+              {EXTERIOR_COLORS.map((color) => <option key={color} value={color}>{color}</option>)}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          </div>
+        </div>
+
+        {/* 11. Trust Filters */}
+        <div>
           <p className={SECTION_LBL}>Trust Filters</p>
           <div className="space-y-2">
             <CheckboxItem id="f-verified-seller" label="Verified Seller" checked={filters.verifiedSeller} onChange={(v) => setFilters({ ...filters, verifiedSeller: v })} />
-            <CheckboxItem id="f-ownership" label="Ownership Verified" checked={filters.ownershipVerified} onChange={(v) => setFilters({ ...filters, ownershipVerified: v })} />
+            <CheckboxItem id="f-ownership" label="Ownership documents reviewed" checked={filters.ownershipVerified} onChange={(v) => setFilters({ ...filters, ownershipVerified: v })} />
             <CheckboxItem id="f-vehicle-ver" label="Vehicle Verified" checked={filters.vehicleVerified} onChange={(v) => setFilters({ ...filters, vehicleVerified: v })} />
             <CheckboxItem id="f-inspection" label="Inspection Verified" checked={filters.inspectionVerified} onChange={(v) => setFilters({ ...filters, inspectionVerified: v })} />
           </div>
@@ -451,9 +609,15 @@ function FilterChips({ filters, setFilters, onClearAll }: { filters: FilterState
   filters.fuelTypes.forEach((t)     => chips.push({ label: t, onRemove: () => setFilters({ ...filters, fuelTypes: filters.fuelTypes.filter((v) => v !== t) }) }));
   filters.driveTypes.forEach((t)    => chips.push({ label: t, onRemove: () => setFilters({ ...filters, driveTypes: filters.driveTypes.filter((v) => v !== t) }) }));
   if (filters.transmission)          chips.push({ label: filters.transmission, onRemove: () => setFilters({ ...filters, transmission: '' }) });
+  if (filters.exteriorColor)         chips.push({ label: filters.exteriorColor, onRemove: () => setFilters({ ...filters, exteriorColor: '' }) });
+  if (filters.belowMarket)           chips.push({ label: 'Below Market', onRemove: () => setFilters({ ...filters, belowMarket: false }) });
   if (filters.verifiedSeller)        chips.push({ label: 'Verified Seller', onRemove: () => setFilters({ ...filters, verifiedSeller: false }) });
+  if (filters.ownershipVerified)     chips.push({ label: 'Ownership documents reviewed', onRemove: () => setFilters({ ...filters, ownershipVerified: false }) });
+  if (filters.vehicleVerified)       chips.push({ label: 'Vehicle Verified', onRemove: () => setFilters({ ...filters, vehicleVerified: false }) });
+  if (filters.inspectionVerified)    chips.push({ label: 'Inspection Verified', onRemove: () => setFilters({ ...filters, inspectionVerified: false }) });
   if (filters.cleanTitle)            chips.push({ label: 'Clean Title', onRemove: () => setFilters({ ...filters, cleanTitle: false }) });
   if (filters.noAccidents)           chips.push({ label: 'No Accidents', onRemove: () => setFilters({ ...filters, noAccidents: false }) });
+  if (filters.numOwners)             chips.push({ label: `${filters.numOwners} owner${filters.numOwners === '1' ? '' : 's'}`, onRemove: () => setFilters({ ...filters, numOwners: '' }) });
   if (filters.hasMaintenanceRecords) chips.push({ label: 'Has Records', onRemove: () => setFilters({ ...filters, hasMaintenanceRecords: false }) });
 
   if (chips.length === 0) return null;
@@ -557,7 +721,7 @@ export function SearchPage() {
         setLocationError('');
       },
       () => setLocationError('Unable to access your location. Check browser location permissions and try again.'),
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 }
     );
   };
 

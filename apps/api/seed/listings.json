@@ -25,8 +25,17 @@
     "status": "active",
     "vin": "WP1AB2A59MLB31542",
     "verificationStatus": "ownership_reviewed",
-    "badges": ["Identity verified", "VIN decoded", "Ownership reviewed"],
-    "features": ["Premium package", "Heated seats", "Backup camera", "Blind spot monitoring"],
+    "badges": [
+      "Identity verified",
+      "VIN decoded",
+      "Ownership reviewed"
+    ],
+    "features": [
+      "Premium package",
+      "Heated seats",
+      "Backup camera",
+      "Blind spot monitoring"
+    ],
     "images": [
       "https://images.unsplash.com/photo-1619767886558-efdc259cde1a?auto=format&fit=crop&w=1600&q=80",
       "https://images.unsplash.com/photo-1616422285623-13ff0162193c?auto=format&fit=crop&w=1600&q=80"
@@ -72,8 +81,17 @@
     "status": "active",
     "vin": "3TMCZ5ANXLM342187",
     "verificationStatus": "ownership_pending",
-    "badges": ["Identity verified", "VIN decoded", "Ownership pending"],
-    "features": ["Tow package", "Locking rear differential", "Backup camera", "All-weather mats"],
+    "badges": [
+      "Identity verified",
+      "VIN decoded",
+      "Ownership pending"
+    ],
+    "features": [
+      "Tow package",
+      "Locking rear differential",
+      "Backup camera",
+      "All-weather mats"
+    ],
     "images": [
       "https://images.unsplash.com/photo-1605893477799-b99e3b8b93fe?auto=format&fit=crop&w=1600&q=80",
       "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=1600&q=80"
@@ -119,8 +137,18 @@
     "status": "active",
     "vin": "5YJ3E1EB9NF185204",
     "verificationStatus": "ownership_reviewed",
-    "badges": ["Identity verified", "VIN decoded", "Ownership reviewed", "Battery warranty"],
-    "features": ["Long Range AWD", "Autopilot", "Heated seats", "Glass roof"],
+    "badges": [
+      "Identity verified",
+      "VIN decoded",
+      "Ownership reviewed",
+      "Battery warranty"
+    ],
+    "features": [
+      "Long Range AWD",
+      "Autopilot",
+      "Heated seats",
+      "Glass roof"
+    ],
     "images": [
       "https://images.unsplash.com/photo-1560958089-b8a1929cea89?auto=format&fit=crop&w=1600&q=80",
       "https://images.unsplash.com/photo-1617788138017-80ad40651399?auto=format&fit=crop&w=1600&q=80"
@@ -166,8 +194,17 @@
     "status": "active",
     "vin": "5YFB4MDE1PP029348",
     "verificationStatus": "vin_only",
-    "badges": ["Email verified", "Phone verified", "VIN decoded"],
-    "features": ["Toyota Safety Sense", "Backup camera", "Bluetooth", "Adaptive cruise"],
+    "badges": [
+      "Email verified",
+      "Phone verified",
+      "VIN decoded"
+    ],
+    "features": [
+      "Toyota Safety Sense",
+      "Backup camera",
+      "Bluetooth",
+      "Adaptive cruise"
+    ],
     "images": [
       "https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?auto=format&fit=crop&w=1600&q=80",
       "https://images.unsplash.com/photo-1603386329225-868f9b1ee6c9?auto=format&fit=crop&w=1600&q=80"
@@ -213,8 +250,18 @@
     "status": "active",
     "vin": "JTDKAMFU3M3140952",
     "verificationStatus": "ownership_reviewed",
-    "badges": ["Identity verified", "VIN decoded", "Ownership reviewed", "Service records"],
-    "features": ["Hybrid system", "Blind spot monitoring", "Wireless charging", "Heated seats"],
+    "badges": [
+      "Identity verified",
+      "VIN decoded",
+      "Ownership reviewed",
+      "Service records"
+    ],
+    "features": [
+      "Hybrid system",
+      "Blind spot monitoring",
+      "Wireless charging",
+      "Heated seats"
+    ],
     "images": [
       "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=1600&q=80",
       "https://images.unsplash.com/photo-1542362567-b07e54358753?auto=format&fit=crop&w=1600&q=80"
@@ -260,8 +307,17 @@
     "status": "active",
     "vin": "4S4BSACC4K3371841",
     "verificationStatus": "documents_pending",
-    "badges": ["Email verified", "VIN decoded", "Documents pending"],
-    "features": ["EyeSight driver assist", "Roof rails", "Heated seats", "All-weather mats"],
+    "badges": [
+      "Email verified",
+      "VIN decoded",
+      "Documents pending"
+    ],
+    "features": [
+      "EyeSight driver assist",
+      "Roof rails",
+      "Heated seats",
+      "All-weather mats"
+    ],
     "images": [
       "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&w=1600&q=80",
       "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1600&q=80"
@@ -307,8 +363,17 @@
     "status": "active",
     "vin": "2HKRW2H85JH658921",
     "verificationStatus": "ownership_pending",
-    "badges": ["Identity verified", "VIN decoded", "Ownership pending"],
-    "features": ["Leather seats", "Sunroof", "Backup camera", "Lane watch"],
+    "badges": [
+      "Identity verified",
+      "VIN decoded",
+      "Ownership pending"
+    ],
+    "features": [
+      "Leather seats",
+      "Sunroof",
+      "Backup camera",
+      "Lane watch"
+    ],
     "images": [
       "https://images.unsplash.com/photo-1606016159991-dfe4f2746ad5?auto=format&fit=crop&w=1600&q=80"
     ],
@@ -353,8 +418,17 @@
     "status": "active",
     "vin": "2T2AZMAA7LC163822",
     "verificationStatus": "ownership_reviewed",
-    "badges": ["Identity verified", "VIN decoded", "Ownership reviewed"],
-    "features": ["Premium audio", "Navigation", "Power liftgate", "Safety system plus"],
+    "badges": [
+      "Identity verified",
+      "VIN decoded",
+      "Ownership reviewed"
+    ],
+    "features": [
+      "Premium audio",
+      "Navigation",
+      "Power liftgate",
+      "Safety system plus"
+    ],
     "images": [
       "https://images.unsplash.com/photo-1544636331-e26879cd4d9b?auto=format&fit=crop&w=1600&q=80"
     ],
@@ -372,5 +446,365 @@
     },
     "description": "Privately owned RX 350 with clean document review. Selling because the family moved to a hybrid.",
     "updatedAt": "2026-05-22T11:25:00.000Z"
+  },
+  {
+    "id": "lst_209",
+    "userId": "seller_tasha_green",
+    "title": "2021 Mazda CX-5 Touring",
+    "make": "Mazda",
+    "model": "CX-5",
+    "year": 2021,
+    "trim": "Touring",
+    "price": 23800,
+    "mileage": 38200,
+    "location": "Decatur, GA",
+    "zip": "30030",
+    "lat": 33.7748,
+    "lng": -84.2963,
+    "bodyType": "SUV",
+    "fuelType": "Gasoline",
+    "transmission": "Automatic",
+    "drivetrain": "FWD",
+    "color": "Deep Crystal Blue",
+    "condition": "Very good",
+    "sellerRating": null,
+    "dealScore": 86,
+    "fairValueDelta": -1100,
+    "status": "active",
+    "vin": "JM3KFBCM6M0458127",
+    "verificationStatus": "ownership_reviewed",
+    "badges": [
+      "Identity verified",
+      "VIN decoded",
+      "Clean title",
+      "No accidents reported"
+    ],
+    "features": [
+      "Apple CarPlay",
+      "Blind spot monitoring",
+      "Heated seats",
+      "Backup camera",
+      "Lane keep assist"
+    ],
+    "images": [
+      "https://images.unsplash.com/photo-1606611013016-969c19ba27bb?auto=format&fit=crop&w=1600&q=80"
+    ],
+    "description": "Single-owner CX-5 with a clean title and recent maintenance records. Mostly used for commuting around Decatur and Atlanta.",
+    "marketValue": 24900,
+    "marketValueDate": "2026-06-09T14:00:00.000Z",
+    "marketValueRadius": 100,
+    "marketValueComparableCount": 11,
+    "updatedAt": "2026-06-09T14:25:00.000Z",
+    "seller": {
+      "id": "seller_tasha_green",
+      "name": "Tasha Green",
+      "initials": "TG",
+      "responseTime": "Replies within a few hours",
+      "responseRate": 91,
+      "completedSales": 0,
+      "verified": true,
+      "memberSince": "2026-03-15T13:15:00.000Z",
+      "rating": null,
+      "reviewCount": 0
+    }
+  },
+  {
+    "id": "lst_210",
+    "userId": "seller_marcus_hill",
+    "title": "2022 Honda Accord Sport",
+    "make": "Honda",
+    "model": "Accord",
+    "year": 2022,
+    "trim": "Sport",
+    "price": 26700,
+    "mileage": 29600,
+    "location": "Marietta, GA",
+    "zip": "30060",
+    "lat": 33.9526,
+    "lng": -84.5499,
+    "bodyType": "Sedan",
+    "fuelType": "Gasoline",
+    "transmission": "CVT",
+    "drivetrain": "FWD",
+    "color": "Sonic Gray Pearl",
+    "condition": "Very good",
+    "sellerRating": null,
+    "dealScore": 83,
+    "fairValueDelta": -650,
+    "status": "active",
+    "vin": "1HGCV1F32NA041382",
+    "verificationStatus": "ownership_pending",
+    "badges": [
+      "VIN decoded",
+      "Clean title",
+      "No accidents reported"
+    ],
+    "features": [
+      "Apple CarPlay",
+      "Android Auto",
+      "Adaptive cruise control",
+      "Lane keep assist",
+      "Remote start"
+    ],
+    "images": [
+      "https://images.unsplash.com/photo-1590362891991-f776e747a588?auto=format&fit=crop&w=1600&q=80"
+    ],
+    "description": "Accord Sport with a clean title and documented oil changes. Seller is waiting on identity review.",
+    "marketValue": 27350,
+    "marketValueDate": "2026-06-08T18:30:00.000Z",
+    "marketValueRadius": 100,
+    "marketValueComparableCount": 16,
+    "updatedAt": "2026-06-08T18:55:00.000Z",
+    "seller": {
+      "id": "seller_marcus_hill",
+      "name": "Marcus Hill",
+      "initials": "MH",
+      "responseTime": "Usually replies same day",
+      "responseRate": 84,
+      "completedSales": 0,
+      "verified": true,
+      "memberSince": "2026-02-21T10:40:00.000Z",
+      "rating": null,
+      "reviewCount": 0
+    }
+  },
+  {
+    "id": "lst_211",
+    "userId": "seller_elena_brooks",
+    "title": "2021 Ford Mustang Mach-E Premium",
+    "make": "Ford",
+    "model": "Mustang Mach-E",
+    "year": 2021,
+    "trim": "Premium",
+    "price": 28900,
+    "mileage": 33400,
+    "location": "Alpharetta, GA",
+    "zip": "30009",
+    "lat": 34.0754,
+    "lng": -84.2941,
+    "bodyType": "SUV",
+    "fuelType": "Electric",
+    "transmission": "Single-speed",
+    "drivetrain": "RWD",
+    "color": "Rapid Red",
+    "condition": "Good",
+    "sellerRating": 5,
+    "dealScore": 85,
+    "fairValueDelta": -1400,
+    "status": "active",
+    "vin": "3FMTK3RM1MMA21473",
+    "verificationStatus": "ownership_reviewed",
+    "badges": [
+      "Identity verified",
+      "VIN decoded",
+      "Ownership reviewed",
+      "Battery warranty"
+    ],
+    "features": [
+      "Panoramic glass roof",
+      "BlueCruise ready",
+      "Apple CarPlay",
+      "Heated seats",
+      "Power liftgate"
+    ],
+    "images": [
+      "https://images.unsplash.com/photo-1619767886558-efdc259cde1a?auto=format&fit=crop&w=1600&q=80"
+    ],
+    "description": "Premium Mach-E with home-charging history and current registration uploaded. Selling because seller now works remote.",
+    "marketValue": 30300,
+    "marketValueDate": "2026-06-07T11:15:00.000Z",
+    "marketValueRadius": 100,
+    "marketValueComparableCount": 9,
+    "updatedAt": "2026-06-07T11:35:00.000Z",
+    "seller": {
+      "id": "seller_elena_brooks",
+      "name": "Elena Brooks",
+      "initials": "EB",
+      "responseTime": "Replies within 1 hour",
+      "responseRate": 94,
+      "completedSales": 1,
+      "verified": true,
+      "memberSince": "2026-01-12T15:25:00.000Z",
+      "rating": 5,
+      "reviewCount": 1
+    }
+  },
+  {
+    "id": "lst_212",
+    "userId": "seller_noah_reed",
+    "title": "2019 Hyundai Elantra SEL",
+    "make": "Hyundai",
+    "model": "Elantra",
+    "year": 2019,
+    "trim": "SEL",
+    "price": 12600,
+    "mileage": 71200,
+    "location": "Athens, GA",
+    "zip": "30601",
+    "lat": 33.9519,
+    "lng": -83.3576,
+    "bodyType": "Sedan",
+    "fuelType": "Gasoline",
+    "transmission": "Automatic",
+    "drivetrain": "FWD",
+    "color": "Machine Gray",
+    "condition": "Good",
+    "sellerRating": null,
+    "dealScore": 72,
+    "fairValueDelta": -250,
+    "status": "active",
+    "vin": "5NPD84LF4KH456219",
+    "verificationStatus": "presence_pending",
+    "badges": [
+      "VIN decoded",
+      "Clean title"
+    ],
+    "features": [
+      "Blind spot monitoring",
+      "Backup camera",
+      "Bluetooth",
+      "Cruise control"
+    ],
+    "images": [
+      "https://images.unsplash.com/photo-1542362567-b07e54358753?auto=format&fit=crop&w=1600&q=80"
+    ],
+    "description": "Affordable commuter car with recent tires and oil change receipt. Seller still needs to complete phone verification.",
+    "marketValue": 12850,
+    "marketValueDate": "2026-06-06T16:20:00.000Z",
+    "marketValueRadius": 100,
+    "marketValueComparableCount": 14,
+    "updatedAt": "2026-06-06T16:40:00.000Z",
+    "seller": {
+      "id": "seller_noah_reed",
+      "name": "Noah Reed",
+      "initials": "NR",
+      "responseTime": "Usually replies in 1 day",
+      "responseRate": 68,
+      "completedSales": 0,
+      "verified": false,
+      "memberSince": "2026-04-18T09:00:00.000Z",
+      "rating": null,
+      "reviewCount": 0
+    }
+  },
+  {
+    "id": "lst_213",
+    "userId": "seller_brianna_cole",
+    "title": "2020 Subaru Forester Premium",
+    "make": "Subaru",
+    "model": "Forester",
+    "year": 2020,
+    "trim": "Premium",
+    "price": 21900,
+    "mileage": 52600,
+    "location": "Smyrna, GA",
+    "zip": "30080",
+    "lat": 33.8839,
+    "lng": -84.5144,
+    "bodyType": "SUV",
+    "fuelType": "Gasoline",
+    "transmission": "CVT",
+    "drivetrain": "AWD",
+    "color": "Crystal White",
+    "condition": "Good",
+    "sellerRating": null,
+    "dealScore": 80,
+    "fairValueDelta": -800,
+    "status": "active",
+    "vin": "JF2SKACC6LH512840",
+    "verificationStatus": "ownership_reviewed",
+    "badges": [
+      "Identity verified",
+      "VIN decoded",
+      "Clean title",
+      "No accidents reported"
+    ],
+    "features": [
+      "Symmetrical AWD",
+      "EyeSight safety",
+      "Apple CarPlay",
+      "Roof rails",
+      "Heated seats"
+    ],
+    "images": [
+      "https://images.unsplash.com/photo-1609521263047-f8f205293f24?auto=format&fit=crop&w=1600&q=80"
+    ],
+    "description": "Forester Premium with service history uploaded and a clean-title document check. Great practical SUV for Atlanta weather.",
+    "marketValue": 22700,
+    "marketValueDate": "2026-06-05T19:10:00.000Z",
+    "marketValueRadius": 100,
+    "marketValueComparableCount": 12,
+    "updatedAt": "2026-06-05T19:35:00.000Z",
+    "seller": {
+      "id": "seller_brianna_cole",
+      "name": "Brianna Cole",
+      "initials": "BC",
+      "responseTime": "Replies within a few hours",
+      "responseRate": 82,
+      "completedSales": 0,
+      "verified": true,
+      "memberSince": "2026-03-29T17:10:00.000Z",
+      "rating": null,
+      "reviewCount": 0
+    }
+  },
+  {
+    "id": "lst_214",
+    "userId": "seller_daniel_ross",
+    "title": "2020 Volkswagen Golf GTI SE",
+    "make": "Volkswagen",
+    "model": "Golf GTI",
+    "year": 2020,
+    "trim": "SE",
+    "price": 24800,
+    "mileage": 40200,
+    "location": "Charlotte, NC",
+    "zip": "28203",
+    "lat": 35.2104,
+    "lng": -80.8563,
+    "bodyType": "Hatchback",
+    "fuelType": "Gasoline",
+    "transmission": "DSG",
+    "drivetrain": "FWD",
+    "color": "Pure White",
+    "condition": "Very good",
+    "sellerRating": null,
+    "dealScore": 77,
+    "fairValueDelta": 300,
+    "status": "active",
+    "vin": "3VW6T7AU9LM018462",
+    "verificationStatus": "ownership_pending",
+    "badges": [
+      "VIN decoded",
+      "Maintenance document uploaded"
+    ],
+    "features": [
+      "Apple CarPlay",
+      "Android Auto",
+      "Sunroof",
+      "Leather seats",
+      "Performance monitor"
+    ],
+    "images": [
+      "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=1600&q=80"
+    ],
+    "description": "GTI SE with maintenance records and a disclosed minor bumper scuff. Priced close to market based on nearby comps.",
+    "marketValue": 24500,
+    "marketValueDate": "2026-06-04T13:05:00.000Z",
+    "marketValueRadius": 150,
+    "marketValueComparableCount": 7,
+    "updatedAt": "2026-06-04T13:25:00.000Z",
+    "seller": {
+      "id": "seller_daniel_ross",
+      "name": "Daniel Ross",
+      "initials": "DR",
+      "responseTime": "Usually replies same day",
+      "responseRate": 79,
+      "completedSales": 0,
+      "verified": false,
+      "memberSince": "2026-02-02T12:05:00.000Z",
+      "rating": null,
+      "reviewCount": 0
+    }
   }
 ]

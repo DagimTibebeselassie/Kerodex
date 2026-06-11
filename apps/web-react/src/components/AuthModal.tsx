@@ -44,6 +44,8 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
   const [resetCode, setResetCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [resetMessage, setResetMessage] = useState('');
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -58,6 +60,8 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
       setResetCode('');
       setNewPassword('');
       setResetMessage('');
+      setTermsAccepted(false);
+      setPrivacyAccepted(false);
     }
   }, [defaultTab, isOpen]);
 
@@ -88,7 +92,18 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
         return;
       }
 
-      const result = await emailAuth(tab === 'signup' ? 'create' : 'signin', email, password, name);
+      if (tab === 'signup' && (!termsAccepted || !privacyAccepted)) {
+        setError('Agree to the Terms of Service and Privacy Policy before creating an account.');
+        return;
+      }
+
+      const result = await emailAuth(
+        tab === 'signup' ? 'create' : 'signin',
+        email,
+        password,
+        name,
+        tab === 'signup' ? { termsAccepted, privacyAccepted } : undefined
+      );
       if ('requiresVerification' in result) {
         setPendingEmail(result.email);
         setVerificationMessage(result.message || result.error || 'Enter the verification code we sent to your email.');
@@ -300,6 +315,42 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
               Forgot password?
             </button>
           )}
+          {tab === 'signup' && (
+            <div className="space-y-3 pt-1">
+              <label className="flex items-start gap-3 text-left text-[12px] text-muted-foreground leading-relaxed">
+                <input
+                  type="checkbox"
+                  checked={termsAccepted}
+                  onChange={(e) => setTermsAccepted(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 accent-foreground"
+                  required
+                />
+                <span>
+                  I agree to the{' '}
+                  <a href="/terms" target="_blank" rel="noreferrer" className="underline underline-offset-2 text-foreground">
+                    Terms of Service
+                  </a>
+                  .
+                </span>
+              </label>
+              <label className="flex items-start gap-3 text-left text-[12px] text-muted-foreground leading-relaxed">
+                <input
+                  type="checkbox"
+                  checked={privacyAccepted}
+                  onChange={(e) => setPrivacyAccepted(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 accent-foreground"
+                  required
+                />
+                <span>
+                  I agree to the{' '}
+                  <a href="/privacy" target="_blank" rel="noreferrer" className="underline underline-offset-2 text-foreground">
+                    Privacy Policy
+                  </a>
+                  .
+                </span>
+              </label>
+            </div>
+          )}
           </>}
 
           {error && (
@@ -350,9 +401,13 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
             className="h-10 text-[11px] font-bold uppercase tracking-wider inline-flex items-center justify-center gap-2"
             onClick={async () => {
               setError('');
+              if (tab === 'signup' && (!termsAccepted || !privacyAccepted)) {
+                setError('Agree to the Terms of Service and Privacy Policy before creating an account.');
+                return;
+              }
               setIsLoading(true);
               try {
-                await socialAuth('google');
+                await socialAuth('google', tab === 'signup' ? { termsAccepted, privacyAccepted } : undefined);
                 onClose();
               } catch (err: any) {
                 setError(err.message || 'Google sign in failed');
@@ -370,9 +425,13 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
             className="h-10 text-[11px] font-bold uppercase tracking-wider inline-flex items-center justify-center gap-2"
             onClick={async () => {
               setError('');
+              if (tab === 'signup' && (!termsAccepted || !privacyAccepted)) {
+                setError('Agree to the Terms of Service and Privacy Policy before creating an account.');
+                return;
+              }
               setIsLoading(true);
               try {
-                await socialAuth('microsoft');
+                await socialAuth('microsoft', tab === 'signup' ? { termsAccepted, privacyAccepted } : undefined);
                 onClose();
               } catch (err: any) {
                 setError(err.message || 'Microsoft sign in failed');

@@ -94,7 +94,9 @@ interface VehicleRowSectionProps {
   viewAllHref?: string;
 }
 
-function VehicleRowSection({ label, heading, vehicles, viewAllHref = '/search' }: VehicleRowSectionProps) {
+function VehicleRowSection({ label, heading, vehicles, viewAllHref = '/cars' }: VehicleRowSectionProps) {
+  if (!vehicles.length) return null;
+
   return (
     <section className="px-4 md:px-6 py-12 md:py-16 border-t border-border">
       <div className="max-w-screen-xl mx-auto">
@@ -136,6 +138,22 @@ function VehicleRowSection({ label, heading, vehicles, viewAllHref = '/search' }
 }
 
 // ── Chatbot Button + Panel ────────────────────────────────────────────────────
+function distanceMiles(lat1: number, lng1: number, lat2?: number, lng2?: number) {
+  if (!Number.isFinite(Number(lat2)) || !Number.isFinite(Number(lng2))) return Number.POSITIVE_INFINITY;
+  const toRad = (degrees: number) => degrees * Math.PI / 180;
+  const earthMiles = 3958.8;
+  const dLat = toRad(Number(lat2) - lat1);
+  const dLng = toRad(Number(lng2) - lng1);
+  const a = Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(Number(lat2))) *
+    Math.sin(dLng / 2) ** 2;
+  return 2 * earthMiles * Math.asin(Math.sqrt(a));
+}
+
+function cityName(location = '') {
+  return location.split(',')[0]?.trim() || 'your area';
+}
+
 const CHAT_CHIPS = [
   'Help me price my car',
   'Detect potential scams',
@@ -271,7 +289,7 @@ export function HomePage() {
       () => {
         setLocationError('Unable to retrieve your location. Please try again.');
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 }
     );
   };
 
@@ -281,18 +299,18 @@ export function HomePage() {
     if (heroCity) params.q = heroCity;
     if (heroMake) params.make = heroMake;
     if (heroModel) params.model = heroModel;
-    navigate({ to: '/search', search: params as any });
+    navigate({ to: '/cars', search: params as any });
   };
 
   const handleBrowseNearby = () => {
     if (!navigator.geolocation) {
-      navigate({ to: '/search', search: { nearby: '1', radius: '100', sort: 'closest' } as any });
+      navigate({ to: '/cars', search: { nearby: '1', radius: '100', sort: 'closest', lat: '33.749', lng: '-84.388' } as any });
       return;
     }
     navigator.geolocation.getCurrentPosition(
       (position) => {
         navigate({
-          to: '/search',
+          to: '/cars',
           search: {
             nearby: '1',
             radius: '100',
@@ -303,9 +321,9 @@ export function HomePage() {
         });
       },
       () => {
-        navigate({ to: '/search', search: { nearby: '1', radius: '100', sort: 'closest' } as any });
+        navigate({ to: '/cars', search: { nearby: '1', radius: '100', sort: 'closest', lat: '33.749', lng: '-84.388' } as any });
       },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 }
     );
   };
 
@@ -322,6 +340,24 @@ export function HomePage() {
   const budgetVehicles = marketVehicles
     .filter((vehicle) => Number(vehicle.price || 0) <= 25000)
     .slice(0, 4);
+  const anchorLocation = userLocation || { lat: 33.749, lng: -84.388 };
+  const nearbySortedVehicles = [...marketVehicles]
+    .map((vehicle) => ({
+      vehicle,
+      distance: distanceMiles(anchorLocation.lat, anchorLocation.lng, vehicle.lat, vehicle.lng),
+    }))
+    .filter((item) => item.distance <= 100)
+    .sort((a, b) => a.distance - b.distance)
+    .map((item) => item.vehicle);
+  const nearbyCity = cityName(nearbySortedVehicles[0]?.location || 'Atlanta, GA');
+  const nearbyVehicles = nearbySortedVehicles.slice(0, 4);
+  const nearbyEfficientVehicles = nearbySortedVehicles
+    .filter((vehicle) => {
+      const fuel = String(vehicle.fuelType || '').toLowerCase();
+      return fuel.includes('hybrid') || fuel.includes('electric') || Number(vehicle.mileage || 0) <= 45000;
+    })
+    .slice(0, 4);
+  const nearbySearchHref = `/cars?nearby=1&radius=100&sort=closest&lat=${anchorLocation.lat}&lng=${anchorLocation.lng}`;
 
   return (
     <div>
@@ -416,7 +452,7 @@ export function HomePage() {
             </button>
             <span className="text-border">·</span>
             <Link
-              to="/search"
+              to="/cars"
               className="text-[12px] text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
             >
               View all listings
@@ -439,7 +475,7 @@ export function HomePage() {
               </h2>
             </div>
             <Link
-              to="/search"
+              to="/cars"
               className="group flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-wider hover:text-muted-foreground transition-colors"
             >
               View all
@@ -493,6 +529,20 @@ export function HomePage() {
         vehicles={budgetVehicles}
       />
 
+      <VehicleRowSection
+        label="Near You"
+        heading={`Cars in ${nearbyCity}`}
+        vehicles={nearbyVehicles}
+        viewAllHref={nearbySearchHref}
+      />
+
+      <VehicleRowSection
+        label="Recommended Nearby"
+        heading="Efficient picks close by"
+        vehicles={nearbyEfficientVehicles}
+        viewAllHref={nearbySearchHref}
+      />
+
       {/* ── MAP PREVIEW ─────────────────────────────────────────────────────── */}
       <section
         id="location-section"
@@ -529,7 +579,7 @@ export function HomePage() {
                     <Navigation className="h-3.5 w-3.5 mr-2" />
                     Enable Location
                   </Button>
-                  <Link to="/search">
+                  <Link to="/cars">
                     <Button
                       variant="outline"
                       className="h-10 px-5 text-[11px] font-bold uppercase tracking-wider"
@@ -640,7 +690,7 @@ export function HomePage() {
           </div>
 
           <div className="mt-12 flex flex-col sm:flex-row gap-4">
-            <Link to="/search">
+            <Link to="/cars">
               <Button
                 variant="outline"
                 className="h-11 px-8 text-[11px] font-bold uppercase tracking-wider border-background/40 text-background hover:bg-background hover:text-foreground"

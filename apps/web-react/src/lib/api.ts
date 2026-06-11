@@ -12,6 +12,18 @@ export interface KerodexUser {
   phoneVerified?: boolean;
   identityVerified?: boolean;
   selfieVerified?: boolean;
+  personaInquiryId?: string;
+  personaReferenceId?: string;
+  identityVerificationStatus?: 'unverified' | 'pending' | 'approved' | 'declined' | 'failed';
+  identityVerifiedAt?: string;
+  avatarUrl?: string;
+  avatarS3Key?: string;
+  lastActiveAt?: string;
+  termsVersion?: string;
+  acceptedTermsAt?: string;
+  privacyVersion?: string;
+  acceptedPrivacyAt?: string;
+  safetyNoticeSeenAt?: string;
 }
 
 export interface AuthSession {
@@ -43,6 +55,12 @@ export interface ConversationRecord {
   buyerName: string;
   sellerName: string;
   vehicleTitle?: string;
+  partnerId?: string;
+  partnerName?: string;
+  partnerLastActiveAt?: string;
+  currentUserRole?: 'buyer' | 'seller';
+  buyerLastActiveAt?: string;
+  sellerLastActiveAt?: string;
   lastMessage: string;
   unread: number;
   updatedAt: string;
@@ -53,7 +71,13 @@ export interface ConversationRecord {
     vehicleId: string;
     content: string;
     createdAt: string;
+    scamRiskScore?: number;
+    scamFlags?: string[];
+    moderationStatus?: 'clear' | 'needs_review' | 'high_risk';
   }>;
+  scamRiskScore?: number;
+  scamFlags?: string[];
+  moderationStatus?: 'clear' | 'needs_review' | 'high_risk';
 }
 
 export interface SellerProfileRecord {
@@ -126,7 +150,7 @@ export function toVehicle(listing: ListingPayload): Vehicle {
     location: listing.location || 'Private seller',
     description: listing.description || '',
     images,
-    status: listing.status === 'sold' ? 'sold' : 'available',
+    status: listing.status || 'available',
     createdAt: listing.createdAt || listing.updatedAt || new Date().toISOString(),
     lat: Number(listing.lat || 39.5),
     lng: Number(listing.lng || -98.35),
@@ -155,10 +179,16 @@ export function clearSession() {
   window.dispatchEvent(new CustomEvent('kerodex:auth-changed'));
 }
 
-export async function emailAuth(mode: 'signin' | 'create', email: string, password: string, name = '') {
+export async function emailAuth(
+  mode: 'signin' | 'create',
+  email: string,
+  password: string,
+  name = '',
+  legalConsent?: { termsAccepted?: boolean; privacyAccepted?: boolean }
+) {
   const result = await request<AuthSession | EmailVerificationRequired>('/api/auth/email', {
     method: 'POST',
-    body: JSON.stringify({ mode, email, password, name }),
+    body: JSON.stringify({ mode, email, password, name, ...(legalConsent || {}) }),
   });
   if ('token' in result) saveSession(result);
   return result;
@@ -173,8 +203,15 @@ export async function verifyEmail(email: string, code: string) {
   return session;
 }
 
-export async function socialAuth(provider: 'google' | 'microsoft') {
-  window.location.assign(apiUrl(`/api/auth/${provider}`));
+export async function socialAuth(
+  provider: 'google' | 'microsoft',
+  legalConsent?: { termsAccepted?: boolean; privacyAccepted?: boolean }
+) {
+  const search = new URLSearchParams();
+  if (legalConsent?.termsAccepted) search.set('termsAccepted', 'true');
+  if (legalConsent?.privacyAccepted) search.set('privacyAccepted', 'true');
+  const suffix = search.toString() ? `?${search}` : '';
+  window.location.assign(apiUrl(`/api/auth/${provider}${suffix}`));
 }
 
 export async function requestPasswordReset(email: string) {
@@ -201,8 +238,87 @@ export async function submitVerificationRequest(type: 'identity' | 'selfie' | 'o
   });
 }
 
+export async function startPhoneVerification(phone: string) {
+  return request<{ message: string; phoneLast4: string; devCode?: string }>('/api/me/phone/start', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ phone }),
+  });
+}
+
+export async function verifyPhoneCode(code: string) {
+  const body = await request<{ message: string; user: KerodexUser }>('/api/me/phone/verify', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ code }),
+  });
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (token) saveSession({ token, user: body.user });
+  return body;
+}
+
+export async function markSafetyNoticeSeen() {
+  const body = await request<{ message: string; user: KerodexUser }>('/api/me/safety-notice', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({}),
+  });
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (token) saveSession({ token, user: body.user });
+  return body;
+}
+
+export async function updateProfileAvatar(avatarUrl: string, avatarS3Key: string) {
+  const body = await request<{ message: string; user: KerodexUser }>('/api/me/avatar', {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify({ avatarUrl, avatarS3Key }),
+  });
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (token) saveSession({ token, user: body.user });
+  return body;
+}
+
+export async function createReport(payload: {
+  reportedUserId?: string;
+  listingId?: string;
+  messageId?: string;
+  conversationId?: string;
+  category?: string;
+  description?: string;
+}) {
+  return request<{ message: string; report: Record<string, any> }>('/api/reports', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function trackAnalyticsEvent(payload: {
+  eventType: 'page_view' | 'listing_view' | 'search_performed' | 'filter_used' | 'save_listing' | 'unsave_listing';
+  route?: string;
+  listingId?: string;
+  query?: string;
+  filter?: string;
+}) {
+  try {
+    await request<{ ok: boolean }>('/api/events/track', {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    // Analytics should never interrupt a buyer or seller workflow.
+  }
+}
+
 export function consumeAuthRedirect() {
   const params = new URLSearchParams(window.location.search);
+  if (params.get('persona') === 'return') {
+    const status = params.get('status');
+    window.history.replaceState({}, document.title, window.location.pathname || '/verify');
+    return { ok: true, persona: true, status };
+  }
   const token = params.get('token');
   const user = params.get('user');
   const errorMessage = params.get('message');
@@ -234,7 +350,9 @@ export async function listVehicles(params: Record<string, string | number | bool
 }
 
 export async function getVehicle(id: string) {
-  const listing = await request<ListingPayload>(`/api/listings/${encodeURIComponent(id)}`);
+  const listing = await request<ListingPayload>(`/api/listings/${encodeURIComponent(id)}`, {
+    headers: authHeaders(),
+  });
   return toVehicle(listing);
 }
 
@@ -255,6 +373,66 @@ export async function createVehicle(payload: ListingPayload) {
   return toVehicle(body.listing);
 }
 
+export async function updateVehicle(id: string, payload: ListingPayload) {
+  const body = await request<{ listing: ListingPayload }>(`/api/listings/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+  return toVehicle(body.listing);
+}
+
+export async function createUploadUrl(
+  fileName: string,
+  contentType: string,
+  options: { purpose?: string; documentType?: string; fileSize?: number } = {}
+) {
+  return request<{
+    uploadUrl: string;
+    publicUrl: string;
+    key: string;
+    headers?: Record<string, string>;
+  }>('/api/uploads/presign', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ fileName, contentType, ...options }),
+  });
+}
+
+export async function createVehiclePresenceCode() {
+  return request<{
+    token: string;
+    code: string;
+    generatedAt: string;
+    expiresAt: string;
+    instructions: string;
+  }>('/api/vehicle-presence/code', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({}),
+  });
+}
+
+export async function submitVehiclePresence(
+  listingId: string,
+  payload: {
+    vehiclePresenceToken: string;
+    vehiclePresenceCode: string;
+    vehiclePresencePhotoUrl: string;
+    vehiclePresenceS3Key?: string;
+  }
+) {
+  const body = await request<{ listing: ListingPayload; queued: boolean }>(
+    `/api/listings/${encodeURIComponent(listingId)}/vehicle-presence`,
+    {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    }
+  );
+  return toVehicle(body.listing);
+}
+
 export async function listConversations() {
   const body = await request<{ conversations: ConversationRecord[] }>('/api/conversations', {
     headers: authHeaders(),
@@ -269,11 +447,38 @@ export async function listMyVehicles() {
   return body.listings.map(toVehicle);
 }
 
+export async function startPersonaVerification() {
+  return request<{ url: string; status: string; referenceId: string }>('/api/me/persona/start', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({}),
+  });
+}
+
+export async function savePersonaReturn(inquiryId: string, status?: string | null, referenceId?: string | null) {
+  const session = await request<AuthSession>('/api/me/persona/return', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ inquiryId, status, referenceId }),
+  });
+  saveSession(session);
+  return session;
+}
+
 export async function startConversation(listingId: string, message = 'Hi, is this still available?') {
   const body = await request<{ conversation: ConversationRecord }>('/api/conversations', {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({ listingId, message }),
+  });
+  return body.conversation;
+}
+
+export async function sendConversationMessage(conversationId: string, content: string) {
+  const body = await request<{ conversation: ConversationRecord }>(`/api/conversations/${encodeURIComponent(conversationId)}/messages`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ content }),
   });
   return body.conversation;
 }
@@ -285,6 +490,7 @@ export function saveVehicleLocal(vehicleId: string, saved: boolean) {
   if (saved) ids.add(vehicleId);
   else ids.delete(vehicleId);
   localStorage.setItem(key, JSON.stringify([...ids]));
+  trackAnalyticsEvent({ eventType: saved ? 'save_listing' : 'unsave_listing', listingId: vehicleId });
   window.dispatchEvent(new CustomEvent('kerodex:saved-changed'));
 }
 

@@ -1,6 +1,20 @@
 const fs = require("fs");
 const path = require("path");
 
+function loadLocalEnvFile(filePath) {
+  if (!fs.existsSync(filePath)) return;
+  const lines = fs.readFileSync(filePath, "utf8").split(/\r?\n/);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#") || !trimmed.includes("=")) continue;
+    const [key, ...rest] = trimmed.split("=");
+    if (!process.env[key]) process.env[key] = rest.join("=").replace(/^['"]|['"]$/g, "");
+  }
+}
+
+loadLocalEnvFile(path.resolve(__dirname, "../.env.local"));
+loadLocalEnvFile(path.resolve(__dirname, "../.env"));
+
 async function main() {
   if (!process.env.DATABASE_URL) {
     throw new Error("Set DATABASE_URL before running npm run db:seed.");
@@ -34,6 +48,14 @@ async function main() {
       id TEXT PRIMARY KEY,
       payload JSONB NOT NULL,
       updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+
+    CREATE TABLE IF NOT EXISTS marketcheck_cache (
+      kind TEXT NOT NULL,
+      cache_key TEXT NOT NULL,
+      payload JSONB NOT NULL,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      PRIMARY KEY (kind, cache_key)
     );
   `);
 

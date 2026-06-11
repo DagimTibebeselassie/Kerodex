@@ -98,12 +98,11 @@ export function Layout() {
   const handleHeaderSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (headerSearch.trim()) {
-      navigate({ to: '/search', search: { q: headerSearch.trim() } as any });
+      navigate({ to: '/cars', search: { q: headerSearch.trim() } as any });
       setHeaderSearch('');
     }
   };
 
-  const openSignIn = () => { setAuthTab('login'); setAuthOpen(true); };
   const openSignUp = () => { setAuthTab('signup'); setAuthOpen(true); };
 
   const handleLogout = async () => {
@@ -243,7 +242,7 @@ export function Layout() {
               ) : (
                 /* ── Signed Out ── */
                 <>
-                  <Link to="/search" className="hidden md:block">
+                  <Link to="/cars" className="hidden md:block">
                     <button className="h-9 px-3 text-[12px] text-muted-foreground hover:text-foreground transition-colors font-medium">
                       Browse
                     </button>
@@ -253,12 +252,11 @@ export function Layout() {
                       Become a Seller
                     </Button>
                   </Link>
-                  <Button
-                    onClick={openSignIn}
-                    className="h-8 px-4 text-[11px] font-bold uppercase tracking-wider"
-                  >
-                    Sign In
-                  </Button>
+                  <Link to="/signin">
+                    <Button className="h-8 px-4 text-[11px] font-bold uppercase tracking-wider">
+                      Sign In
+                    </Button>
+                  </Link>
                 </>
               )}
             </>
@@ -309,7 +307,7 @@ export function Layout() {
 
         <nav className="p-4 space-y-1">
           <Link
-            to="/search"
+            to="/cars"
             onClick={() => setMobileMenuOpen(false)}
             className="flex items-center gap-3 px-3 py-2.5 text-[13px] font-medium hover:bg-muted transition-colors"
           >
@@ -365,12 +363,13 @@ export function Layout() {
           ) : (
             <>
               <div className="border-t border-border my-2" />
-              <button
-                onClick={() => { setMobileMenuOpen(false); openSignIn(); }}
-                className="w-full flex items-center gap-3 px-3 py-2.5 text-[13px] font-medium hover:bg-muted transition-colors text-left"
+              <Link
+                to="/signin"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center gap-3 px-3 py-2.5 text-[13px] font-medium hover:bg-muted transition-colors"
               >
                 <User className="h-4 w-4 text-muted-foreground" /> Sign In
-              </button>
+              </Link>
               <button
                 onClick={() => { setMobileMenuOpen(false); openSignUp(); }}
                 className="w-full flex items-center gap-3 px-3 py-2.5 text-[13px] font-medium hover:bg-muted transition-colors text-left"
@@ -401,13 +400,18 @@ export function Layout() {
             <h4 className="text-[10px] font-bold uppercase tracking-[0.18em] mb-4 text-muted-foreground">Marketplace</h4>
             <ul className="space-y-2.5">
               <li>
-                <Link to="/search" className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">
+                <Link to="/cars" className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">
                   Browse Cars
                 </Link>
               </li>
               <li>
                 <Link to="/sell" className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">
                   Sell Your Car
+                </Link>
+              </li>
+              <li>
+                <Link to="/how-it-works" className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">
+                  How It Works
                 </Link>
               </li>
               <li>
@@ -442,6 +446,16 @@ export function Layout() {
                 </Link>
               </li>
               <li>
+                <Link to="/safety" className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">
+                  Safety Center
+                </Link>
+              </li>
+              <li>
+                <Link to="/contact" className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">
+                  Contact
+                </Link>
+              </li>
+              <li>
                 <Link to="/terms" className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">
                   Terms
                 </Link>
@@ -450,6 +464,11 @@ export function Layout() {
                 <Link to="/privacy" className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">
                   Privacy
                 </Link>
+              </li>
+              <li>
+                <a href="mailto:founder@kerodexofficial.com" className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">
+                  founder@kerodexofficial.com
+                </a>
               </li>
             </ul>
           </div>

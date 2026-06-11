@@ -8,6 +8,7 @@ import {
   Pencil, Trash2, BadgeCheck, TrendingUp, DollarSign, AlertTriangle,
   CheckCircle2, Clock, Loader2, Search, ShieldCheck,
 } from 'lucide-react';
+import { MAKES } from '@/data/makes-models';
 
 // ── VIN Decoder ────────────────────────────────────────────────────────────
 interface VinResult {
@@ -20,24 +21,26 @@ interface VinResult {
   driveType: string;
 }
 
+function makeOptionFromDecode(make: string): string {
+  const normalized = make.trim().toLowerCase().replace(/\s+/g, '_');
+  return MAKES.find((option) => option.toLowerCase() === normalized) || make.trim();
+}
+
 async function decodeVin(vin: string): Promise<VinResult | null> {
-  try {
-    const res = await fetch(`/api/vin/decode/${encodeURIComponent(vin)}`);
-    const json = await res.json();
-    const r = json?.vehicle || json;
-    if (!r || !r.make) return null;
-    return {
-      make: r.make || '',
-      model: r.model || '',
-      year: r.year || '',
-      trim: r.trim || '',
-      engine: r.bodyClass || '',
-      fuelType: r.fuelType || '',
-      driveType: r.driveType || '',
-    };
-  } catch {
-    return null;
-  }
+  const res = await fetch(`/api/marketcheck/decode/${encodeURIComponent(vin)}`);
+  const json = await res.json();
+  const r = json?.vehicle || json;
+  if (!res.ok) throw new Error(json.error || json.detail || 'Unable to decode VIN.');
+  if (!r || !r.make) return null;
+  return {
+    make: makeOptionFromDecode(r.make || ''),
+    model: r.model || '',
+    year: r.year || '',
+    trim: r.trim || '',
+    engine: r.engine || r.body_type || r.bodyClass || '',
+    fuelType: r.fuel_type || r.fuelType || '',
+    driveType: r.drivetrain || r.driveType || '',
+  };
 }
 
 // ── Mock Data ──────────────────────────────────────────────────────────────
@@ -49,7 +52,7 @@ interface MockListing {
   price: number;
   mileage: number;
   location: string;
-  status: 'active' | 'draft';
+  status: 'active' | 'draft' | 'pending_verification' | 'verification_in_progress' | string;
   completeness: number;
   views: number;
   saves: number;
@@ -57,29 +60,45 @@ interface MockListing {
   images: string[];
   daysListed: number;
   dealScore: 'great' | 'good' | 'fair' | null;
+  createdAt?: string;
+  sellerNotification?: string;
 }
 
-const MOCK_LISTINGS: MockListing[] = [
-  {
-    id: 'ml1', make: 'BMW', model: '3 Series', year: 2021, price: 42000, mileage: 28000,
-    location: 'Nashville, TN', status: 'active',
-    completeness: 88, views: 342, saves: 18, messages: 7,
-    images: ['https://images.unsplash.com/photo-1555215695-3004980ad54e?q=80&w=400'],
-    daysListed: 3, dealScore: 'great',
-  },
-  {
-    id: 'ml2', make: 'Honda', model: 'Civic', year: 2020, price: 17500, mileage: 52000,
-    location: 'Nashville, TN', status: 'draft',
-    completeness: 45, views: 0, saves: 0, messages: 0,
-    images: ['https://images.unsplash.com/photo-1606016159991-dfe4f2746ad5?q=80&w=400'],
-    daysListed: 0, dealScore: null,
-  },
-];
+function numberField(value: unknown): number {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
+}
 
-const COMPLETENESS_TIPS: Record<string, string[]> = {
-  ml1: ['Add inspection report', 'Verify ownership'],
-  ml2: ['Upload photos (0 added)', 'Add a description', 'Set your price'],
-};
+function listingCompleteness(vehicle: any): number {
+  const checks = [
+    Boolean(vehicle.images?.length),
+    Boolean(vehicle.description),
+    Boolean(vehicle.price),
+    Boolean(vehicle.mileage),
+    Boolean(vehicle.vin),
+    Boolean(vehicle.titleStatus),
+    Boolean(vehicle.accidentHistory),
+    Boolean(vehicle.ownerCount),
+    Boolean(vehicle.features?.length),
+    Boolean(vehicle.maintenanceNames?.length),
+  ];
+  return Math.round((checks.filter(Boolean).length / checks.length) * 100);
+}
+
+function listingTips(listing: MockListing): string[] {
+  const tips: string[] = [];
+  if (!listing.images.length) tips.push('Upload photos');
+  if (listing.completeness < 100) tips.push('Complete missing listing details');
+  if (listing.status === 'draft') tips.push('Draft not published');
+  if (listing.status === 'pending_verification' || listing.status === 'verification_in_progress') tips.push('Vehicle presence verification is processing');
+  return tips;
+}
+
+function daysSince(value?: string): number {
+  const time = Date.parse(value || '');
+  if (!Number.isFinite(time)) return 0;
+  return Math.max(0, Math.ceil((Date.now() - time) / (24 * 60 * 60 * 1000)));
+}
 
 // ── Stat Card ──────────────────────────────────────────────────────────────
 function StatCard({ icon, label, value, sub }: {
@@ -108,7 +127,7 @@ function ListingCard({
   listing: MockListing;
   onDelete: (id: string) => void;
 }) {
-  const tips = COMPLETENESS_TIPS[listing.id] ?? [];
+  const tips = listingTips(listing);
 
   const dealColors: Record<string, string> = {
     great: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
@@ -141,7 +160,11 @@ function ListingCard({
                   ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                   : 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400'
               }`}>
-                {listing.status === 'active' ? 'Active' : 'Draft'}
+                {listing.status === 'active'
+                  ? 'Active'
+                  : listing.status === 'pending_verification' || listing.status === 'verification_in_progress'
+                    ? 'Pending verification'
+                    : 'Draft'}
               </span>
 
               {/* Deal score */}
@@ -177,13 +200,21 @@ function ListingCard({
       </div>
 
       {/* Improvement suggestions */}
+      {listing.sellerNotification && (
+        <div className="flex items-start gap-2 p-3 border border-border bg-muted/20">
+          <AlertTriangle className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
+          <p className="text-[11px] text-muted-foreground">{listing.sellerNotification}</p>
+        </div>
+      )}
       {tips.length > 0 && (
         <div className="space-y-1.5">
-          {listing.status === 'draft' ? (
+          {listing.status === 'draft' || listing.status === 'pending_verification' || listing.status === 'verification_in_progress' ? (
             <div className="flex items-start gap-2 p-3 border border-amber-500/20 bg-amber-500/5">
               <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
               <div className="space-y-1">
-                <p className="text-[11px] font-bold text-amber-600 dark:text-amber-400">Missing:</p>
+                <p className="text-[11px] font-bold text-amber-600 dark:text-amber-400">
+                  {listing.status === 'draft' ? 'Missing:' : 'Status:'}
+                </p>
                 {tips.map((tip) => (
                   <p key={tip} className="text-[11px] text-muted-foreground">• {tip}</p>
                 ))}
@@ -230,7 +261,7 @@ function ListingCard({
         ) : (
           <Link to="/sell">
             <button className="flex items-center gap-1.5 h-8 px-4 text-[11px] font-bold uppercase tracking-wider bg-primary text-primary-foreground hover:opacity-90 transition-opacity">
-              Complete to publish
+              {listing.status === 'pending_verification' || listing.status === 'verification_in_progress' ? 'View status' : 'Complete to publish'}
             </button>
           </Link>
         )}
@@ -322,7 +353,14 @@ function VinPanel({ onResult }: { onResult: (r: VinResult) => void }) {
     }
     setError('');
     setLoading(true);
-    const r = await decodeVin(cleaned);
+    let r: VinResult | null = null;
+    try {
+      r = await decodeVin(cleaned);
+    } catch (error: any) {
+      setLoading(false);
+      setError(error?.message || 'Unable to decode this VIN.');
+      return;
+    }
     setLoading(false);
     if (!r || !r.make) {
       setError('Could not decode this VIN. Please check and try again.');
@@ -378,7 +416,7 @@ function VinPanel({ onResult }: { onResult: (r: VinResult) => void }) {
           ))}
           <div className="col-span-2 flex items-center gap-2 mt-1 text-[11px] text-emerald-500">
             <CheckCircle2 className="h-3.5 w-3.5" />
-            VIN verified via NHTSA — fields populated
+            VIN verified via MarketCheck - fields populated
           </div>
         </div>
       )}
@@ -400,7 +438,7 @@ export function SellerCockpitPage() {
     listMyVehicles()
       .then((vehicles) => {
         if (!alive) return;
-        setListings(vehicles.map((v, index) => ({
+        setListings(vehicles.map((v: any) => ({
           id: v.id,
           make: v.make,
           model: v.model,
@@ -408,14 +446,16 @@ export function SellerCockpitPage() {
           price: v.price,
           mileage: v.mileage,
           location: v.location,
-          status: v.status === 'sold' ? 'active' : 'active',
-          completeness: Math.min(96, 62 + (v.images.length * 6)),
-          views: 140 + index * 37,
-          saves: 6 + index * 2,
-          messages: 2 + index,
+          status: v.status === 'sold' ? 'active' : (v.status || 'active'),
+          completeness: listingCompleteness(v),
+          views: numberField(v.views),
+          saves: numberField(v.favorites || v.saves),
+          messages: numberField(v.inquiries || v.messages),
           images: v.images,
-          daysListed: Math.max(1, index + 1),
-          dealScore: index % 3 === 0 ? 'great' : index % 3 === 1 ? 'good' : 'fair',
+          daysListed: daysSince(v.createdAt),
+          dealScore: Number(v.fairValueDelta) < -1000 ? 'great' : Number(v.fairValueDelta) < 0 ? 'good' : Number.isFinite(Number(v.fairValueDelta)) ? 'fair' : null,
+          createdAt: v.createdAt,
+          sellerNotification: v.sellerNotification,
         })));
       })
       .catch(() => {});
@@ -454,6 +494,10 @@ export function SellerCockpitPage() {
   const activeListings = listings.filter((l) => l.status === 'active');
   const totalViews = listings.reduce((sum, l) => sum + l.views, 0);
   const totalMessages = listings.reduce((sum, l) => sum + l.messages, 0);
+  const avgDaysListed = activeListings.length
+    ? Math.round(activeListings.reduce((sum, l) => sum + l.daysListed, 0) / activeListings.length)
+    : 0;
+  const maxViews = Math.max(...activeListings.map((listing) => listing.views), 1);
 
   return (
     <div className="animate-fade-in px-4 md:px-6 py-10 max-w-screen-xl mx-auto">
@@ -466,13 +510,23 @@ export function SellerCockpitPage() {
             Manage listings, track performance, and decode VINs.
           </p>
         </div>
-        <Button
-          onClick={() => navigate({ to: '/sell' })}
-          className="h-10 px-6 text-[12px] font-bold uppercase tracking-widest shrink-0"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          New Listing
-        </Button>
+        <div className="flex flex-wrap gap-2 justify-end">
+          <Button
+            variant="outline"
+            onClick={() => navigate({ to: '/verify' })}
+            className="h-10 px-5 text-[11px] font-bold uppercase tracking-wider shrink-0"
+          >
+            <ShieldCheck className="h-4 w-4 mr-2" />
+            {user.identityVerified ? 'Verified' : 'Verify Identity'}
+          </Button>
+          <Button
+            onClick={() => navigate({ to: '/sell' })}
+            className="h-10 px-6 text-[12px] font-bold uppercase tracking-widest shrink-0"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            New Listing
+          </Button>
+        </div>
       </div>
 
       {/* ── Stats Row ───────────────────────────────────────────────────── */}
@@ -493,13 +547,13 @@ export function SellerCockpitPage() {
           icon={<MessageSquare className="h-4 w-4" />}
           label="Messages"
           value={totalMessages}
-          sub={totalMessages ? '3 unread' : 'No unread'}
+          sub="From listing records"
         />
         <StatCard
           icon={<Clock className="h-4 w-4" />}
-          label="Avg. Days to Sell"
-          value={18}
-          sub="Market average: 24"
+          label="Avg. Days Listed"
+          value={avgDaysListed}
+          sub="Across active listings"
         />
       </div>
 
@@ -582,14 +636,15 @@ export function SellerCockpitPage() {
                 <TrendingUp className="h-4 w-4 text-primary" />
                 <h3 className="text-[12px] font-bold uppercase tracking-[0.15em]">Views This Month</h3>
               </div>
-              <div className="text-4xl font-black tracking-tight">342</div>
-              <div className="text-[12px] text-emerald-500 font-medium">↑ 23% vs last month</div>
+              <div className="text-4xl font-black tracking-tight">{totalViews.toLocaleString()}</div>
+              <div className="text-[12px] text-muted-foreground font-medium">From active listing records</div>
               <div className="flex items-end gap-1.5 h-20 pt-4">
-                {[40, 65, 45, 80, 60, 90, 75, 100, 85, 95, 70, 88].map((h, i) => (
+                {activeListings.map((listing) => (
                   <div
-                    key={i}
+                    key={listing.id}
                     className="flex-1 bg-primary/20 hover:bg-primary/40 transition-colors"
-                    style={{ height: `${h}%` }}
+                    title={`${listing.year} ${listing.make} ${listing.model}: ${listing.views} views`}
+                    style={{ height: `${Math.max(6, (listing.views / maxViews) * 100)}%` }}
                   />
                 ))}
               </div>
@@ -614,7 +669,7 @@ export function SellerCockpitPage() {
                     <div className="h-1.5 bg-muted mt-1 overflow-hidden">
                       <div
                         className="h-full bg-primary"
-                        style={{ width: `${Math.min(100, (listing.views / 400) * 100)}%` }}
+                        style={{ width: `${Math.min(100, (listing.views / maxViews) * 100)}%` }}
                       />
                     </div>
                   </div>
@@ -676,8 +731,8 @@ export function SellerCockpitPage() {
           <div className="p-5 border border-border bg-card space-y-2">
             <h3 className="text-[12px] font-bold uppercase tracking-[0.15em]">About VIN Decoding</h3>
             <p className="text-[12px] text-muted-foreground leading-relaxed">
-              Kerodex uses the free <strong>NHTSA (National Highway Traffic Safety Administration)</strong> database to decode
-              VINs and auto-populate listing details. This helps reduce errors and builds buyer trust.
+              Kerodex uses backend VIN decoding to auto-populate listing details without exposing provider credentials.
+              This helps reduce errors and builds buyer trust.
             </p>
             <p className="text-[12px] text-muted-foreground">
               VIN verification also adds a <strong>✓ VIN Verified</strong> badge to your listing.

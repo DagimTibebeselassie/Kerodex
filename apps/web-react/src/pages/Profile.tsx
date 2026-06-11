@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { useAuth } from '@/hooks/useAuth';
-import { listMyVehicles, savedVehicleIds } from '@/lib/api';
+import { createUploadUrl, listMyVehicles, savedVehicleIds, updateProfileAvatar } from '@/lib/api';
 import { Button, Input, toast } from '@blinkdotnew/ui';
 import {
   User, BadgeCheck, Shield, Bell, Lock, Car, Heart, MessageSquare,
@@ -65,6 +65,7 @@ export function ProfilePage() {
   const [editMode, setEditMode] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [phone, setPhone] = useState('');
+  const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
   const { data: myVehicles } = useQuery({
     queryKey: ['my-vehicles-count', user?.id],
@@ -97,6 +98,32 @@ export function ProfilePage() {
     },
     onError: () => toast.error('Failed to update profile.'),
   });
+
+  const avatarMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const upload = await createUploadUrl(file.name, file.type || 'image/jpeg', {
+        purpose: 'profile-picture',
+        fileSize: file.size,
+      });
+      const response = await fetch(upload.uploadUrl, {
+        method: 'PUT',
+        headers: upload.headers || { 'content-type': file.type || 'image/jpeg' },
+        body: file,
+      });
+      if (!response.ok) throw new Error('Profile picture upload failed.');
+      return updateProfileAvatar(upload.publicUrl, upload.key);
+    },
+    onSuccess: () => {
+      toast.success('Profile picture updated.');
+      queryClient.invalidateQueries({ queryKey: ['auth'] });
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : 'Failed to update profile picture.'),
+  });
+
+  const handleAvatarFile = (file?: File) => {
+    if (!file) return;
+    avatarMutation.mutate(file);
+  };
 
   if (authLoading) {
     return (
@@ -135,14 +162,32 @@ export function ProfilePage() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 mb-12 pb-12 border-b border-border">
         {/* Avatar */}
         <div className="relative">
-          <div className="h-20 w-20 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-black text-2xl shrink-0">
-            {initials}
+          <div className="h-20 w-20 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-black text-2xl shrink-0 overflow-hidden">
+            {user.avatarUrl ? (
+              <img src={user.avatarUrl} alt="" className="h-full w-full object-cover" />
+            ) : (
+              initials
+            )}
           </div>
+          <input
+            ref={avatarInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="hidden"
+            onChange={(event) => handleAvatarFile(event.target.files?.[0])}
+          />
           <button
+            type="button"
             aria-label="Change avatar"
+            disabled={avatarMutation.isPending}
+            onClick={() => avatarInputRef.current?.click()}
             className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-background border border-border flex items-center justify-center hover:bg-muted transition-colors"
           >
-            <Camera className="h-3.5 w-3.5 text-muted-foreground" />
+            {avatarMutation.isPending ? (
+              <span className="h-3.5 w-3.5 rounded-full border border-muted-foreground border-t-transparent animate-spin" />
+            ) : (
+              <Camera className="h-3.5 w-3.5 text-muted-foreground" />
+            )}
           </button>
         </div>
 
@@ -224,8 +269,8 @@ export function ProfilePage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <VerifBadge done={Boolean(user.emailVerified)} label="Email Verified" />
           <VerifBadge done={false} label="Phone Verified" />
-          <VerifBadge done={false} label="Identity Verified (Gov ID)" />
-          <VerifBadge done={false} label="Selfie Verification" />
+          <VerifBadge done={Boolean(user.identityVerified)} label="Identity Verified (Gov ID)" />
+          <VerifBadge done={Boolean(user.selfieVerified)} label="Selfie Verification" />
         </div>
 
         {/* Trust Score Preview */}
@@ -239,7 +284,7 @@ export function ProfilePage() {
           </div>
           <Link to="/verify">
             <Button className="h-10 px-5 text-[11px] font-bold uppercase tracking-wider">
-              Improve Score
+              {user.identityVerified ? 'View Verification' : 'Verify Identity'}
             </Button>
           </Link>
         </div>

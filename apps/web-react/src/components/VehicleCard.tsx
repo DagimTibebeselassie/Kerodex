@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { Vehicle } from '@/types';
 import { savedVehicleIds, saveVehicleLocal } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
 import { Heart, MapPin, Gauge, BadgeCheck, Star } from 'lucide-react';
+import { toast } from '@blinkdotnew/ui';
 
 interface VehicleCardProps {
   vehicle: Vehicle;
@@ -21,6 +23,7 @@ export function VehicleCard({
   isVerified = false,
   className = '',
 }: VehicleCardProps) {
+  const { user, login } = useAuth();
   const [saved, setSaved] = useState(savedIds?.has(vehicle.id) ?? savedVehicleIds().has(vehicle.id));
   const verified = isVerified || Boolean(vehicle.seller?.verified);
   const visibleBadges = (vehicle.badges || []).slice(0, 2);
@@ -37,6 +40,11 @@ export function VehicleCard({
   const handleSave = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (!user) {
+      login();
+      toast.error('Sign in to save vehicles.');
+      return;
+    }
     const next = !saved;
     setSaved(next);
     saveVehicleLocal(vehicle.id, next);

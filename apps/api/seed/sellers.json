@@ -118,5 +118,125 @@
       "identity": false,
       "selfie": false
     }
+  },
+  {
+    "id": "seller_tasha_green",
+    "name": "Tasha Green",
+    "initials": "TG",
+    "city": "Decatur",
+    "state": "GA",
+    "memberSince": "2026-03-15T13:15:00.000Z",
+    "bio": "Decatur teacher selling a compact SUV after upgrading to a larger family vehicle.",
+    "responseTime": "Replies within a few hours",
+    "responseRate": 91,
+    "completedSales": 0,
+    "rating": null,
+    "reviewCount": 0,
+    "verification": {
+      "email": true,
+      "phone": true,
+      "identity": true,
+      "selfie": true
+    }
+  },
+  {
+    "id": "seller_marcus_hill",
+    "name": "Marcus Hill",
+    "initials": "MH",
+    "city": "Marietta",
+    "state": "GA",
+    "memberSince": "2026-02-21T10:40:00.000Z",
+    "bio": "Private owner with maintenance records for a lightly used sedan.",
+    "responseTime": "Usually replies same day",
+    "responseRate": 84,
+    "completedSales": 0,
+    "rating": null,
+    "reviewCount": 0,
+    "verification": {
+      "email": true,
+      "phone": true,
+      "identity": true,
+      "selfie": false
+    }
+  },
+  {
+    "id": "seller_elena_brooks",
+    "name": "Elena Brooks",
+    "initials": "EB",
+    "city": "Alpharetta",
+    "state": "GA",
+    "memberSince": "2026-01-12T15:25:00.000Z",
+    "bio": "Selling a well-kept EV after moving closer to work.",
+    "responseTime": "Replies within 1 hour",
+    "responseRate": 94,
+    "completedSales": 1,
+    "rating": 5,
+    "reviewCount": 1,
+    "verification": {
+      "email": true,
+      "phone": true,
+      "identity": true,
+      "selfie": true
+    }
+  },
+  {
+    "id": "seller_noah_reed",
+    "name": "Noah Reed",
+    "initials": "NR",
+    "city": "Athens",
+    "state": "GA",
+    "memberSince": "2026-04-18T09:00:00.000Z",
+    "bio": "First-time seller listing a student commuter car with service receipts.",
+    "responseTime": "Usually replies in 1 day",
+    "responseRate": 68,
+    "completedSales": 0,
+    "rating": null,
+    "reviewCount": 0,
+    "verification": {
+      "email": true,
+      "phone": false,
+      "identity": false,
+      "selfie": false
+    }
+  },
+  {
+    "id": "seller_brianna_cole",
+    "name": "Brianna Cole",
+    "initials": "BC",
+    "city": "Smyrna",
+    "state": "GA",
+    "memberSince": "2026-03-29T17:10:00.000Z",
+    "bio": "Selling a crossover after switching to a company vehicle.",
+    "responseTime": "Replies within a few hours",
+    "responseRate": 82,
+    "completedSales": 0,
+    "rating": null,
+    "reviewCount": 0,
+    "verification": {
+      "email": true,
+      "phone": true,
+      "identity": true,
+      "selfie": true
+    }
+  },
+  {
+    "id": "seller_daniel_ross",
+    "name": "Daniel Ross",
+    "initials": "DR",
+    "city": "Charlotte",
+    "state": "NC",
+    "memberSince": "2026-02-02T12:05:00.000Z",
+    "bio": "Private seller with a clean commuter hatchback and recent tire receipt.",
+    "responseTime": "Usually replies same day",
+    "responseRate": 79,
+    "completedSales": 0,
+    "rating": null,
+    "reviewCount": 0,
+    "verification": {
+      "email": true,
+      "phone": true,
+      "identity": false,
+      "selfie": false
+    }
   }
 ]

@@ -159,10 +159,14 @@
               <div class="metric-grid compact" id="messageMetrics"></div>
             </article>
             <article class="panel">
-              <h2>Investigation Workspace</h2>
-              <div class="workspace-map">
-                <span>Users</span><span>Listings</span><span>Messages</span><span>Reports</span><span>IPs</span><span>Documents</span>
+              <h2>Reported Conversation Review</h2>
+              <p>Enter a conversation ID from a report and a reason before viewing message content.</p>
+              <div class="table-toolbar stacked">
+                <input id="conversationReviewId" placeholder="Conversation ID">
+                <input id="conversationReviewReason" placeholder="Required review reason">
+                <button id="reviewConversationButton">Open Review</button>
               </div>
+              <div class="message-review" id="messageReview"></div>
             </article>
           </div>
         </section>

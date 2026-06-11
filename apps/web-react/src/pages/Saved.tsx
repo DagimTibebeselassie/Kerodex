@@ -3,11 +3,13 @@ import { Vehicle } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
 import { listVehicles, savedVehicleIds } from '@/lib/api';
 import { Link } from '@tanstack/react-router';
+import { useNavigate } from '@tanstack/react-router';
 import { Button, EmptyState } from '@blinkdotnew/ui';
 import { Heart, MapPin, Gauge, ArrowRight } from 'lucide-react';
 
 export function SavedVehiclesPage() {
   const { user, login, isLoading: authLoading } = useAuth();
+  const navigate = useNavigate();
 
   const { data: savedVehicles, isLoading: savedLoading } = useQuery({
     queryKey: ['saved-vehicles', user?.id],
@@ -56,7 +58,7 @@ export function SavedVehiclesPage() {
           title="No saved vehicles"
           description="Browse the marketplace and heart the listings you love."
           icon={<Heart className="h-8 w-8 text-muted-foreground" />}
-          action={{ label: 'Explore Marketplace', onClick: () => {} }}
+          action={{ label: 'Explore Marketplace', onClick: () => navigate({ to: '/search' }) }}
           className="border border-border py-20"
         />
       ) : (

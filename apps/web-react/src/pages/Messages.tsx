@@ -2,22 +2,31 @@ import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { useAuth } from '@/hooks/useAuth';
-import { listConversations } from '@/lib/api';
+import { ConversationRecord, createReport, listConversations, markSafetyNoticeSeen, sendConversationMessage } from '@/lib/api';
 import { Button, Input, toast } from '@blinkdotnew/ui';
 import {
-  MessageSquare, Send, Car, ArrowLeft, Search, User, Circle,
+  MessageSquare, Send, Car, ArrowLeft, Search, User, Circle, AlertTriangle, Flag, X,
 } from 'lucide-react';
 import { Message } from '@/types';
 
 // ── Thread preview type ────────────────────────────────────────────────────
 interface ThreadPreview {
+  conversationId: string;
   partnerId: string;
+  partnerName: string;
+  partnerLastActiveAt?: string;
   vehicleId: string;
   lastMessage: string;
   lastAt: string;
   unread: boolean;
   vehicleTitle: string;
+  messages: Message[];
+  scamRiskScore?: number;
+  scamFlags?: string[];
+  moderationStatus?: 'clear' | 'needs_review' | 'high_risk';
 }
+
+const SAFETY_NOTICE_TEXT = 'Safety reminder: Meet in a public, well-lit place. Bring another person if possible. Do not send deposits or payments before verifying the vehicle and documents in person. Verify the title, VIN, seller identity, and vehicle condition before completing a purchase. If anything feels suspicious, stop the conversation and report the user.';
 
 // ── Timestamp helper ───────────────────────────────────────────────────────
 function fmtTime(iso: string): string {
@@ -30,6 +39,23 @@ function fmtTime(iso: string): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
+function initialsFor(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join('') || 'K';
+}
+
+function presence(iso?: string) {
+  if (!iso) return { label: 'Activity unknown', color: 'bg-muted-foreground/40' };
+  const diff = Date.now() - new Date(iso).getTime();
+  if (diff < 2 * 60 * 1000) return { label: 'Active now', color: 'bg-emerald-500' };
+  if (diff < 24 * 60 * 60 * 1000) return { label: `Active ${fmtTime(iso)}`, color: 'bg-amber-400' };
+  return { label: `Last active ${fmtTime(iso)}`, color: 'bg-muted-foreground/50' };
+}
+
 // ── Thread List Item ───────────────────────────────────────────────────────
 function ThreadItem({
   thread,
@@ -40,7 +66,8 @@ function ThreadItem({
   selected: boolean;
   onSelect: () => void;
 }) {
-  const initials = thread.partnerId.substring(0, 2).toUpperCase();
+  const initials = initialsFor(thread.partnerName);
+  const status = presence(thread.partnerLastActiveAt);
 
   return (
     <button
@@ -57,10 +84,15 @@ function ThreadItem({
       {/* Content */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[13px] font-bold truncate">{thread.vehicleTitle || 'Vehicle Inquiry'}</span>
+          <span className="text-[13px] font-bold truncate">{thread.partnerName || 'Kerodex member'}</span>
           <span className="text-[10px] text-muted-foreground shrink-0">{fmtTime(thread.lastAt)}</span>
         </div>
+        <p className="text-[11px] text-muted-foreground truncate mt-0.5">{thread.vehicleTitle || 'Vehicle Inquiry'}</p>
         <p className="text-[12px] text-muted-foreground truncate mt-0.5">{thread.lastMessage}</p>
+        <div className="flex items-center gap-1.5 mt-1">
+          <span className={`h-1.5 w-1.5 rounded-full ${status.color}`} />
+          <span className="text-[10px] text-muted-foreground">{status.label}</span>
+        </div>
         {thread.unread && (
           <div className="flex items-center gap-1 mt-1">
             <Circle className="h-2 w-2 fill-primary text-primary" />
@@ -99,66 +131,53 @@ export function MessagesPage() {
   const [messageText, setMessageText] = useState('');
   const [mobileView, setMobileView] = useState<'list' | 'thread'>('list');
   const [search, setSearch] = useState('');
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportText, setReportText] = useState('');
+  const [safetyDismissed, setSafetyDismissed] = useState(Boolean(user?.safetyNoticeSeenAt || localStorage.getItem('kerodex_safety_notice_seen')));
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Fetch all messages involving the current user
-  const { data: allMessages, isLoading: msgLoading } = useQuery({
-    queryKey: ['messages', user?.id],
+  // Fetch server-backed conversations. Polling keeps two open browsers in sync for MVP.
+  const { data: conversations = [], isLoading: msgLoading } = useQuery({
+    queryKey: ['conversations', user?.id],
     queryFn: async () => {
-      if (!user) return [] as Message[];
-      const localMessages = JSON.parse(localStorage.getItem('kerodex-messages') || '[]') as Message[];
-      const conversations = await listConversations();
-      const conversationMessages = conversations.flatMap((conversation) => {
-        if (conversation.messages?.length) return conversation.messages;
-        const partnerId = conversation.buyerId === user.id
-          ? conversation.sellerId || 'seller'
-          : conversation.buyerId || 'buyer';
-        return [{
-          id: `${conversation.id}_seed`,
-          senderId: partnerId,
-          receiverId: user.id,
-          vehicleId: conversation.listingId,
-          content: conversation.lastMessage,
-          createdAt: conversation.updatedAt,
-        }];
-      });
-      const all = [...conversationMessages, ...localMessages] as Message[];
-      all.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-      return all;
+      if (!user) return [] as ConversationRecord[];
+      return listConversations();
     },
     enabled: !!user,
-    refetchInterval: 5000,
+    refetchInterval: (query) => {
+      const existing = query.state.data as ConversationRecord[] | undefined;
+      return existing && existing.length > 0 ? 2000 : false;
+    },
+    refetchOnWindowFocus: false,
   });
 
-  // Build thread list from messages
-  const threads: ThreadPreview[] = (() => {
-    if (!allMessages || !user) return [];
-    const seen = new Map<string, ThreadPreview>();
-    for (const msg of allMessages) {
-      const partnerId = msg.senderId === user.id ? msg.receiverId : msg.senderId;
-      const key = `${partnerId}__${msg.vehicleId}`;
-      seen.set(key, {
-        partnerId: partnerId ?? '',
-        vehicleId: msg.vehicleId ?? '',
-        lastMessage: msg.content ?? '',
-        lastAt: msg.createdAt ?? '',
-        unread: msg.receiverId === user.id,
-        vehicleTitle: `Vehicle #${(msg.vehicleId ?? '').substring(0, 6)}`,
-      });
-    }
-    return Array.from(seen.values()).sort(
+  const threads: ThreadPreview[] = conversations.map((conversation) => ({
+    conversationId: conversation.id,
+    partnerId: conversation.partnerId || (conversation.buyerId === user?.id ? conversation.sellerId : conversation.buyerId) || '',
+    partnerName: conversation.partnerName || (conversation.buyerId === user?.id ? conversation.sellerName : conversation.buyerName) || 'Kerodex member',
+    partnerLastActiveAt: conversation.partnerLastActiveAt,
+    vehicleId: conversation.listingId,
+    lastMessage: conversation.lastMessage || '',
+    lastAt: conversation.updatedAt,
+    unread: Number(conversation.unread || 0) > 0,
+    vehicleTitle: conversation.vehicleTitle || 'Vehicle Inquiry',
+    scamRiskScore: conversation.scamRiskScore,
+    scamFlags: conversation.scamFlags,
+    moderationStatus: conversation.moderationStatus,
+    messages: (conversation.messages || []).slice().sort(
+      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+    ) as Message[],
+  })).sort(
       (a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime()
     );
-  })();
 
-  // Messages in selected thread
-  const threadMessages = allMessages?.filter((m) => {
-    if (!selectedThread || !user) return false;
-    const involved =
-      (m.senderId === user.id && m.receiverId === selectedThread.partnerId) ||
-      (m.receiverId === user.id && m.senderId === selectedThread.partnerId);
-    return involved && m.vehicleId === selectedThread.vehicleId;
-  }) ?? [];
+  useEffect(() => {
+    if (!selectedThread) return;
+    const fresh = threads.find((thread) => thread.conversationId === selectedThread.conversationId);
+    if (fresh && fresh.lastAt !== selectedThread.lastAt) setSelectedThread(fresh);
+  }, [threads, selectedThread]);
+
+  const threadMessages = selectedThread?.messages ?? [];
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -169,20 +188,11 @@ export function MessagesPage() {
   const sendMutation = useMutation({
     mutationFn: async (content: string) => {
       if (!user || !selectedThread) return;
-      const nextMessage = {
-        id: `msg_${Date.now()}`,
-        senderId: user.id,
-        receiverId: selectedThread.partnerId,
-        vehicleId: selectedThread.vehicleId,
-        content,
-        createdAt: new Date().toISOString(),
-      };
-      const current = JSON.parse(localStorage.getItem('kerodex-messages') || '[]') as Message[];
-      localStorage.setItem('kerodex-messages', JSON.stringify([...current, nextMessage]));
+      return sendConversationMessage(selectedThread.conversationId, content);
     },
     onSuccess: () => {
       setMessageText('');
-      queryClient.invalidateQueries({ queryKey: ['messages', user?.id] });
+      queryClient.invalidateQueries({ queryKey: ['conversations', user?.id] });
     },
     onError: () => toast.error('Failed to send message.'),
   });
@@ -199,8 +209,53 @@ export function MessagesPage() {
     setMobileView('thread');
   };
 
+  const handleSafetyDismiss = async () => {
+    setSafetyDismissed(true);
+    localStorage.setItem('kerodex_safety_notice_seen', new Date().toISOString());
+    try {
+      await markSafetyNoticeSeen();
+    } catch {
+      // Keep the local dismissal so the notice does not nag during a temporary network issue.
+    }
+  };
+
+  const reportMutation = useMutation({
+    mutationFn: async (description: string) => {
+      if (!selectedThread) return;
+      return createReport({
+        reportedUserId: selectedThread.partnerId,
+        listingId: selectedThread.vehicleId,
+        conversationId: selectedThread.conversationId,
+        category: 'suspected_scam',
+        description,
+      });
+    },
+    onSuccess: () => {
+      toast.success('Report submitted for Kerodex review.');
+      setReportOpen(false);
+      setReportText('');
+    },
+    onError: (error: any) => toast.error(error?.message || 'Unable to submit report.'),
+  });
+
+  const handleReportThread = async () => {
+    if (!selectedThread) return;
+    setReportOpen(true);
+  };
+
+  const handleSubmitReport = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const description = reportText.trim();
+    if (!description) return;
+    try {
+      await reportMutation.mutateAsync(description);
+    } catch { /* handled by mutation */ }
+  };
+
   const filteredThreads = threads.filter((t) =>
-    !search || t.vehicleTitle.toLowerCase().includes(search.toLowerCase())
+    !search ||
+    t.vehicleTitle.toLowerCase().includes(search.toLowerCase()) ||
+    t.partnerName.toLowerCase().includes(search.toLowerCase())
   );
 
   // ── Loading / Auth States ────────────────────────────────────────────
@@ -232,6 +287,62 @@ export function MessagesPage() {
       className="animate-fade-in"
       style={{ height: 'calc(100vh - 3.5rem)' }}
     >
+      {reportOpen && selectedThread && (
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-background/80 backdrop-blur-sm px-4">
+          <form
+            onSubmit={handleSubmitReport}
+            className="w-full max-w-md border border-border bg-background shadow-2xl"
+          >
+            <div className="flex items-center justify-between border-b border-border px-5 py-4">
+              <div>
+                <h2 className="text-[14px] font-black tracking-tight">Report conversation</h2>
+                <p className="text-[12px] text-muted-foreground mt-1">
+                  Kerodex will review this thread for safety concerns.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReportOpen(false)}
+                className="h-8 w-8 flex items-center justify-center text-muted-foreground hover:text-foreground"
+                aria-label="Close report dialog"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="px-5 py-4 space-y-3">
+              <div className="text-[12px] text-muted-foreground">
+                Reporting <span className="text-foreground font-semibold">{selectedThread.partnerName}</span> about{' '}
+                <span className="text-foreground font-semibold">{selectedThread.vehicleTitle}</span>.
+              </div>
+              <textarea
+                value={reportText}
+                onChange={(event) => setReportText(event.target.value)}
+                rows={5}
+                autoFocus
+                placeholder="Describe what feels suspicious, unsafe, or inaccurate..."
+                className="w-full resize-none border border-border bg-background px-3 py-3 text-[13px] text-foreground placeholder:text-muted-foreground outline-none focus:border-primary"
+              />
+            </div>
+            <div className="flex items-center justify-end gap-2 border-t border-border px-5 py-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setReportOpen(false)}
+                className="h-9 px-4 text-[11px] font-bold uppercase tracking-wider"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={!reportText.trim() || reportMutation.isPending}
+                className="h-9 px-4 text-[11px] font-bold uppercase tracking-wider"
+              >
+                Submit Report
+              </Button>
+            </div>
+          </form>
+        </div>
+      )}
       <div className="flex h-full">
         {/* ── Thread List (sidebar) ──────────────────────────────────── */}
         <div className={`w-full md:w-80 lg:w-96 flex flex-col border-r border-border bg-background shrink-0 ${
@@ -283,9 +394,9 @@ export function MessagesPage() {
             ) : (
               filteredThreads.map((t) => (
                 <ThreadItem
-                  key={`${t.partnerId}__${t.vehicleId}`}
+                  key={t.conversationId}
                   thread={t}
-                  selected={selectedThread?.partnerId === t.partnerId && selectedThread?.vehicleId === t.vehicleId}
+                  selected={selectedThread?.conversationId === t.conversationId}
                   onSelect={() => handleSelectThread(t)}
                 />
               ))
@@ -318,15 +429,18 @@ export function MessagesPage() {
                 </button>
 
                 <div className="h-9 w-9 rounded-full bg-primary/15 text-primary flex items-center justify-center font-bold text-[12px] shrink-0">
-                  {selectedThread.partnerId.substring(0, 2).toUpperCase()}
+                  {initialsFor(selectedThread.partnerName)}
                 </div>
 
                 <div className="flex-1 min-w-0">
                   <div className="text-[13px] font-bold truncate">
-                    {selectedThread.vehicleTitle}
+                    {selectedThread.partnerName}
                   </div>
-                  <div className="text-[11px] text-muted-foreground">
-                    ID: {selectedThread.partnerId.substring(0, 8)}…
+                  <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                    <span className={`h-1.5 w-1.5 rounded-full ${presence(selectedThread.partnerLastActiveAt).color}`} />
+                    <span>{presence(selectedThread.partnerLastActiveAt).label}</span>
+                    <span className="text-muted-foreground/50">/</span>
+                    <span className="truncate">{selectedThread.vehicleTitle}</span>
                   </div>
                 </div>
 
@@ -338,10 +452,35 @@ export function MessagesPage() {
                     </Button>
                   </Link>
                 )}
+                <Button
+                  variant="outline"
+                  onClick={handleReportThread}
+                  className="h-8 px-3 text-[11px] font-bold uppercase tracking-wider"
+                >
+                  <Flag className="h-3.5 w-3.5 mr-1.5" />
+                  Report
+                </Button>
               </div>
 
               {/* Messages */}
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                {!safetyDismissed && (
+                  <div className="border border-amber-400/30 bg-amber-400/10 p-3 text-[12px] leading-relaxed text-foreground flex gap-3">
+                    <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
+                    <p className="flex-1">{SAFETY_NOTICE_TEXT}</p>
+                    <button onClick={handleSafetyDismiss} className="h-6 w-6 flex items-center justify-center text-muted-foreground hover:text-foreground" aria-label="Dismiss safety reminder">
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+                {(selectedThread.moderationStatus === 'needs_review' || selectedThread.moderationStatus === 'high_risk') && (
+                  <div className="border border-border bg-muted/40 p-3 text-[12px] leading-relaxed text-muted-foreground flex gap-3">
+                    <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                    <p>
+                      Kerodex detected language that may require extra caution. Review the vehicle, title, VIN, and payment details in person before moving forward.
+                    </p>
+                  </div>
+                )}
                 {threadMessages.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-center">
                     <User className="h-8 w-8 text-muted-foreground/40 mb-3" />

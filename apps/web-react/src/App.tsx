@@ -1,4 +1,4 @@
-import { createRouter, createRoute, createRootRoute, RouterProvider } from '@tanstack/react-router';
+import { createRouter, createRoute, createRootRoute, RouterProvider, useRouterState } from '@tanstack/react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster, BlinkUIProvider, toast } from '@blinkdotnew/ui';
 import { useEffect } from 'react';
@@ -14,14 +14,33 @@ import { SellerCockpitPage } from './pages/SellerCockpit';
 import { SellerProfilePage } from './pages/SellerProfile';
 import { VerificationPage } from './pages/Verification';
 import { MessagesPage } from './pages/Messages';
-import { StubPage } from './pages/StubPage';
-import { consumeAuthRedirect } from './lib/api';
+import { PrivacyPage, TermsPage } from './pages/LegalPage';
+import { SafetyCenterPage } from './pages/SafetyCenter';
+import { AboutPage } from './pages/About';
+import { ContactPage, HowItWorksPage, SignInPage } from './pages/MarketingPages';
+import { RouteSeo } from './components/Seo';
+import { consumeAuthRedirect, trackAnalyticsEvent } from './lib/api';
 
 const queryClient = new QueryClient();
+
+function RouteAnalytics() {
+  const location = useRouterState({ select: (state) => state.location });
+
+  useEffect(() => {
+    trackAnalyticsEvent({
+      eventType: 'page_view',
+      route: `${location.pathname}${location.searchStr || ''}`,
+    });
+  }, [location.pathname, location.searchStr]);
+
+  return null;
+}
 
 const rootRoute = createRootRoute({
   component: () => (
     <>
+      <RouteSeo />
+      <RouteAnalytics />
       <Layout />
       <Toaster position="top-right" />
     </>
@@ -37,6 +56,12 @@ const indexRoute = createRoute({
 const searchRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/search',
+  component: SearchPage,
+});
+
+const carsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/cars',
   component: SearchPage,
 });
 
@@ -80,6 +105,12 @@ const sellRoute = createRoute({
   component: SellPage,
 });
 
+const signInRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/signin',
+  component: SignInPage,
+});
+
 const savedRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/saved',
@@ -120,30 +151,50 @@ const verifyRoute = createRoute({
 const aboutRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/about',
-  component: () => <StubPage title="About Kerodex" description="Kerodex is a private-party car marketplace built for trust, transparency, and simplicity." />,
+  component: AboutPage,
 });
 
 const termsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/terms',
-  component: () => <StubPage title="Terms of Service" description="Our terms of service are being finalized. Please check back soon." />,
+  component: TermsPage,
 });
 
 const privacyRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/privacy',
-  component: () => <StubPage title="Privacy Policy" description="Our privacy policy is being finalized. Please check back soon." />,
+  component: PrivacyPage,
+});
+
+const safetyRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/safety',
+  component: SafetyCenterPage,
+});
+
+const howItWorksRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/how-it-works',
+  component: HowItWorksPage,
+});
+
+const contactRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/contact',
+  component: ContactPage,
 });
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
   searchRoute,
+  carsRoute,
   legacySearchRoute,
   vehicleDetailRoute,
   sellerProfileRoute,
   legacyListingRoute,
   dashboardRoute,
   sellRoute,
+  signInRoute,
   savedRoute,
   messagesRoute,
   profileRoute,
@@ -153,6 +204,9 @@ const routeTree = rootRoute.addChildren([
   aboutRoute,
   termsRoute,
   privacyRoute,
+  safetyRoute,
+  howItWorksRoute,
+  contactRoute,
 ]);
 
 const router = createRouter({ routeTree });
@@ -163,7 +217,7 @@ declare module '@tanstack/react-router' {
   }
 }
 
-export default function App() {
+function AuthRedirectHandler() {
   useEffect(() => {
     const result = consumeAuthRedirect();
     if (!result) return;
@@ -171,9 +225,14 @@ export default function App() {
     else toast.error(result.error || 'Authentication failed.');
   }, []);
 
+  return null;
+}
+
+export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BlinkUIProvider theme="minimal">
+        <AuthRedirectHandler />
         <RouterProvider router={router} />
       </BlinkUIProvider>
     </QueryClientProvider>
