@@ -33,8 +33,24 @@
     min-height: 100%;
     min-height: 100dvh;
     @apply bg-background text-foreground;
-    font-family: var(--font-sans), 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    font-family: var(--font-sans), 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
     letter-spacing: var(--tracking-normal);
+    /* Premium font rendering — crisper, more intentional type */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Consistent, accessible focus treatment across the app */
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  /* Refined text selection to match the monochrome system */
+  ::selection {
+    background: hsl(var(--foreground));
+    color: hsl(var(--background));
   }
 }
 
@@ -75,30 +91,29 @@
    * --accent: 24 95% 63%;          (Lighter orange #FB923C)
    */
 
-  /* Colors - REPLACE ALL VALUES BELOW with your custom palette */
-  /* Neutral defaults so an un-customized build still looks clean (not washed-blue) — but you MUST replace these. */
+  /* ── Kerodex monochrome system (light) ──────────────────────────────────────
+     Editorial, premium near-black ink on a warm-neutral paper. Pure #000/#fff
+     reads flat and harsh; a slightly desaturated ink + softened neutrals restore
+     depth and intentionality while keeping the recognizable black-and-white look. */
   --background: 0 0% 100%;
-  --foreground: 0 0% 0%;
+  --foreground: 220 13% 9%;
   --card: 0 0% 100%;
-  --card-foreground: 0 0% 0%;
+  --card-foreground: 220 13% 9%;
   --popover: 0 0% 100%;
-  --popover-foreground: 0 0% 0%;
-  /* ⚠️ NEUTRAL SCAFFOLDING (grayscale, NOT a theme) — replace with your real brand colour */
-  --primary: 0 0% 0%;
+  --popover-foreground: 220 13% 9%;
+  --primary: 220 13% 9%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 0 0% 98%;
-  --secondary-foreground: 0 0% 0%;
-  --muted: 0 0% 96%;
-  --muted-foreground: 0 0% 40%;
-  /* ⚠️ NEUTRAL SCAFFOLDING — replace with your accent */
-  --accent: 0 0% 96%;
-  --accent-foreground: 0 0% 0%;
-  --destructive: 0 84.2% 60.2%;
+  --secondary: 220 14% 97%;
+  --secondary-foreground: 220 13% 9%;
+  --muted: 220 14% 96%;
+  --muted-foreground: 220 9% 43%;
+  --accent: 220 14% 96%;
+  --accent-foreground: 220 13% 9%;
+  --destructive: 0 72% 48%;
   --destructive-foreground: 0 0% 100%;
-  --border: 0 0% 90%;
-  --input: 0 0% 90%;
-  /* ⚠️ NEUTRAL SCAFFOLDING — replace (usually matches primary) */
-  --ring: 0 0% 0%;
+  --border: 220 13% 91%;
+  --input: 220 13% 89%;
+  --ring: 220 13% 9%;
   --radius: 0rem;
   --radius-sm: 0rem;
   --radius-md: 0rem;
@@ -113,30 +128,31 @@
   --chart-4: 151 55% 35%;
   --chart-5: 262 52% 47%;
 
-  /* Sidebar - ⚠️ PLACEHOLDER: Replace with your custom sidebar colors */
+  /* Sidebar - tuned to the monochrome system */
   --sidebar: 220 14% 98%;
-  --sidebar-foreground: 216.9231 19.1176% 26.6667%;
-  --sidebar-primary: 0 0% 20%;
+  --sidebar-foreground: 220 13% 26%;
+  --sidebar-primary: 220 13% 9%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 0 0% 92%;
-  --sidebar-accent-foreground: 216.9231 19.1176% 26.6667%;
-  --sidebar-border: 220 13.0435% 90.9804%;
-  --sidebar-ring: 0 0% 20%;
+  --sidebar-accent: 220 14% 94%;
+  --sidebar-accent-foreground: 220 13% 26%;
+  --sidebar-border: 220 13% 91%;
+  --sidebar-ring: 220 13% 9%;
 
-  /* Fonts */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-serif: Lora, serif;
-  --font-mono: 'IBM Plex Mono', monospace;
+  /* Fonts — DM Sans (UI), Lora (editorial serif), IBM Plex Mono (numeric/labels) */
+  --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-heading: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-serif: 'Lora', Georgia, serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
-  /* Shadows */
-  --shadow-2xs: 0px 4px 8px -1px hsl(0 0% 0% / 0.05);
-  --shadow-xs: 0px 4px 8px -1px hsl(0 0% 0% / 0.05);
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0px 4px 8px -1px hsl(0 0% 0% / 0.10), 0px 4px 6px -2px hsl(0 0% 0% / 0.10);
-  --shadow-xl: 0px 4px 8px -1px hsl(0 0% 0% / 0.10), 0px 8px 10px -2px hsl(0 0% 0% / 0.10);
-  --shadow-2xl: 0px 4px 8px -1px hsl(0 0% 0% / 0.25);
+  /* Shadows — soft, low-spread elevation for a premium, restrained feel */
+  --shadow-2xs: 0 1px 2px hsl(220 13% 9% / 0.04);
+  --shadow-xs: 0 1px 2px hsl(220 13% 9% / 0.05);
+  --shadow-sm: 0 1px 2px hsl(220 13% 9% / 0.06), 0 1px 3px hsl(220 13% 9% / 0.05);
+  --shadow: 0 2px 4px hsl(220 13% 9% / 0.06), 0 1px 2px hsl(220 13% 9% / 0.05);
+  --shadow-md: 0 4px 12px hsl(220 13% 9% / 0.07), 0 2px 4px hsl(220 13% 9% / 0.05);
+  --shadow-lg: 0 8px 24px hsl(220 13% 9% / 0.08), 0 3px 8px hsl(220 13% 9% / 0.05);
+  --shadow-xl: 0 16px 40px hsl(220 13% 9% / 0.10), 0 6px 12px hsl(220 13% 9% / 0.06);
+  --shadow-2xl: 0 24px 56px hsl(220 13% 9% / 0.16);
 
   /* Misc */
   --tracking-normal: 0em;
@@ -148,27 +164,28 @@
 .theme-glass.dark,
 .theme-midnight.dark,
 .theme-minimal.dark {
-  /* ⚠️ AGENT MUST REPLACE: Dark mode colors - replace with your custom dark palette */
-  --background: 0 0% 0%;
-  --foreground: 0 0% 100%;
-  --card: 0 0% 0%;
-  --card-foreground: 0 0% 100%;
-  --popover: 0 0% 0%;
-  --popover-foreground: 0 0% 100%;
-  /* ⚠️ PLACEHOLDER: Replace with your custom dark mode primary color */
+  /* ── Kerodex monochrome system (dark) ───────────────────────────────────────
+     Deep near-black canvas with faintly lifted card/popover surfaces so panels
+     read as distinct layers (depth = premium) instead of a single flat void. */
+  --background: 220 16% 5%;
+  --foreground: 220 14% 96%;
+  --card: 220 15% 7%;
+  --card-foreground: 220 14% 96%;
+  --popover: 220 15% 8%;
+  --popover-foreground: 220 14% 96%;
   --primary: 0 0% 100%;
-  --primary-foreground: 0 0% 0%;
-  --secondary: 0 0% 10%;
-  --secondary-foreground: 0 0% 100%;
-  --muted: 0 0% 15%;
-  --muted-foreground: 0 0% 65%;
-  --accent: 0 0% 15%;
-  --accent-foreground: 0 0% 100%;
-  --destructive: 0 62.8% 30.6%;
+  --primary-foreground: 220 16% 5%;
+  --secondary: 220 13% 12%;
+  --secondary-foreground: 220 14% 96%;
+  --muted: 220 13% 13%;
+  --muted-foreground: 220 9% 62%;
+  --accent: 220 13% 14%;
+  --accent-foreground: 220 14% 96%;
+  --destructive: 0 62% 46%;
   --destructive-foreground: 0 0% 100%;
-  --border: 0 0% 20%;
-  --input: 0 0% 20%;
-  --ring: 0 0% 100%;
+  --border: 220 12% 18%;
+  --input: 220 12% 20%;
+  --ring: 220 14% 80%;
 
   /* ⚠️ PLACEHOLDER: Replace with your custom dark mode chart colors */
   --chart-1: 348 83% 65%;
@@ -177,15 +194,15 @@
   --chart-4: 151 55% 55%;
   --chart-5: 262 52% 65%;
 
-  /* ⚠️ PLACEHOLDER: Replace with your custom dark mode sidebar colors */
-  --sidebar: 217.2414 32.5843% 17.451%;
-  --sidebar-foreground: 216 12.1951% 83.9216%;
-  --sidebar-primary: 0 0% 90%;
-  --sidebar-primary-foreground: 222.2222 47.3684% 11.1765%;
-  --sidebar-accent: 216.9231 19.1176% 26.6667%;
-  --sidebar-accent-foreground: 240 5.0279% 64.902%;
-  --sidebar-border: 215 13.7931% 34.1176%;
-  --sidebar-ring: 0 0% 90%;
+  /* Sidebar (dark) - tuned to the monochrome system */
+  --sidebar: 220 15% 7%;
+  --sidebar-foreground: 220 14% 84%;
+  --sidebar-primary: 0 0% 100%;
+  --sidebar-primary-foreground: 220 16% 5%;
+  --sidebar-accent: 220 13% 14%;
+  --sidebar-accent-foreground: 220 14% 84%;
+  --sidebar-border: 220 12% 18%;
+  --sidebar-ring: 220 14% 80%;
 }
 
 .animate-fade-in {

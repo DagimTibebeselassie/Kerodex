@@ -17,6 +17,7 @@ import {
   Lock,
   Navigation,
   MessageCircle,
+  AlertTriangle,
 } from 'lucide-react';
 
 // ── Beta Notice Banner ───────────────────────────────────────────────────────
@@ -39,8 +40,9 @@ function BetaBanner() {
       className="bg-amber-50 dark:bg-amber-950/40 border-b border-amber-200 dark:border-amber-800 px-4 py-2.5 flex items-center justify-between gap-4"
       role="alert"
     >
-      <p className="text-[12px] text-amber-800 dark:text-amber-300 font-medium flex-1 text-center">
-        <span className="font-bold">⚠ Kerodex is in beta</span> — listings are demo data. Some features may be incomplete.
+      <p className="text-[12px] text-amber-800 dark:text-amber-300 font-medium flex-1 flex items-center justify-center gap-1.5">
+        <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+        <span><span className="font-bold">Kerodex is in beta</span> — listings are demo data. Some features may be incomplete.</span>
       </p>
       <button
         onClick={dismiss}
