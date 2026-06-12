@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { currentUser, emailAuth, requestPasswordReset, resetPassword, socialAuth, verifyEmail } from '@/lib/api';
-import { Button, Input } from '@/components/ui';
+import { Button, Input } from '@blinkdotnew/ui';
 import { X, Loader2, Mail, Lock, User } from 'lucide-react';
 
 interface AuthModalProps {

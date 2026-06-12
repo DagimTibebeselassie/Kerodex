@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router';
-import { Button } from '@/components/ui';
+import { Button } from '@blinkdotnew/ui';
 import { ArrowRight, BadgeCheck, Car, Mail, MessageSquare, Search, ShieldCheck } from 'lucide-react';
 
 export function SignInPage() {

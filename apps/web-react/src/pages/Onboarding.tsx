@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { Button, Input, toast } from '@/components/ui';
+import { Button, Input, toast } from '@blinkdotnew/ui';
 import { checkUsername, currentUser, updateAccountProfile } from '@/lib/api';
 import { MAKES } from '@/data/makes-models';
 
@@ -63,7 +63,7 @@ export function OnboardingPage() {
         {step === 0 && (
           <div className="space-y-5">
             <h1 className="text-3xl md:text-4xl font-black tracking-tight">Welcome to Kerodex.</h1>
-            <p className="text-[13px] text-muted-foreground">Let’s set up your profile so the marketplace feels more personal.</p>
+            <p className="text-[13px] text-muted-foreground">Letâ€™s set up your profile so the marketplace feels more personal.</p>
             <div className="grid sm:grid-cols-2 gap-3">
               <Input value={firstName} onChange={(event) => setFirstName(event.target.value)} placeholder="First name" />
               <Input value={lastName} onChange={(event) => setLastName(event.target.value)} placeholder="Last name" />

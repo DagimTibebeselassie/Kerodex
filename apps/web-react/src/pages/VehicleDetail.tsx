@@ -18,7 +18,7 @@ import {
   DialogTitle,
   Separator,
   toast,
-} from '@/components/ui';
+} from '@blinkdotnew/ui';
 import {
   MapPin, Gauge, Calendar, Shield, MessageSquare, Heart, Share2, ArrowLeft,
   CheckCircle2, ChevronDown, ChevronUp, ZoomIn, Car, User, AlertTriangle, X,
@@ -36,7 +36,7 @@ function calcMonthly(price: number, down: number, months: number, aprPct: number
   return (principal * r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1);
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// â”€â”€â”€ Sub-components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function Gallery({ images, activeIdx, setActiveIdx, setLightboxOpen, make, model, year }: {
   images: string[]; activeIdx: number; setActiveIdx: (i: number) => void;
@@ -839,8 +839,8 @@ function PaymentEstimator({ price }: { price: number }) {
           <SelectTrigger {...({} as any)} className="text-[12px] h-10"><SelectValue /></SelectTrigger>
           <SelectContent {...({} as any)}>
             <SelectItem {...({} as any)} value="excellent">Excellent (750+)</SelectItem>
-            <SelectItem {...({} as any)} value="good">Good (700–749)</SelectItem>
-            <SelectItem {...({} as any)} value="fair">Fair (650–699)</SelectItem>
+            <SelectItem {...({} as any)} value="good">Good (700â€“749)</SelectItem>
+            <SelectItem {...({} as any)} value="fair">Fair (650â€“699)</SelectItem>
             <SelectItem {...({} as any)} value="poor">Poor (&lt;650)</SelectItem>
           </SelectContent>
         </Select>
@@ -907,7 +907,7 @@ function TradeIn() {
   );
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Main Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export function VehicleDetailPage() {
   const { id } = useParams({ from: '/vehicle/$id' });
@@ -1130,7 +1130,7 @@ export function VehicleDetailPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 xl:gap-16">
 
-        {/* ── LEFT COLUMN ──────────────────────────────────────────── */}
+        {/* â”€â”€ LEFT COLUMN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="lg:col-span-8 space-y-10">
 
           <Gallery images={images} activeIdx={activeIdx} setActiveIdx={setActiveIdx}
@@ -1153,7 +1153,7 @@ export function VehicleDetailPage() {
           <ScamWarnings vehicle={vehicle} />
         </div>
 
-        {/* ── RIGHT COLUMN (sticky) ─────────────────────────────── */}
+        {/* â”€â”€ RIGHT COLUMN (sticky) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="lg:col-span-4">
           <div className="sticky top-24 space-y-5">
 

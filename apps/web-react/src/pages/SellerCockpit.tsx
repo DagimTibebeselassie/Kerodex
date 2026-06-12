@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useAuth } from '@/hooks/useAuth';
-import { Button, Input } from '@/components/ui';
+import { Button, Input } from '@blinkdotnew/ui';
 import { listMyVehicles } from '@/lib/api';
 import {
   Plus, BarChart3, MessageSquare, Car, ExternalLink, Eye, Heart,
@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { MAKES } from '@/data/makes-models';
 
-// ── VIN Decoder ────────────────────────────────────────────────────────────
+// â”€â”€ VIN Decoder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface VinResult {
   make: string;
   model: string;
@@ -43,7 +43,7 @@ async function decodeVin(vin: string): Promise<VinResult | null> {
   };
 }
 
-// ── Mock Data ──────────────────────────────────────────────────────────────
+// â”€â”€ Mock Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface MockListing {
   id: string;
   make: string;
@@ -100,7 +100,7 @@ function daysSince(value?: string): number {
   return Math.max(0, Math.ceil((Date.now() - time) / (24 * 60 * 60 * 1000)));
 }
 
-// ── Stat Card ──────────────────────────────────────────────────────────────
+// â”€â”€ Stat Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function StatCard({ icon, label, value, sub }: {
   icon: React.ReactNode;
   label: string;
@@ -119,7 +119,7 @@ function StatCard({ icon, label, value, sub }: {
   );
 }
 
-// ── Listing Card ───────────────────────────────────────────────────────────
+// â”€â”€ Listing Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function ListingCard({
   listing,
   onDelete,
@@ -170,14 +170,14 @@ function ListingCard({
               {/* Deal score */}
               {listing.dealScore && (
                 <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 border ${dealColors[listing.dealScore]}`}>
-                  {listing.dealScore === 'great' ? '★ Great Deal' : listing.dealScore === 'good' ? '✓ Good Deal' : '— Fair'}
+                  {listing.dealScore === 'great' ? 'â˜… Great Deal' : listing.dealScore === 'good' ? 'âœ“ Good Deal' : 'â€” Fair'}
                 </span>
               )}
             </div>
           </div>
 
           <div className="text-[16px] font-black text-primary">${listing.price.toLocaleString()}</div>
-          <div className="text-[12px] text-muted-foreground">{listing.location} · {listing.mileage.toLocaleString()} mi</div>
+          <div className="text-[12px] text-muted-foreground">{listing.location} Â· {listing.mileage.toLocaleString()} mi</div>
         </div>
       </div>
 
@@ -216,7 +216,7 @@ function ListingCard({
                   {listing.status === 'draft' ? 'Missing:' : 'Status:'}
                 </p>
                 {tips.map((tip) => (
-                  <p key={tip} className="text-[11px] text-muted-foreground">• {tip}</p>
+                  <p key={tip} className="text-[11px] text-muted-foreground">â€¢ {tip}</p>
                 ))}
               </div>
             </div>
@@ -283,7 +283,7 @@ function ListingCard({
   );
 }
 
-// ── Trust Score Panel ──────────────────────────────────────────────────────
+// â”€â”€ Trust Score Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function TrustScorePanel({ emailVerified = false, phoneVerified = false }: { emailVerified?: boolean; phoneVerified?: boolean }) {
   const score = (emailVerified ? 10 : 0) + (phoneVerified ? 20 : 0);
   const steps = [
@@ -331,14 +331,14 @@ function TrustScorePanel({ emailVerified = false, phoneVerified = false }: { ema
 
       <Link to="/verify">
         <Button className="w-full h-9 text-[11px] font-bold uppercase tracking-wider">
-          Complete Verification →
+          Complete Verification â†’
         </Button>
       </Link>
     </div>
   );
 }
 
-// ── VIN Panel ──────────────────────────────────────────────────────────────
+// â”€â”€ VIN Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function VinPanel({ onResult }: { onResult: (r: VinResult) => void }) {
   const [vin, setVin] = useState('');
   const [loading, setLoading] = useState(false);
@@ -405,9 +405,9 @@ function VinPanel({ onResult }: { onResult: (r: VinResult) => void }) {
             ['Make', result.make],
             ['Model', result.model],
             ['Year', result.year],
-            ['Trim', result.trim || '—'],
-            ['Engine', result.engine || '—'],
-            ['Fuel', result.fuelType || '—'],
+            ['Trim', result.trim || 'â€”'],
+            ['Engine', result.engine || 'â€”'],
+            ['Fuel', result.fuelType || 'â€”'],
           ].map(([k, v]) => (
             <div key={k} className="flex justify-between py-1.5 border-b border-border/50 text-[12px]">
               <span className="text-muted-foreground">{k}</span>
@@ -424,7 +424,7 @@ function VinPanel({ onResult }: { onResult: (r: VinResult) => void }) {
   );
 }
 
-// ── Main Component ─────────────────────────────────────────────────────────
+// â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function SellerCockpitPage() {
   const { user, login, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -501,7 +501,7 @@ export function SellerCockpitPage() {
 
   return (
     <div className="animate-fade-in px-4 md:px-6 py-10 max-w-screen-xl mx-auto">
-      {/* ── Header ──────────────────────────────────────────────────────── */}
+      {/* â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary mb-1">Seller Tools</p>
@@ -529,7 +529,7 @@ export function SellerCockpitPage() {
         </div>
       </div>
 
-      {/* ── Stats Row ───────────────────────────────────────────────────── */}
+      {/* â”€â”€ Stats Row â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-10">
         <StatCard
           icon={<Car className="h-4 w-4" />}
@@ -557,12 +557,12 @@ export function SellerCockpitPage() {
         />
       </div>
 
-      {/* ── Trust Score ─────────────────────────────────────────────────── */}
+      {/* â”€â”€ Trust Score â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="mb-10">
         <TrustScorePanel emailVerified={user.emailVerified} phoneVerified={user.phoneVerified} />
       </div>
 
-      {/* ── Tabs ────────────────────────────────────────────────────────── */}
+      {/* â”€â”€ Tabs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="flex border-b border-border mb-8">
         {[
           { key: 'listings', label: 'My Listings', icon: <Car className="h-3.5 w-3.5" /> },
@@ -584,7 +584,7 @@ export function SellerCockpitPage() {
         ))}
       </div>
 
-      {/* ── Tab: Listings ───────────────────────────────────────────────── */}
+      {/* â”€â”€ Tab: Listings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {activeTab === 'listings' && (
         <div className="space-y-4">
           {/* Scam warning for draft */}
@@ -596,8 +596,8 @@ export function SellerCockpitPage() {
                   Listing Health Check
                 </h4>
                 <ul className="space-y-1">
-                  <li className="text-[12px] text-muted-foreground">• No photos uploaded — buyers trust listings with 6+ photos</li>
-                  <li className="text-[12px] text-muted-foreground">• Draft not published — not visible to buyers</li>
+                  <li className="text-[12px] text-muted-foreground">â€¢ No photos uploaded â€” buyers trust listings with 6+ photos</li>
+                  <li className="text-[12px] text-muted-foreground">â€¢ Draft not published â€” not visible to buyers</li>
                 </ul>
               </div>
             </div>
@@ -626,7 +626,7 @@ export function SellerCockpitPage() {
         </div>
       )}
 
-      {/* ── Tab: Analytics ──────────────────────────────────────────────── */}
+      {/* â”€â”€ Tab: Analytics â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {activeTab === 'analytics' && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -692,9 +692,9 @@ export function SellerCockpitPage() {
             </div>
             <ul className="space-y-1.5 pl-6">
               {[
-                'Listings with 6+ photos get 3× more views',
+                'Listings with 6+ photos get 3Ã— more views',
                 'Price within 5% of market value sells 40% faster',
-                'Verified sellers get 2× more messages',
+                'Verified sellers get 2Ã— more messages',
                 'Responding within 1 hour increases close rate by 60%',
               ].map((tip) => (
                 <li key={tip} className="text-[12px] text-muted-foreground list-disc">{tip}</li>
@@ -704,7 +704,7 @@ export function SellerCockpitPage() {
         </div>
       )}
 
-      {/* ── Tab: VIN Decoder ────────────────────────────────────────────── */}
+      {/* â”€â”€ Tab: VIN Decoder â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {activeTab === 'vin' && (
         <div className="max-w-lg space-y-6">
           <VinPanel onResult={setVinResult} />
@@ -735,7 +735,7 @@ export function SellerCockpitPage() {
               This helps reduce errors and builds buyer trust.
             </p>
             <p className="text-[12px] text-muted-foreground">
-              VIN verification also adds a <strong>✓ VIN Verified</strong> badge to your listing.
+              VIN verification also adds a <strong>âœ“ VIN Verified</strong> badge to your listing.
             </p>
           </div>
         </div>

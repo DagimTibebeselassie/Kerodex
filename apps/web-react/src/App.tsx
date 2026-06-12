@@ -1,6 +1,6 @@
 import { createRouter, createRoute, createRootRoute, RouterProvider, useRouterState } from '@tanstack/react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster, KerodexUIProvider, toast } from '@/components/ui';
+import { Toaster, BlinkUIProvider, toast } from '@blinkdotnew/ui';
 import { useEffect } from 'react';
 import { Layout } from './components/Layout';
 import { HomePage } from './pages/Home';
@@ -124,7 +124,7 @@ const savedRoute = createRoute({
   component: SavedVehiclesPage,
 });
 
-// ── Stub routes for nav links ─────────────────────────────────────────────
+// â”€â”€ Stub routes for nav links â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const messagesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/messages',
@@ -253,10 +253,10 @@ function AuthRedirectHandler() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <KerodexUIProvider theme="minimal">
+      <BlinkUIProvider theme="minimal">
         <AuthRedirectHandler />
         <RouterProvider router={router} />
-      </KerodexUIProvider>
+      </BlinkUIProvider>
     </QueryClientProvider>
   );
 }

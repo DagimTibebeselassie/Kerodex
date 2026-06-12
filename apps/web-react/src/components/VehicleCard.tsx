@@ -4,7 +4,7 @@ import { Vehicle } from '@/types';
 import { savedVehicleIds, saveVehicleLocal } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { Heart, MapPin, Gauge, BadgeCheck, Star } from 'lucide-react';
-import { toast } from '@/components/ui';
+import { toast } from '@blinkdotnew/ui';
 
 interface VehicleCardProps {
   vehicle: Vehicle;
@@ -93,7 +93,7 @@ export function VehicleCard({
         {/* Deal Score Badge */}
         {dealScore && (
           <div className={`absolute top-3 left-3 px-2 py-1 text-[10px] font-bold uppercase tracking-wider border ${dealColors[dealScore]}`}>
-            {dealScore === 'great' ? '★ Great Deal' : dealScore === 'good' ? '✓ Good Deal' : '— Fair Price'}
+            {dealScore === 'great' ? 'â˜… Great Deal' : dealScore === 'good' ? 'âœ“ Good Deal' : 'â€” Fair Price'}
           </div>
         )}
 

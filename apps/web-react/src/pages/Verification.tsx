@@ -1,13 +1,13 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { savePersonaReturn, startPersonaVerification, startPhoneVerification, submitVerificationRequest, verifyPhoneCode } from '@/lib/api';
-import { Button, Input, toast } from '@/components/ui';
+import { Button, Input, toast } from '@blinkdotnew/ui';
 import {
   Shield, BadgeCheck, Phone, Mail, FileText, Camera,
   CheckCircle2, Clock, ChevronRight, Lock, AlertTriangle, Loader2, X,
 } from 'lucide-react';
 
-// ── Types ──────────────────────────────────────────────────────────────────
+// â”€â”€ Types â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 type VerifStatus = 'not_started' | 'in_progress' | 'pending' | 'verified';
 
 interface Step {
@@ -20,7 +20,7 @@ interface Step {
   required: boolean;
 }
 
-// ── Phone Modal ────────────────────────────────────────────────────────────
+// â”€â”€ Phone Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function PhoneModal({
   onClose,
   onDone,
@@ -114,7 +114,7 @@ function PhoneModal({
   );
 }
 
-// ── ID Upload Modal ────────────────────────────────────────────────────────
+// â”€â”€ ID Upload Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function IdUploadModal({
   onClose,
   onDone,
@@ -140,7 +140,7 @@ function IdUploadModal({
     await new Promise((r) => setTimeout(r, 1500));
     setLoading(false);
     onDone();
-    toast.success('ID submitted for review (usually 24–48h)');
+    toast.success('ID submitted for review (usually 24â€“48h)');
   };
 
   return (
@@ -185,14 +185,14 @@ function IdUploadModal({
         </div>
 
         <Button onClick={submit} disabled={!file || loading} className="w-full h-11 text-[12px] font-bold uppercase tracking-widest">
-          {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Uploading…</> : 'Submit for Review'}
+          {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Uploadingâ€¦</> : 'Submit for Review'}
         </Button>
       </div>
     </div>
   );
 }
 
-// ── Selfie Modal ────────────────────────────────────────────────────────────
+// â”€â”€ Selfie Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function SelfieModal({
   onClose,
   onDone,
@@ -232,7 +232,7 @@ function SelfieModal({
         </p>
 
         <ul className="space-y-1.5 text-[12px] text-muted-foreground">
-          {['Face clearly visible', 'Good lighting — no shadows', 'No sunglasses or hats'].map((t) => (
+          {['Face clearly visible', 'Good lighting â€” no shadows', 'No sunglasses or hats'].map((t) => (
             <li key={t} className="flex items-center gap-2"><CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />{t}</li>
           ))}
         </ul>
@@ -256,14 +256,14 @@ function SelfieModal({
           onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
 
         <Button onClick={submit} disabled={!file || loading} className="w-full h-11 text-[12px] font-bold uppercase tracking-widest">
-          {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Submitting…</> : 'Submit Selfie'}
+          {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Submittingâ€¦</> : 'Submit Selfie'}
         </Button>
       </div>
     </div>
   );
 }
 
-// ── Step Card ──────────────────────────────────────────────────────────────
+// â”€â”€ Step Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function StepCard({ step, onStart }: { step: Step; onStart: (id: string) => void }) {
   const statusMap = {
     not_started: { label: 'Not Started', cls: 'border-border text-muted-foreground bg-transparent', canStart: true },
@@ -322,7 +322,7 @@ function StepCard({ step, onStart }: { step: Step; onStart: (id: string) => void
   );
 }
 
-// ── Main Page ──────────────────────────────────────────────────────────────
+// â”€â”€ Main Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function VerificationPage() {
   const { user, login, isLoading: authLoading } = useAuth();
   const [personaLoading, setPersonaLoading] = useState(false);
@@ -432,7 +432,7 @@ export function VerificationPage() {
 
   const handleModalClose = (id: string) => {
     setModal(null);
-    // Revert in_progress → not_started if user closed without completing
+    // Revert in_progress â†’ not_started if user closed without completing
     setSteps((prev) =>
       prev.map((s) => s.id === id && s.status === 'in_progress' ? { ...s, status: 'not_started' } : s)
     );
@@ -472,7 +472,7 @@ export function VerificationPage() {
         <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary mb-2">Trust & Safety</p>
         <h1 className="text-3xl font-black tracking-tight">Verification Center</h1>
         <p className="text-[13px] text-muted-foreground mt-2">
-          Verified sellers get 2× more messages and unlock all Kerodex features.
+          Verified sellers get 2Ã— more messages and unlock all Kerodex features.
         </p>
       </div>
 

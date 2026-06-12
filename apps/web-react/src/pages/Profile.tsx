@@ -3,14 +3,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { useAuth } from '@/hooks/useAuth';
 import { createUploadUrl, listMyVehicles, savedVehicleIds, updateAccountPassword, updateAccountProfile, updateProfileAvatar } from '@/lib/api';
-import { Button, Input, toast } from '@/components/ui';
+import { Button, Input, toast } from '@blinkdotnew/ui';
 import {
   User, BadgeCheck, Shield, Bell, Lock, Car, Heart, MessageSquare,
   LayoutDashboard, ChevronRight, CheckCircle2, AlertCircle, Edit3,
   Phone, Mail, Camera,
 } from 'lucide-react';
 
-// ── Stat Tile ──────────────────────────────────────────────────────────────
+// â”€â”€ Stat Tile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function StatTile({ icon, label, value, href }: {
   icon: React.ReactNode;
   label: string;
@@ -32,7 +32,7 @@ function StatTile({ icon, label, value, href }: {
   return href ? <Link to={href as any}>{inner}</Link> : inner;
 }
 
-// ── Section Header ──────────────────────────────────────────────────────────
+// â”€â”€ Section Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function SectionHeader({ title, description }: { title: string; description?: string }) {
   return (
     <div className="mb-6">
@@ -42,7 +42,7 @@ function SectionHeader({ title, description }: { title: string; description?: st
   );
 }
 
-// ── Verification Badge ──────────────────────────────────────────────────────
+// â”€â”€ Verification Badge â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function VerifBadge({ done, label }: { done: boolean; label: string }) {
   return (
     <div className={`flex items-center gap-2.5 px-3 py-2 border text-[12px] font-medium ${
@@ -183,7 +183,7 @@ export function ProfilePage() {
 
   return (
     <div className="animate-fade-in px-4 md:px-6 py-10 max-w-screen-lg mx-auto">
-      {/* ── Hero / Avatar ─────────────────────────────────────────────── */}
+      {/* â”€â”€ Hero / Avatar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 mb-12 pb-12 border-b border-border">
         {/* Avatar */}
         <div className="relative">
@@ -297,18 +297,18 @@ export function ProfilePage() {
         </div>
       </div>
 
-      {/* ── Quick Stats ────────────────────────────────────────────────── */}
+      {/* â”€â”€ Quick Stats â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <section className="mb-12">
         <SectionHeader title="Activity" />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <StatTile icon={<Car className="h-5 w-5" />} label="Listings" value={myVehicles?.length ?? 0} href="/cockpit" />
           <StatTile icon={<Heart className="h-5 w-5" />} label="Saved" value={savedCount?.length ?? 0} href="/saved" />
           <StatTile icon={<MessageSquare className="h-5 w-5" />} label="Messages" value={0} href="/messages" />
-          <StatTile icon={<LayoutDashboard className="h-5 w-5" />} label="Views" value="—" href="/cockpit" />
+          <StatTile icon={<LayoutDashboard className="h-5 w-5" />} label="Views" value="â€”" href="/cockpit" />
         </div>
       </section>
 
-      {/* ── Verification Status ────────────────────────────────────────── */}
+      {/* â”€â”€ Verification Status â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <section className="mb-12">
         <div className="flex items-center justify-between mb-6">
           <SectionHeader title="Verification Status" description="Complete verification to earn trust badges on all your listings." />
@@ -333,7 +333,7 @@ export function ProfilePage() {
             <div className="text-3xl font-black tracking-tight">
               24<span className="text-[16px] text-muted-foreground font-normal">/100</span>
             </div>
-            <div className="text-[12px] text-amber-500 font-medium mt-1">⚠ Partially Verified — Complete steps to improve</div>
+            <div className="text-[12px] text-amber-500 font-medium mt-1">âš  Partially Verified â€” Complete steps to improve</div>
           </div>
           <Link to="/verify">
             <Button className="h-10 px-5 text-[11px] font-bold uppercase tracking-wider">
@@ -343,7 +343,7 @@ export function ProfilePage() {
         </div>
       </section>
 
-      {/* ── Personal Info ──────────────────────────────────────────────── */}
+      {/* â”€â”€ Personal Info â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <section className="mb-12">
         <SectionHeader title="Personal Information" />
         <div className="space-y-3">
@@ -413,7 +413,7 @@ export function ProfilePage() {
         </div>
       </section>
 
-      {/* ── Quick Links ────────────────────────────────────────────────── */}
+      {/* â”€â”€ Quick Links â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <section>
         <SectionHeader title="Account" />
         <div className="space-y-1">

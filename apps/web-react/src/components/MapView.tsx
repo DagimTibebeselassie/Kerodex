@@ -4,7 +4,7 @@ import { Heart, X, MapPin, Gauge, BadgeCheck, CheckCircle2 } from 'lucide-react'
 import { Vehicle } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
 import { saveVehicleLocal, savedVehicleIds } from '@/lib/api';
-import { toast } from '@/components/ui';
+import { toast } from '@blinkdotnew/ui';
 
 interface MapViewProps {
   vehicles?: Vehicle[];
@@ -56,11 +56,11 @@ function tileOptions(L: any) {
     minZoom: 3,
     noWrap: true,
     bounds: L.latLngBounds(MAP_BOUNDS),
-    attribution: '© OpenStreetMap © CARTO',
+    attribution: 'Â© OpenStreetMap Â© CARTO',
   };
 }
 
-// ── Popup Card ────────────────────────────────────────────────────────────────
+// â”€â”€ Popup Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function PopupCard({
   vehicle,
   isDark,
@@ -185,7 +185,7 @@ function PopupCard({
   );
 }
 
-// ── MapView ───────────────────────────────────────────────────────────────────
+// â”€â”€ MapView â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function MapView({
   vehicles = [],
   selectedId,
@@ -212,7 +212,7 @@ export function MapView({
     setActiveVehicle(v);
   }, [selectedId, vehicles]);
 
-  // ── Init map once ──────────────────────────────────────────────────────────
+  // â”€â”€ Init map once â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
@@ -239,7 +239,7 @@ export function MapView({
       map.setMaxBounds(MAP_BOUNDS);
 
       L.control.zoom({ position: 'bottomright' }).addTo(map);
-      L.control.attribution({ position: 'bottomleft', prefix: '© OpenStreetMap' }).addTo(map);
+      L.control.attribution({ position: 'bottomleft', prefix: 'Â© OpenStreetMap' }).addTo(map);
 
       const tileUrl = tileUrlForTheme(isDark);
       const tile = L.tileLayer(tileUrl, tileOptions(L));
@@ -268,7 +268,7 @@ export function MapView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Swap tile layer on dark toggle ─────────────────────────────────────────
+  // â”€â”€ Swap tile layer on dark toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     if (!mapRef.current || !tileLayerRef.current) return;
     import('leaflet').then((L) => {
@@ -310,7 +310,7 @@ export function MapView({
     };
   }, [mapReady]);
 
-  // ── Refresh markers when vehicles / selectedId change ─────────────────────
+  // â”€â”€ Refresh markers when vehicles / selectedId change â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;

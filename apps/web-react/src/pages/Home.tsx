@@ -5,7 +5,7 @@ import { MAKES, getModelsForMake } from '@/data/makes-models';
 import { VehicleCard } from '@/components/VehicleCard';
 import { MapView } from '@/components/MapView';
 import { listVehicles } from '@/lib/api';
-import { Button } from '@/components/ui';
+import { Button } from '@blinkdotnew/ui';
 import {
   Search,
   X,
@@ -19,7 +19,7 @@ import {
   MessageCircle,
 } from 'lucide-react';
 
-// ── Beta Notice Banner ───────────────────────────────────────────────────────
+// â”€â”€ Beta Notice Banner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function BetaBanner() {
   const [dismissed, setDismissed] = useState(() =>
     localStorage.getItem('kerodex_beta_dismissed') === 'true'
@@ -40,7 +40,7 @@ function BetaBanner() {
       role="alert"
     >
       <p className="text-[12px] text-amber-800 dark:text-amber-300 font-medium flex-1 text-center">
-        <span className="font-bold">⚠ Kerodex is in beta</span> — listings are demo data. Some features may be incomplete.
+        <span className="font-bold">âš  Kerodex is in beta</span> â€” listings are demo data. Some features may be incomplete.
       </p>
       <button
         onClick={dismiss}
@@ -53,7 +53,7 @@ function BetaBanner() {
   );
 }
 
-// ── Skeleton Card ────────────────────────────────────────────────────────────
+// â”€â”€ Skeleton Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function SkeletonCard() {
   return (
     <div className="space-y-3">
@@ -67,7 +67,7 @@ function SkeletonCard() {
   );
 }
 
-// ── Trust Pillar ─────────────────────────────────────────────────────────────
+// â”€â”€ Trust Pillar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface TrustPillarProps {
   icon: React.ReactNode;
   title: string;
@@ -86,7 +86,7 @@ function TrustPillar({ icon, title, description }: TrustPillarProps) {
   );
 }
 
-// ── Vehicle Row Section ───────────────────────────────────────────────────────
+// â”€â”€ Vehicle Row Section â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface VehicleRowSectionProps {
   label: string;
   heading: string;
@@ -137,7 +137,7 @@ function VehicleRowSection({ label, heading, vehicles, viewAllHref = '/cars' }: 
   );
 }
 
-// ── Chatbot Button + Panel ────────────────────────────────────────────────────
+// â”€â”€ Chatbot Button + Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function distanceMiles(lat1: number, lng1: number, lat2?: number, lng2?: number) {
   if (!Number.isFinite(Number(lat2)) || !Number.isFinite(Number(lng2))) return Number.POSITIVE_INFINITY;
   const toRad = (degrees: number) => degrees * Math.PI / 180;
@@ -224,7 +224,7 @@ function ChatbotWidget() {
   );
 }
 
-// ── Main Home Page ────────────────────────────────────────────────────────────
+// â”€â”€ Main Home Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function HomePage() {
   const navigate = useNavigate();
 
@@ -363,7 +363,7 @@ export function HomePage() {
     <div>
       <BetaBanner />
 
-      {/* ── HERO ──────────────────────────────────────────────────────────── */}
+      {/* â”€â”€ HERO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <section className="px-4 md:px-6 py-16 md:py-24 border-b border-border">
         <div className="max-w-screen-xl mx-auto">
           {/* Label */}
@@ -450,7 +450,7 @@ export function HomePage() {
             >
               <Navigation className="h-3 w-3" /> Browse nearby cars
             </button>
-            <span className="text-border">·</span>
+            <span className="text-border">Â·</span>
             <Link
               to="/cars"
               className="text-[12px] text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
@@ -461,7 +461,7 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* ── JUST LISTED ───────────────────────────────────────────────────── */}
+      {/* â”€â”€ JUST LISTED â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <section className="px-4 md:px-6 py-16 md:py-20">
         <div className="max-w-screen-xl mx-auto">
           {/* Section header */}
@@ -501,28 +501,28 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* ── BEST DEALS ────────────────────────────────────────────────────── */}
+      {/* â”€â”€ BEST DEALS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <VehicleRowSection
         label="Best Deals"
         heading="Priced below market"
         vehicles={bestDealVehicles}
       />
 
-      {/* ── EV & HYBRID ───────────────────────────────────────────────────── */}
+      {/* â”€â”€ EV & HYBRID â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <VehicleRowSection
         label="Electric & Hybrid"
         heading="Go electric"
         vehicles={evHybridVehicles}
       />
 
-      {/* ── LOW MILEAGE ───────────────────────────────────────────────────── */}
+      {/* â”€â”€ LOW MILEAGE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <VehicleRowSection
         label="Low Mileage"
         heading="Nearly new"
         vehicles={lowMileageVehicles}
       />
 
-      {/* ── UNDER $20K ────────────────────────────────────────────────────── */}
+      {/* â”€â”€ UNDER $20K â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <VehicleRowSection
         label="Budget Picks"
         heading="Under $25,000"
@@ -543,7 +543,7 @@ export function HomePage() {
         viewAllHref={nearbySearchHref}
       />
 
-      {/* ── MAP PREVIEW ─────────────────────────────────────────────────────── */}
+      {/* â”€â”€ MAP PREVIEW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <section
         id="location-section"
         className="px-4 md:px-6 py-16 border-t border-b border-border bg-muted/30"
@@ -568,7 +568,7 @@ export function HomePage() {
               {locationEnabled ? (
                 <div className="flex items-center gap-2 text-[12px] font-medium">
                   <div className="w-2 h-2 bg-foreground" />
-                  Location enabled — showing nearby results
+                  Location enabled â€” showing nearby results
                 </div>
               ) : (
                 <div className="flex flex-col sm:flex-row gap-3">
@@ -604,7 +604,7 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* ── TRUST / SAFETY ──────────────────────────────────────────────────── */}
+      {/* â”€â”€ TRUST / SAFETY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <section className="px-4 md:px-6 py-16 md:py-24">
         <div className="max-w-screen-xl mx-auto">
           <div className="mb-12 md:mb-16">
@@ -641,7 +641,7 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* ── HOW IT WORKS ─────────────────────────────────────────────────────── */}
+      {/* â”€â”€ HOW IT WORKS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <section className="px-4 md:px-6 py-16 md:py-24 bg-foreground text-background">
         <div className="max-w-screen-xl mx-auto">
           <div className="mb-12 md:mb-16">
@@ -679,7 +679,7 @@ export function HomePage() {
                 className="p-8 md:p-12 border-b md:border-b-0 md:border-r border-background/20 last:border-0"
               >
                 <div className="text-[10px] font-bold uppercase tracking-[0.25em] opacity-40 mb-6">
-                  {item.step} · {item.sub}
+                  {item.step} Â· {item.sub}
                 </div>
                 <h3 className="text-4xl md:text-5xl font-black tracking-tighter mb-4 leading-none">
                   {item.title}
@@ -707,7 +707,7 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* ── FLOATING CHATBOT ─────────────────────────────────────────────────── */}
+      {/* â”€â”€ FLOATING CHATBOT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <ChatbotWidget />
     </div>
   );

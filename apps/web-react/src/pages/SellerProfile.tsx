@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from '@tanstack/react-router';
-import { Button } from '@/components/ui';
+import { Button } from '@blinkdotnew/ui';
 import { ArrowLeft, BadgeCheck, Calendar, CheckCircle2, Clock, MapPin, MessageSquare, Shield } from 'lucide-react';
 import { getSellerProfile, SellerProfileRecord } from '@/lib/api';
 import { Vehicle } from '@/types';

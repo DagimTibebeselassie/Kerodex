@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import { Button, toast } from '@/components/ui';
+import { Button, toast } from '@blinkdotnew/ui';
 import { MAKES, MAKES_MODELS } from '@/data/makes-models';
 import { createUploadUrl, createVehicle, createVehiclePresenceCode, getVehicle, updateVehicle } from '@/lib/api';
 import {
@@ -12,7 +12,7 @@ import {
   MapPin, ChevronDown, AlertCircle, FileText,
 } from 'lucide-react';
 
-// ── Constants ────────────────────────────────────────────────────────────
+// â”€â”€ Constants â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS: number[] = [];
 for (let y = CURRENT_YEAR; y >= 1980; y--) YEARS.push(y);
@@ -85,7 +85,7 @@ const LOCATION_OPTIONS = [
   { label: 'Phoenix, AZ', lat: 33.4484, lng: -112.0740 },
 ];
 
-// ── Schema ────────────────────────────────────────────────────────────────
+// â”€â”€ Schema â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const vehicleSchema = z.object({
   vin:          z.string().regex(/^[A-HJ-NPR-Z0-9]{17}$/i, 'A valid 17-character VIN is required'),
   make:         z.string().min(1, 'Make is required'),
@@ -135,7 +135,7 @@ async function fetchVin(vin: string): Promise<VinData | null> {
   };
 }
 
-// ── City normalizer (simple title-case) ──────────────────────────────────
+// â”€â”€ City normalizer (simple title-case) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function normalizeLocation(raw: string): string {
   return raw
     .split(/\s*,\s*/)
@@ -175,7 +175,7 @@ function makeId(prefix: string) {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-// ── FormField helper ──────────────────────────────────────────────────────
+// â”€â”€ FormField helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function FieldLabel({ children, required }: { children: React.ReactNode; required?: boolean }) {
   return (
     <label className="block text-[12px] font-bold uppercase tracking-[0.12em] text-muted-foreground mb-1.5">
@@ -211,7 +211,7 @@ function NativeSelect({ value, onChange, options, placeholder, disabled, id }: {
   );
 }
 
-// ── Image upload item ─────────────────────────────────────────────────────
+// â”€â”€ Image upload item â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function ImageItem({ url, onRemove }: { url: string; onRemove: () => void }) {
   return (
     <div className="relative aspect-square bg-muted border border-border rounded-md overflow-hidden group">
@@ -227,7 +227,7 @@ function ImageItem({ url, onRemove }: { url: string; onRemove: () => void }) {
   );
 }
 
-// ── Main Sell Page ─────────────────────────────────────────────────────────
+// â”€â”€ Main Sell Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function SellPage() {
   const { user, login, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
@@ -610,7 +610,7 @@ export function SellPage() {
     );
   };
 
-  // ── VIN Autofill ─────────────────────────────────────────────────────
+  // â”€â”€ VIN Autofill â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleVinDecode = useCallback(async () => {
     const cleaned = vin.trim().toUpperCase();
     if (cleaned.length !== 17) {
@@ -648,10 +648,10 @@ export function SellPage() {
 
     setVinVerified(true);
     setValue('vin', cleaned);
-    toast.success(`VIN decoded — ${data.year} ${data.make} ${data.model} auto-filled`);
+    toast.success(`VIN decoded â€” ${data.year} ${data.make} ${data.model} auto-filled`);
   }, [vin, setValue]);
 
-  // ── Image upload ──────────────────────────────────────────────────────
+  // â”€â”€ Image upload â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const handleImageFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
     if (!user) { login(); return; }
@@ -705,7 +705,7 @@ export function SellPage() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  // ── Submit ────────────────────────────────────────────────────────────
+  // â”€â”€ Submit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const onSubmit = async (data: VehicleForm) => {
     if (!user) { login(); return; }
     const cleanVin = vin.trim().toUpperCase();
@@ -729,7 +729,7 @@ export function SellPage() {
 
     setIsSubmitting(true);
     try {
-      // Normalize location (e.g. "atlanta georgia" → "Atlanta, Georgia")
+      // Normalize location (e.g. "atlanta georgia" â†’ "Atlanta, Georgia")
       const location = normalizeLocation(data.location);
       const matchedLocation = geocodeDemoLocation(location);
       const coords = listingCoords || (matchedLocation ? { lat: matchedLocation.lat, lng: matchedLocation.lng } : null);
@@ -812,7 +812,7 @@ export function SellPage() {
     }
   };
 
-  // ── Auth gate ─────────────────────────────────────────────────────────
+  // â”€â”€ Auth gate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (authLoading || editLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -847,12 +847,12 @@ export function SellPage() {
         </p>
       </div>
 
-      {/* ── VIN Autofill Banner ───────────────────────────────────────── */}
+      {/* â”€â”€ VIN Autofill Banner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="mb-8 p-5 border border-primary/20 bg-primary/5 rounded-lg space-y-3">
         <div className="flex items-center gap-2">
           <BadgeCheck className="h-4 w-4 text-primary" />
           <span className="text-[12px] font-bold uppercase tracking-[0.15em] text-primary">VIN Autofill</span>
-          <span className="text-[11px] text-muted-foreground ml-1">— Enter your 17-digit VIN to auto-populate the form</span>
+          <span className="text-[11px] text-muted-foreground ml-1">â€” Enter your 17-digit VIN to auto-populate the form</span>
         </div>
         <div className="flex gap-2">
           <input
@@ -884,19 +884,19 @@ export function SellPage() {
         )}
         {vinVerified && (
           <p className="text-[11px] text-primary font-bold flex items-center gap-1">
-            <CheckCircle2 className="h-3.5 w-3.5" />VIN verified — form fields have been auto-populated
+            <CheckCircle2 className="h-3.5 w-3.5" />VIN verified â€” form fields have been auto-populated
           </p>
         )}
         <p className="text-[11px] text-muted-foreground">
           Character count: <strong>{vin.length}/17</strong>
-          {vin.length > 0 && vin.length < 17 && ' — keep typing…'}
-          {vin.length === 17 && ' ✓'}
+          {vin.length > 0 && vin.length < 17 && ' â€” keep typingâ€¦'}
+          {vin.length === 17 && ' âœ“'}
         </p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit as any)} className="space-y-10">
 
-        {/* ── Photos ───────────────────────────────────────────────── */}
+        {/* â”€â”€ Photos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <section className="space-y-4">
           <div>
             <h2 className="text-[13px] font-black uppercase tracking-[0.15em] mb-1">Photos</h2>
@@ -920,7 +920,7 @@ export function SellPage() {
             {uploadingIdx !== null && (
               <div className="aspect-square border border-dashed border-primary/40 bg-primary/5 flex flex-col items-center justify-center gap-2 rounded-md">
                 <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                <span className="text-[10px] text-muted-foreground">Uploading…</span>
+                <span className="text-[10px] text-muted-foreground">Uploadingâ€¦</span>
               </div>
             )}
 
@@ -1010,7 +1010,7 @@ export function SellPage() {
           </div>
         </section>
 
-        {/* ── Vehicle Info ──────────────────────────────────────────── */}
+        {/* â”€â”€ Vehicle Info â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <section className="space-y-5">
           <h2 className="text-[13px] font-black uppercase tracking-[0.15em]">Vehicle Information</h2>
 
@@ -1199,7 +1199,7 @@ export function SellPage() {
           </div>
         </section>
 
-        {/* ── Specs ────────────────────────────────────────────────── */}
+        {/* â”€â”€ Specs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <section className="space-y-5">
           <h2 className="text-[13px] font-black uppercase tracking-[0.15em]">Specs</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
@@ -1251,7 +1251,7 @@ export function SellPage() {
           </div>
         </section>
 
-        {/* ── Description ──────────────────────────────────────────── */}
+        {/* â”€â”€ Description â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <section className="space-y-5">
           <h2 className="text-[13px] font-black uppercase tracking-[0.15em]">History & Title</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
@@ -1502,7 +1502,7 @@ export function SellPage() {
           <FieldError msg={errors.description?.message} />
         </section>
 
-        {/* ── Submit ───────────────────────────────────────────────── */}
+        {/* â”€â”€ Submit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="pt-6 border-t border-border space-y-3">
           {images.length === 0 && (
             <div className="flex items-center gap-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-md text-[12px] text-amber-600 dark:text-amber-400">
