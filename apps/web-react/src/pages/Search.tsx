@@ -16,8 +16,6 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
-// ── Constants ─────────────────────────────────────────────────────────────────
 const YEARS: number[] = [];
 for (let y = 2026; y >= 1990; y--) YEARS.push(y);
 
@@ -56,7 +54,6 @@ const SORT_OPTIONS = [
   { label: 'Fastest response',  value: 'response_time' },
 ];
 
-// ── Filter state ──────────────────────────────────────────────────────────────
 interface FilterState {
   priceMin: string;
   priceMax: string;
@@ -104,7 +101,6 @@ const DEFAULT_FILTERS: FilterState = {
   hasMaintenanceRecords: false,
 };
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 function countFilters(f: FilterState): number {
   let n = 0;
   if (f.priceMin || f.priceMax)      n++;
@@ -335,13 +331,11 @@ function applySort(vehicles: Vehicle[], sortBy: string, userLocation: { lat: num
   });
 }
 
-// ── Shared class strings ──────────────────────────────────────────────────────
 const INPUT_CLS   = 'w-full h-9 border border-border bg-background text-foreground text-[12px] px-2.5 outline-none focus:border-ring placeholder:text-muted-foreground transition-colors';
 const SELECT_CLS  = `${INPUT_CLS} appearance-none cursor-pointer`;
 const SECTION_LBL = 'text-[11px] font-bold uppercase tracking-[0.15em] text-muted-foreground mb-2';
 const CHIP_CLS    = 'inline-flex items-center gap-1.5 px-2.5 py-1 border border-border text-[11px] font-medium bg-background';
 
-// ── Sub-components ────────────────────────────────────────────────────────────
 function CheckboxItem({ id, label, checked, onChange }: { id: string; label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <label htmlFor={id} className="flex items-center gap-2.5 cursor-pointer group">
@@ -573,7 +567,6 @@ function FilterSidebarContent({
   );
 }
 
-// ── Map list mini-card ────────────────────────────────────────────────────────
 function MapListCard({ vehicle, isSelected, onClick }: { vehicle: Vehicle; isSelected: boolean; onClick: () => void }) {
   const img = Array.isArray(vehicle.images) ? vehicle.images[0] : vehicle.images;
   return (
@@ -595,14 +588,13 @@ function MapListCard({ vehicle, isSelected, onClick }: { vehicle: Vehicle; isSel
   );
 }
 
-// ── Active filter chips ───────────────────────────────────────────────────────
 function FilterChips({ filters, setFilters, onClearAll }: { filters: FilterState; setFilters: (f: FilterState) => void; onClearAll: () => void }) {
   const chips: { label: string; onRemove: () => void }[] = [];
 
   if (filters.make)                   chips.push({ label: filters.make.replace(/_/g, ' '), onRemove: () => setFilters({ ...filters, make: '', model: '' }) });
   if (filters.model)                  chips.push({ label: filters.model, onRemove: () => setFilters({ ...filters, model: '' }) });
-  if (filters.priceMin || filters.priceMax) chips.push({ label: `$${filters.priceMin || '0'} – $${filters.priceMax || '∞'}`, onRemove: () => setFilters({ ...filters, priceMin: '', priceMax: '' }) });
-  if (filters.yearMin || filters.yearMax)   chips.push({ label: `${filters.yearMin || '—'} – ${filters.yearMax || '—'}`, onRemove: () => setFilters({ ...filters, yearMin: '', yearMax: '' }) });
+  if (filters.priceMin || filters.priceMax) chips.push({ label: `$${filters.priceMin || '0'} - $${filters.priceMax || 'any'}`, onRemove: () => setFilters({ ...filters, priceMin: '', priceMax: '' }) });
+  if (filters.yearMin || filters.yearMax)   chips.push({ label: `${filters.yearMin || 'any'} - ${filters.yearMax || 'any'}`, onRemove: () => setFilters({ ...filters, yearMin: '', yearMax: '' }) });
   if (filters.mileageMax)             chips.push({ label: `Under ${(Number(filters.mileageMax) / 1000).toFixed(0)}k mi`, onRemove: () => setFilters({ ...filters, mileageMax: '' }) });
   if (filters.radius)                 chips.push({ label: `${filters.radius} mi radius`, onRemove: () => setFilters({ ...filters, radius: '' }) });
   filters.vehicleTypes.forEach((t)  => chips.push({ label: t, onRemove: () => setFilters({ ...filters, vehicleTypes: filters.vehicleTypes.filter((v) => v !== t) }) }));
@@ -639,7 +631,6 @@ function FilterChips({ filters, setFilters, onClearAll }: { filters: FilterState
   );
 }
 
-// ── Main SearchPage ───────────────────────────────────────────────────────────
 export function SearchPage() {
   const urlParams = new URLSearchParams(window.location.search);
   const latParam = urlParams.get('lat');
@@ -751,7 +742,6 @@ export function SearchPage() {
   return (
     <div className="flex flex-col min-h-[calc(100vh-3.5rem)]">
 
-      {/* ── TOP BAR ─────────────────────────────────────────────────────────── */}
       <div className="sticky top-14 z-30 bg-background border-b border-border px-4 md:px-6 py-2.5 flex items-center gap-2.5">
 
         {/* Mobile: Filters button */}
@@ -773,14 +763,14 @@ export function SearchPage() {
           <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
           <input
             type="text"
-            placeholder="Search make, model…"
+            placeholder="Search make, model..."
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
             className={`${INPUT_CLS} pl-9 pr-3`}
           />
         </div>
 
-        {/* Results count — desktop */}
+        {/* Results count - desktop */}
         <span className="text-[12px] text-muted-foreground hidden sm:block shrink-0">
           {vehicles.length} vehicle{vehicles.length !== 1 ? 's' : ''} found
         </span>
@@ -844,17 +834,14 @@ export function SearchPage() {
         </div>
       </div>
 
-      {/* ── BODY ────────────────────────────────────────────────────────────── */}
       <div className="flex flex-1 overflow-hidden">
 
-        {/* ── Desktop Filter Sidebar ──────────────────────────────────────── */}
         <aside
           className="hidden lg:flex w-64 h-[calc(100vh-7rem)] shrink-0 flex-col border-r border-border px-5 pt-3 pb-5 overflow-y-auto"
         >
           <FilterSidebarContent filters={filters} setFilters={setFilters} onClear={clearFilters} />
         </aside>
 
-        {/* ── Mobile Filter Drawer (bottom sheet) ─────────────────────────── */}
         {mobileFiltersOpen && (
           <div
             className="fixed inset-0 z-50 lg:hidden bg-foreground/30 backdrop-blur-sm"
@@ -895,11 +882,9 @@ export function SearchPage() {
           </div>
         </div>
 
-        {/* ── Main content ─────────────────────────────────────────────────── */}
         <div className="flex-1 min-w-0 overflow-hidden">
           {viewMode === 'grid' ? (
 
-            /* ── GRID VIEW ───────────────────────────────────────────────── */
             <div className="px-4 md:px-6 py-5">
               <FilterChips filters={filters} setFilters={setFilters} onClearAll={clearFilters} />
 
@@ -928,7 +913,6 @@ export function SearchPage() {
 
           ) : (
 
-            /* ── MAP VIEW ────────────────────────────────────────────────── */
             <div className="flex" style={{ height: 'calc(100vh - 7rem)' }}>
 
               {/* Left: scrollable card list */}

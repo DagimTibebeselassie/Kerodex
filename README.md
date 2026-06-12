@@ -4,22 +4,25 @@ Kerodex is a source-available private-party car marketplace prototype focused on
 
 The product goal is simple: help real owners sell real cars directly to buyers with better vehicle data, safer identity workflows, and a cleaner experience than traditional classified marketplaces.
 
-> Status: early local prototype. The current implementation is intentionally inexpensive to run and avoids paid cloud services until the product shape is proven.
+> Status: beta-stage marketplace app. The current implementation supports local development, Postgres-backed production storage, S3-backed uploads, and CI checks for backend and frontend changes.
 
 ## What Exists Today
 
-- Premium responsive web marketplace UI.
+- Premium responsive React/Vite marketplace UI.
 - Dedicated search results experience with grid and map modes.
-- Local Node.js API with realistic seed listings.
+- Node.js API/static server with JSON fallback and Postgres-ready persistent storage.
 - Local authentication flow with email verification plus Google and Microsoft OAuth hooks.
 - Separate local admin dashboard app with protected admin API routes, role-based access, analytics, moderation queues, verification review, CSV exports, and immutable audit-log scaffolding.
 - Leaflet/CARTO map browsing with grid/map search modes, clickable vehicle pins, and theme-aware map tiles.
 - Removable beta/demo inventory notice for public launch preparation.
 - Postgres-ready store adapter with local JSON seed fallback.
-- S3-ready listing photo uploads through backend-generated presigned URLs.
+- S3-ready uploads through backend-generated presigned URLs for listings, verification photos, profile images, and documents.
+- MarketCheck VIN and valuation enrichment with backend-side caching.
+- Textract OCR hooks for title and maintenance document checks.
+- Vehicle presence photo challenge workflow with manual review fallback.
 - Optional Persona hosted identity verification hook for sellers.
 - Smoke test coverage for the local prototype.
-- GitHub Actions CI workflow.
+- GitHub Actions CI for API syntax, smoke tests, web build, repository health, dependency review, and CodeQL.
 - Architecture direction for AWS, microservices, search, trust, AI, and real-time systems.
 
 ## Repository Structure
@@ -29,29 +32,30 @@ apps/
   api/
     server.js        # Dependency-free local API/static server
     store.js         # JSON fallback or Postgres-backed marketplace store
+    marketcheck.js   # MarketCheck VIN/valuation service
+    textract.js      # AWS Textract OCR service
+    vehicle-presence.js # Vehicle presence verification analysis
     seed/            # Demo seller, listing, and conversation JSON
   admin/
     server.js        # Separate local admin frontend server
     public/          # Admin dashboard UI
-  web/
-    public/
-      index.html     # Homepage
-      search.html    # Search results page
-      app.js         # Homepage client behavior
-      search.js      # Search results behavior
-      styles.css     # Current UI system
-      assets/        # Logo assets
+  web-react/
+    src/             # React/Vite marketplace app
+    public/          # Public icons and static assets
+    dist/            # Production build output
 docs/
   architecture.md    # System architecture notes
   api.md             # API direction
   database.md        # Database schema direction
   roadmap.md         # MVP and scaling roadmap
+  security-hardening-report.md # Current hardening summary
 scripts/
   seed-database.js   # Copies demo JSON into Postgres record tables
   smoke-test.js      # CI smoke test
 .github/
   workflows/
-    ci.yml           # GitHub Actions pipeline
+    ci.yml           # API, smoke, web build, and repo health checks
+    codeql.yml       # GitHub CodeQL security analysis
 ```
 
 ## Run Locally
@@ -152,6 +156,18 @@ Run tests:
 
 ```powershell
 npm.cmd test
+```
+
+Run the full local CI-style check:
+
+```powershell
+npm.cmd run ci
+```
+
+Build the React marketplace:
+
+```powershell
+npm.cmd run build:web
 ```
 
 ## Current Technical Approach

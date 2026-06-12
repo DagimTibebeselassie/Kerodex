@@ -68,7 +68,7 @@ requiredFiles.forEach((file) => {
   assert(adminHtml.includes("Website Analytics"), "Admin app must include website analytics section.");
   assert(adminHtml.includes("Audit Logs"), "Admin app must include audit logs section.");
 
-  console.log(`Smoke test passed with ${listings.length} listings from ${store.kind} and admin dashboard coverage.`);
+  console.log(`Smoke test passed with ${listings.length} listings using ${store.kind} storage and admin dashboard coverage.`);
 })().catch((error) => {
   console.error(error.message);
   process.exit(1);

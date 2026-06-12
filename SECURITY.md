@@ -6,7 +6,7 @@ Kerodex is an early prototype, but the product direction includes identity verif
 
 Do not open public issues for vulnerabilities.
 
-For now, report security concerns directly to the repository owner. A dedicated security contact should be added before any public launch.
+Report security concerns to `founder@kerodexofficial.com`.
 
 ## Current Scope
 
@@ -22,7 +22,7 @@ In scope:
 Out of scope for the prototype:
 
 - Social engineering.
-- Denial-of-service against local development.
+- High-volume denial-of-service against local development.
 - Issues requiring real production credentials, since none should exist in this repo.
 
 ## Production Security Roadmap
@@ -38,3 +38,11 @@ Out of scope for the prototype:
 - WAF and DDoS controls.
 - Least-privilege IAM.
 - Security scanning in CI.
+
+## Current Controls
+
+- GitHub Actions CI for backend syntax checks, smoke tests, web builds, repository health, dependency review, and CodeQL.
+- API rate limiting for general, authentication, upload, and verification routes.
+- Strict CORS allow-list for production and local development origins.
+- S3 presigned upload validation for supported file types and sizes.
+- Production-safe error responses that avoid exposing internal details.

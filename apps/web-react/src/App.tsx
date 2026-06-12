@@ -43,7 +43,26 @@ const rootRoute = createRootRoute({
       <RouteSeo />
       <RouteAnalytics />
       <Layout />
-      <Toaster position="top-right" />
+      <Toaster
+        position="top-right"
+        duration={2600}
+        gap={8}
+        visibleToasts={3}
+        toastOptions={{
+          classNames: {
+            toast: 'kerodex-toast group relative flex items-start gap-3 overflow-hidden rounded-md border border-border bg-card px-4 py-3 pr-10 text-sm text-card-foreground shadow-lg',
+            title: 'text-[13px] font-semibold leading-snug tracking-tight',
+            description: 'mt-0.5 text-[12px] leading-snug text-muted-foreground',
+            closeButton: 'text-muted-foreground opacity-60 transition-opacity hover:opacity-100',
+            actionButton: 'mt-2 text-xs font-medium underline underline-offset-2',
+            cancelButton: 'mt-2 text-xs text-muted-foreground hover:opacity-80',
+            success: 'border-border bg-card',
+            error: 'border-destructive/40 bg-card',
+            warning: 'border-amber-500/40 bg-card',
+            info: 'border-border bg-card',
+          },
+        }}
+      />
     </>
   ),
 });
@@ -124,7 +143,6 @@ const savedRoute = createRoute({
   component: SavedVehiclesPage,
 });
 
-// â”€â”€ Stub routes for nav links â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const messagesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/messages',

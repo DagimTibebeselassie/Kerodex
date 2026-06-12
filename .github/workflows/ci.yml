@@ -8,12 +8,18 @@ on:
     branches:
       - "**"
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
-  smoke-test:
-    name: Smoke test
+  api:
+    name: API syntax and smoke tests
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -21,16 +27,50 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Syntax check API files
+        run: |
+          node --check apps/api/server.js
+          node --check apps/api/store.js
+          node --check apps/api/marketcheck.js
+          node --check apps/api/textract.js
+          node --check apps/api/vehicle-presence.js
 
       - name: Run smoke tests
         run: npm test
 
+  web:
+    name: Web build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: apps/web-react/package-lock.json
+
+      - name: Install web dependencies
+        working-directory: apps/web-react
+        run: npm ci
+
+      - name: Build web app
+        working-directory: apps/web-react
+        run: npm run build
+
   repo-health:
     name: Repository health
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -42,7 +82,38 @@ jobs:
           test -f SECURITY.md
           test -f CONTRIBUTING.md
           test -f CODEOWNERS
+          test -f .editorconfig
+          test -f .nvmrc
+          test -f .github/dependabot.yml
+          test -f .github/pull_request_template.md
 
-      - name: Ensure secrets are not committed
+      - name: Ensure local env files are not tracked
         run: |
-          ! grep -RIn --exclude-dir=.git --exclude-dir=.github --exclude=README.md --exclude=SECURITY.md "AWS_SECRET_ACCESS_KEY\|GOOGLE_CLIENT_SECRET\|APPLE_CLIENT_SECRET\|STRIPE_SECRET_KEY" .
+          ! git ls-files | grep -E '(^|/)\.env(\.|$)'
+
+      - name: Scan for committed secret patterns
+        run: |
+          ! grep -RIn \
+            --exclude-dir=.git \
+            --exclude-dir=node_modules \
+            --exclude-dir=dist \
+            --exclude=README.md \
+            --exclude=SECURITY.md \
+            --exclude=security-hardening-report.md \
+            -E 'AKIA[0-9A-Z]{16}|GOCSPX-|sk-[A-Za-z0-9_-]{20,}|AWS_SECRET_ACCESS_KEY=|DATABASE_URL=postgres|JWT_SECRET=|OPENAI_API_KEY=' .
+
+  dependency-review:
+    name: Dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: critical

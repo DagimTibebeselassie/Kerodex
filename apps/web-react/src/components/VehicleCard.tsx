@@ -61,7 +61,7 @@ export function VehicleCard({
     <Link
       to="/vehicle/$id"
       params={{ id: vehicle.id }}
-      className={`group block bg-background border border-border hover:border-foreground/20 transition-colors ${className}`}
+      className={`group flex h-full flex-col bg-background border border-border hover:border-foreground/20 transition-colors ${className}`}
       data-vehicle-id={vehicle.id}
     >
       {/* Image */}
@@ -93,7 +93,7 @@ export function VehicleCard({
         {/* Deal Score Badge */}
         {dealScore && (
           <div className={`absolute top-3 left-3 px-2 py-1 text-[10px] font-bold uppercase tracking-wider border ${dealColors[dealScore]}`}>
-            {dealScore === 'great' ? 'â˜… Great Deal' : dealScore === 'good' ? 'âœ“ Good Deal' : 'â€” Fair Price'}
+            {dealScore === 'great' ? '* Great Deal' : dealScore === 'good' ? 'Good Deal' : 'Fair Price'}
           </div>
         )}
 
@@ -104,9 +104,9 @@ export function VehicleCard({
       </div>
 
       {/* Info */}
-      <div className="p-4 space-y-2">
-        <div className="flex items-start justify-between gap-2">
-          <h3 className="text-[14px] font-bold tracking-tight leading-tight">
+      <div className="flex flex-1 flex-col p-4">
+        <div className="flex min-h-10 items-start justify-between gap-2">
+          <h3 className="line-clamp-2 text-[14px] font-bold tracking-tight leading-tight">
             {vehicle.year} {vehicle.make} {vehicle.model}
           </h3>
           {verified && (
@@ -114,19 +114,19 @@ export function VehicleCard({
           )}
         </div>
 
-        <div className="flex items-center gap-3 text-[12px] text-muted-foreground">
-          <span className="flex items-center gap-1">
+        <div className="mt-2 flex min-h-8 items-center gap-3 text-[12px] text-muted-foreground">
+          <span className="flex shrink-0 items-center gap-1">
             <Gauge className="h-3 w-3" />
             {vehicle.mileage.toLocaleString()} mi
           </span>
-          <span className="flex items-center gap-1">
+          <span className="flex min-w-0 items-center gap-1">
             <MapPin className="h-3 w-3" />
-            {vehicle.location}
+            <span className="truncate">{vehicle.location}</span>
           </span>
         </div>
 
         {/* Badges row */}
-        <div className="flex flex-wrap gap-1.5 pt-1">
+        <div className="mt-auto flex min-h-[3.35rem] content-start flex-wrap gap-1.5 overflow-hidden pt-3">
           {verified && (
             <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 border border-border text-muted-foreground">
               <BadgeCheck className="h-2.5 w-2.5" /> Seller checked

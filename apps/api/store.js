@@ -302,6 +302,7 @@ class JsonStore {
     this.reports = [];
     this.events = [];
     this.marketCheckCache = new Map();
+    this.authSessions = new Map();
   }
 
   async getListings() {
@@ -408,6 +409,19 @@ class JsonStore {
 
   async saveUser(user) {
     return user;
+  }
+
+  async saveAuthSession(session) {
+    this.authSessions.set(session.token, session);
+    return session;
+  }
+
+  async getActiveAuthSessions() {
+    return Array.from(this.authSessions.values());
+  }
+
+  async deleteAuthSession(token) {
+    this.authSessions.delete(String(token || ""));
   }
 
   async getUsers() {
@@ -520,6 +534,16 @@ class PostgresStore {
         id TEXT PRIMARY KEY,
         payload JSONB NOT NULL,
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await this.pool.query(`
+      CREATE TABLE IF NOT EXISTS auth_sessions (
+        token TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        payload JSONB NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        last_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        expires_at TIMESTAMPTZ
       )
     `);
     this.coreTablesReady = true;
@@ -711,6 +735,33 @@ class PostgresStore {
       [user.id, String(user.email || "").toLowerCase(), user]
     );
     return user;
+  }
+
+  async saveAuthSession(session) {
+    await this.ensureCoreTables();
+    await this.pool.query(
+      `INSERT INTO auth_sessions (token, user_id, payload, created_at, last_seen_at, expires_at)
+       VALUES ($1, $2, $3, NOW(), NOW(), $4)
+       ON CONFLICT (token) DO UPDATE SET user_id = EXCLUDED.user_id, payload = EXCLUDED.payload, last_seen_at = NOW(), expires_at = EXCLUDED.expires_at`,
+      [session.token, session.userId, session, session.expiresAt || null]
+    );
+    return session;
+  }
+
+  async getActiveAuthSessions() {
+    await this.ensureCoreTables();
+    const result = await this.pool.query(
+      `SELECT payload FROM auth_sessions
+       WHERE expires_at IS NULL OR expires_at > NOW()
+       ORDER BY last_seen_at DESC
+       LIMIT 5000`
+    );
+    return result.rows.map((row) => row.payload);
+  }
+
+  async deleteAuthSession(token) {
+    await this.ensureCoreTables();
+    await this.pool.query("DELETE FROM auth_sessions WHERE token = $1", [String(token || "")]);
   }
 
   async getUsers() {

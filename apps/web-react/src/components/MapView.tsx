@@ -54,13 +54,10 @@ function tileOptions(L: any) {
     subdomains: 'abcd',
     maxZoom: 19,
     minZoom: 3,
-    noWrap: true,
-    bounds: L.latLngBounds(MAP_BOUNDS),
-    attribution: 'Â© OpenStreetMap Â© CARTO',
+    attribution: '&copy; OpenStreetMap &copy; CARTO',
   };
 }
 
-// â”€â”€ Popup Card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function PopupCard({
   vehicle,
   isDark,
@@ -185,7 +182,6 @@ function PopupCard({
   );
 }
 
-// â”€â”€ MapView â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function MapView({
   vehicles = [],
   selectedId,
@@ -212,7 +208,6 @@ export function MapView({
     setActiveVehicle(v);
   }, [selectedId, vehicles]);
 
-  // â”€â”€ Init map once â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
@@ -232,14 +227,14 @@ export function MapView({
         zoomControl: false,
         attributionControl: false,
         maxBounds: MAP_BOUNDS,
-        maxBoundsViscosity: 1,
+        maxBoundsViscosity: 0.9,
         worldCopyJump: false,
         inertia: false,
       });
       map.setMaxBounds(MAP_BOUNDS);
 
       L.control.zoom({ position: 'bottomright' }).addTo(map);
-      L.control.attribution({ position: 'bottomleft', prefix: 'Â© OpenStreetMap' }).addTo(map);
+      L.control.attribution({ position: 'bottomleft', prefix: '&copy; OpenStreetMap' }).addTo(map);
 
       const tileUrl = tileUrlForTheme(isDark);
       const tile = L.tileLayer(tileUrl, tileOptions(L));
@@ -268,7 +263,6 @@ export function MapView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // â”€â”€ Swap tile layer on dark toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     if (!mapRef.current || !tileLayerRef.current) return;
     import('leaflet').then((L) => {
@@ -310,7 +304,6 @@ export function MapView({
     };
   }, [mapReady]);
 
-  // â”€â”€ Refresh markers when vehicles / selectedId change â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !mapReady) return;

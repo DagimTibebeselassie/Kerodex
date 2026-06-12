@@ -2,7 +2,8 @@
   "required_status_checks": {
     "strict": true,
     "contexts": [
-      "Smoke test",
+      "API syntax and smoke tests",
+      "Web build",
       "Repository health"
     ]
   },

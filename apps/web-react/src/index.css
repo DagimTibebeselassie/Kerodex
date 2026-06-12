@@ -1,11 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Lora:ital,wght@0,400..700;1,400..700&family=IBM+Plex+Mono:ital,wght@0,100..700;1,100..700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Lora:ital,wght@0,400..700;1,400..700&family=IBM+Plex+Mono:ital,wght@0,100..700&display=swap');
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   Blink UI Theme CSS
-   REQUIRED for @blinkdotnew/ui components to render correctly.
-   BlinkUIProvider adds .theme-{name} + .dark/.light to <html>,
-   activating the matching CSS variable set below.
-   ───────────────────────────────────────────────────────────────────────────── */
+/* Blink UI theme bridge. */
 @import '@blinkdotnew/ui/styles';
 
 @tailwind base;
@@ -17,7 +12,6 @@
     @apply border-border;
   }
 
-  /* Full viewport chain so AppShell / Sidebar h-full + flex-1 SidebarContent work */
   html {
     height: 100%;
   }
@@ -38,17 +32,11 @@
   }
 }
 
-/* ── App palette (unlayered, after utilities) ─────────────────────────────────
-   Overrides @blinkdotnew/ui theme colors. @layer base loses specificity to UI themes.
-   Dark mode uses :root.dark + .theme-*.dark to match BlinkUIProvider.
-   ⚠️ AGENT MUST REPLACE placeholder values with a custom palette.
-   ──────────────────────────────────────────────────────────────────────────── */
+/* Kerodex app palette. Keep these tokens aligned with Tailwind and Blink UI variables. */
 :root {
-  /* ⚠️ AGENT MUST REPLACE: these are NEUTRAL GRAYSCALE scaffolding (NOT a theme) so components render before you style. Define a real, product-specific palette before writing components. */
-  /* HOW: edit THESE values in this UNLAYERED :root in place. Do NOT add a second :root or an `@layer base { :root }` block — unlayered styles win the cascade, so a layered palette is silently ignored. */
-  /* RULES: (1) Pick exactly ONE palette below (or your own) and use BOTH its values — never mix
-   *        primary from one row with accent from another (that produces incoherent "AI slop").
-   *        (2) Replace --background too — never leave a washed/tinted default.
+  /* HOW: edit THESE values in this UNLAYERED :root in place. Do NOT add a second :root or an `@layer base { :root }` block; unlayered styles win the cascade, so a layered palette is silently ignored. */
+  /* RULES: (1) Pick exactly ONE palette below (or your own) and use BOTH its values; never mix
+   *        (2) Replace --background too; never leave a washed/tinted default.
    *        (3) NEVER use hsl(221 83% 53%) / #3B82F6 ("AI blue"), nor green-500 / purple-500. */
 
   /*
@@ -75,29 +63,24 @@
    * --accent: 24 95% 63%;          (Lighter orange #FB923C)
    */
 
-  /* Colors - REPLACE ALL VALUES BELOW with your custom palette */
-  /* Neutral defaults so an un-customized build still looks clean (not washed-blue) — but you MUST replace these. */
   --background: 0 0% 100%;
   --foreground: 0 0% 0%;
   --card: 0 0% 100%;
   --card-foreground: 0 0% 0%;
   --popover: 0 0% 100%;
   --popover-foreground: 0 0% 0%;
-  /* ⚠️ NEUTRAL SCAFFOLDING (grayscale, NOT a theme) — replace with your real brand colour */
   --primary: 0 0% 0%;
   --primary-foreground: 0 0% 100%;
   --secondary: 0 0% 98%;
   --secondary-foreground: 0 0% 0%;
   --muted: 0 0% 96%;
   --muted-foreground: 0 0% 40%;
-  /* ⚠️ NEUTRAL SCAFFOLDING — replace with your accent */
   --accent: 0 0% 96%;
   --accent-foreground: 0 0% 0%;
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 0 0% 100%;
   --border: 0 0% 90%;
   --input: 0 0% 90%;
-  /* ⚠️ NEUTRAL SCAFFOLDING — replace (usually matches primary) */
   --ring: 0 0% 0%;
   --radius: 0rem;
   --radius-sm: 0rem;
@@ -106,14 +89,12 @@
   --radius-xl: 0rem;
   --radius-full: 9999px;
 
-  /* Charts - ⚠️ PLACEHOLDER: Replace with your custom chart colors */
   --chart-1: 348 83% 47%;
   --chart-2: 24 95% 53%;
   --chart-3: 47 96% 53%;
   --chart-4: 151 55% 35%;
   --chart-5: 262 52% 47%;
 
-  /* Sidebar - ⚠️ PLACEHOLDER: Replace with your custom sidebar colors */
   --sidebar: 220 14% 98%;
   --sidebar-foreground: 216.9231 19.1176% 26.6667%;
   --sidebar-primary: 0 0% 20%;
@@ -148,14 +129,12 @@
 .theme-glass.dark,
 .theme-midnight.dark,
 .theme-minimal.dark {
-  /* ⚠️ AGENT MUST REPLACE: Dark mode colors - replace with your custom dark palette */
   --background: 0 0% 0%;
   --foreground: 0 0% 100%;
   --card: 0 0% 0%;
   --card-foreground: 0 0% 100%;
   --popover: 0 0% 0%;
   --popover-foreground: 0 0% 100%;
-  /* ⚠️ PLACEHOLDER: Replace with your custom dark mode primary color */
   --primary: 0 0% 100%;
   --primary-foreground: 0 0% 0%;
   --secondary: 0 0% 10%;
@@ -170,14 +149,12 @@
   --input: 0 0% 20%;
   --ring: 0 0% 100%;
 
-  /* ⚠️ PLACEHOLDER: Replace with your custom dark mode chart colors */
   --chart-1: 348 83% 65%;
   --chart-2: 24 95% 63%;
   --chart-3: 47 96% 65%;
   --chart-4: 151 55% 55%;
   --chart-5: 262 52% 65%;
 
-  /* ⚠️ PLACEHOLDER: Replace with your custom dark mode sidebar colors */
   --sidebar: 217.2414 32.5843% 17.451%;
   --sidebar-foreground: 216 12.1951% 83.9216%;
   --sidebar-primary: 0 0% 90%;
@@ -206,9 +183,48 @@
 .leaflet-bottom { z-index: 1000; }
 .leaflet-control { z-index: 1000; }
 
+.kerodex-vehicle-rail {
+  scrollbar-width: none;
+  scroll-padding-inline: 0.25rem;
+}
+
+.kerodex-vehicle-rail::-webkit-scrollbar {
+  display: none;
+}
+
 .kerodex-price-pin {
   background: transparent;
   border: 0;
+}
+
+.kerodex-toast {
+  position: relative !important;
+  width: min(22rem, calc(100vw - 2rem)) !important;
+  min-height: 3.25rem !important;
+  overflow: hidden !important;
+  border-radius: 0.5rem !important;
+}
+
+.kerodex-toast::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: linear-gradient(90deg, hsl(var(--foreground)), hsl(var(--muted-foreground)));
+  transform-origin: left;
+  animation: kerodex-toast-progress 2.6s linear forwards;
+}
+
+@keyframes kerodex-toast-progress {
+  from {
+    transform: scaleX(1);
+  }
+
+  to {
+    transform: scaleX(0);
+  }
 }
 
 @keyframes fadeIn {

@@ -14,7 +14,7 @@ const PRESENCE_STATUSES = {
 
 function generateCode() {
   const prefixes = ["KRX", "KDX", "KER"];
-  const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+  const prefix = prefixes[crypto.randomInt(0, prefixes.length)];
   const digits = crypto.randomInt(1000, 10000);
   return `${prefix}-${digits}`;
 }
@@ -140,22 +140,23 @@ async function analyzeWithOpenAi({ imageUrl, code, listing, ocrText = "" }) {
   const vinMatches = Boolean(expectedVin && extractedVins.includes(expectedVin)) ||
     Boolean(parsed.vinMatches && expectedVin);
   const codeMatches = normalizeCode(combinedText).includes(normalizeCode(code)) || Boolean(parsed.codeMatches);
+  const likelyNewPhoto = parsed.likelyNewPhoto !== false;
   const checks = {
     vehicleVisible: Boolean(parsed.vehicleVisible),
-    vinPlateVisible: Boolean(parsed.vinPlateVisible),
+    vinPlateVisible: Boolean(parsed.vinPlateVisible) || vinMatches,
     vinMatches,
-    textVisible: Boolean(parsed.textVisible),
+    textVisible: Boolean(parsed.textVisible) || codeMatches,
     codeMatches,
-    likelyNewPhoto: Boolean(parsed.likelyNewPhoto)
+    likelyNewPhoto
   };
 
   let status = PRESENCE_STATUSES.VERIFIED;
-  if (!expectedVin || !extractedVins.length) status = PRESENCE_STATUSES.VIN_NOT_DETECTED;
+  if (!expectedVin || (!extractedVins.length && !checks.vinMatches)) status = PRESENCE_STATUSES.VIN_NOT_DETECTED;
   else if (!checks.vinMatches) status = PRESENCE_STATUSES.VIN_MISMATCH;
   else if (!checks.vehicleVisible || !checks.vinPlateVisible) status = PRESENCE_STATUSES.VIN_NOT_DETECTED;
   else if (!checks.textVisible) status = PRESENCE_STATUSES.CODE_MISMATCH;
   else if (!checks.codeMatches) status = PRESENCE_STATUSES.CODE_MISMATCH;
-  else if (!checks.likelyNewPhoto || confidence < 0.74) status = PRESENCE_STATUSES.MANUAL_REVIEW;
+  else if (!checks.likelyNewPhoto || confidence < 0.65) status = PRESENCE_STATUSES.MANUAL_REVIEW;
 
   return {
     status,

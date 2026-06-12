@@ -1,8 +1,9 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useParams, Link } from '@tanstack/react-router';
-import { createReport, createUploadUrl, getVehicle, saveVehicleLocal, savedVehicleIds, startConversation, updateVehicle } from '@/lib/api';
+import { createReport, createUploadUrl, getVehicle, listVehicles, saveVehicleLocal, savedVehicleIds, startConversation, updateVehicle } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { Vehicle } from '@/types';
+import { VehicleCard } from '@/components/VehicleCard';
 import {
   Button,
   Input,
@@ -36,7 +37,6 @@ function calcMonthly(price: number, down: number, months: number, aprPct: number
   return (principal * r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1);
 }
 
-// â”€â”€â”€ Sub-components â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function Gallery({ images, activeIdx, setActiveIdx, setLightboxOpen, make, model, year }: {
   images: string[]; activeIdx: number; setActiveIdx: (i: number) => void;
@@ -56,7 +56,7 @@ function Gallery({ images, activeIdx, setActiveIdx, setLightboxOpen, make, model
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground gap-3">
             <Camera className="h-8 w-8" />
-            <div className="text-[12px] font-bold uppercase tracking-widest">No photos uploaded yet</div>
+                  <li className="text-[12px] text-muted-foreground">- No photos uploaded - buyers trust listings with 6+ photos</li>
           </div>
         )}
         <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/5 transition-colors" />
@@ -662,7 +662,8 @@ function MarketValuePanel({ vehicle }: { vehicle: Vehicle }) {
   const diff = fairMarket - price;
   const isBelow = diff > 0;
   const pct = Math.round((diff / fairMarket) * 100);
-  const barWidth = isBelow ? Math.min(40 + (diff / fairMarket) * 60, 80) : 50;
+  const valuePosition = Math.max(8, Math.min(92, 50 + ((price - fairMarket) / fairMarket) * 250));
+  const valueColor = isBelow ? 'bg-emerald-500' : 'bg-amber-500';
   const comparableCount = Number(vehicle.marketValueComparableCount || 0);
   const valuationDate = vehicle.marketValueDate
     ? new Date(vehicle.marketValueDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -679,10 +680,11 @@ function MarketValuePanel({ vehicle }: { vehicle: Vehicle }) {
         <span className="text-muted-foreground font-normal">({Math.abs(pct)}%)</span>
       </div>
       <div className="space-y-1.5">
-        <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
           <div
-            className={`h-full rounded-full transition-all ${isBelow ? 'bg-emerald-500' : 'bg-amber-500'}`}
-            style={{ width: `${barWidth}%` }}
+            className={`h-full rounded-full transition-all ${valueColor}`}
+            style={{ width: `${valuePosition}%` }}
+            aria-label={`Listing price is ${Math.abs(pct)} percent ${isBelow ? 'below' : 'above'} market`}
           />
         </div>
         <div className="flex justify-between text-[10px] text-muted-foreground uppercase tracking-wider">
@@ -839,8 +841,8 @@ function PaymentEstimator({ price }: { price: number }) {
           <SelectTrigger {...({} as any)} className="text-[12px] h-10"><SelectValue /></SelectTrigger>
           <SelectContent {...({} as any)}>
             <SelectItem {...({} as any)} value="excellent">Excellent (750+)</SelectItem>
-            <SelectItem {...({} as any)} value="good">Good (700â€“749)</SelectItem>
-            <SelectItem {...({} as any)} value="fair">Fair (650â€“699)</SelectItem>
+            <SelectItem {...({} as any)} value="good">Good (700-749)</SelectItem>
+            <SelectItem {...({} as any)} value="fair">Fair (650-699)</SelectItem>
             <SelectItem {...({} as any)} value="poor">Poor (&lt;650)</SelectItem>
           </SelectContent>
         </Select>
@@ -907,13 +909,70 @@ function TradeIn() {
   );
 }
 
-// â”€â”€â”€ Main Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function similarVehicleScore(current: Vehicle, candidate: Vehicle) {
+  let score = 0;
+  if (candidate.id === current.id) return -1;
+  if (candidate.make?.toLowerCase() === current.make?.toLowerCase()) score += 35;
+  if (candidate.model?.toLowerCase() === current.model?.toLowerCase()) score += 30;
+  if (candidate.bodyType && candidate.bodyType === current.bodyType) score += 15;
+  if (candidate.fuelType && candidate.fuelType === current.fuelType) score += 10;
+  if (Math.abs(Number(candidate.year || 0) - Number(current.year || 0)) <= 3) score += 10;
+  if (Math.abs(Number(candidate.price || 0) - Number(current.price || 0)) <= Math.max(5000, Number(current.price || 0) * 0.2)) score += 12;
+  if (Math.abs(Number(candidate.mileage || 0) - Number(current.mileage || 0)) <= 35000) score += 8;
+  if (candidate.location?.split(',')[1]?.trim() && candidate.location.split(',')[1]?.trim() === current.location?.split(',')[1]?.trim()) score += 8;
+  return score;
+}
+
+function SimilarVehiclesRail({ current, vehicles }: { current: Vehicle; vehicles: Vehicle[] }) {
+  const similarVehicles = useMemo(() => {
+    return vehicles
+      .map((candidate) => ({ candidate, score: similarVehicleScore(current, candidate) }))
+      .filter((item) => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map((item) => item.candidate)
+      .slice(0, 12);
+  }, [current, vehicles]);
+
+  if (!similarVehicles.length) return null;
+
+  return (
+    <section className="mt-14 border-t border-border pt-10">
+      <div className="flex items-end justify-between gap-6 mb-7">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground mb-2">
+            Similar Listings
+          </p>
+          <h2 className="text-2xl md:text-3xl font-black tracking-tight">
+            More like this
+          </h2>
+        </div>
+        <Link
+          to="/cars"
+          search={{ make: current.make, model: current.model } as any}
+          className="group hidden sm:flex items-center gap-1.5 text-[12px] font-bold uppercase tracking-wider hover:text-muted-foreground transition-colors shrink-0"
+        >
+          View all
+          <ArrowLeft className="h-3.5 w-3.5 rotate-180 transition-transform group-hover:translate-x-0.5" />
+        </Link>
+      </div>
+      <div className="kerodex-vehicle-rail flex gap-4 md:gap-6 overflow-x-auto pb-4 px-1 sm:px-0 snap-x snap-mandatory">
+        {similarVehicles.map((item) => (
+          <div key={item.id} className="w-[260px] sm:w-[286px] lg:w-[300px] shrink-0 snap-start">
+            <VehicleCard vehicle={item} />
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 
 export function VehicleDetailPage() {
   const { id } = useParams({ from: '/vehicle/$id' });
   const navigate = useNavigate();
   const { user, login } = useAuth();
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+  const [relatedVehicles, setRelatedVehicles] = useState<Vehicle[]>([]);
   const [vehicleError, setVehicleError] = useState('');
 
   const [activeIdx, setActiveIdx] = useState(0);
@@ -943,6 +1002,18 @@ export function VehicleDetailPage() {
       });
     return () => { alive = false; };
   }, [id]);
+
+  useEffect(() => {
+    let alive = true;
+    listVehicles()
+      .then((vehicles) => {
+        if (alive) setRelatedVehicles(vehicles);
+      })
+      .catch(() => {
+        if (alive) setRelatedVehicles([]);
+      });
+    return () => { alive = false; };
+  }, []);
 
   if (!vehicle) {
     return (
@@ -1130,7 +1201,6 @@ export function VehicleDetailPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 xl:gap-16">
 
-        {/* â”€â”€ LEFT COLUMN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="lg:col-span-8 space-y-10">
 
           <Gallery images={images} activeIdx={activeIdx} setActiveIdx={setActiveIdx}
@@ -1153,7 +1223,6 @@ export function VehicleDetailPage() {
           <ScamWarnings vehicle={vehicle} />
         </div>
 
-        {/* â”€â”€ RIGHT COLUMN (sticky) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className="lg:col-span-4">
           <div className="sticky top-24 space-y-5">
 
@@ -1238,6 +1307,8 @@ export function VehicleDetailPage() {
           </div>
         </div>
       </div>
+
+      <SimilarVehiclesRail current={vehicle} vehicles={relatedVehicles} />
 
       {/* MOBILE STICKY CTA BAR */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-border px-4 py-3 z-50 flex items-center gap-3">

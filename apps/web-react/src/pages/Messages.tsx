@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import { Message } from '@/types';
 
-// â”€â”€ Thread preview type â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface ThreadPreview {
   conversationId: string;
   partnerId: string;
@@ -28,7 +27,6 @@ interface ThreadPreview {
 
 const SAFETY_NOTICE_TEXT = 'Safety reminder: Meet in a public, well-lit place. Bring another person if possible. Do not send deposits or payments before verifying the vehicle and documents in person. Verify the title, VIN, seller identity, and vehicle condition before completing a purchase. If anything feels suspicious, stop the conversation and report the user.';
 
-// â”€â”€ Timestamp helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function fmtTime(iso: string): string {
   const d = new Date(iso);
   const now = new Date();
@@ -56,7 +54,6 @@ function presence(iso?: string) {
   return { label: `Last active ${fmtTime(iso)}`, color: 'bg-muted-foreground/50' };
 }
 
-// â”€â”€ Thread List Item â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function ThreadItem({
   thread,
   selected,
@@ -104,7 +101,6 @@ function ThreadItem({
   );
 }
 
-// â”€â”€ Message Bubble â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function MessageBubble({ msg, isOwn }: { msg: Message; isOwn: boolean }) {
   return (
     <div className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}>
@@ -122,7 +118,6 @@ function MessageBubble({ msg, isOwn }: { msg: Message; isOwn: boolean }) {
   );
 }
 
-// â”€â”€ Main Component â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export function MessagesPage() {
   const { user, login, isLoading: authLoading } = useAuth();
   const queryClient = useQueryClient();
@@ -275,7 +270,6 @@ export function MessagesPage() {
     t.partnerName.toLowerCase().includes(search.toLowerCase())
   );
 
-  // â”€â”€ Loading / Auth States â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (authLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -361,7 +355,6 @@ export function MessagesPage() {
         </div>
       )}
       <div className="flex h-full">
-        {/* â”€â”€ Thread List (sidebar) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className={`w-full md:w-80 lg:w-96 flex flex-col border-r border-border bg-background shrink-0 ${
           mobileView === 'thread' ? 'hidden md:flex' : 'flex'
         }`}>
@@ -372,7 +365,7 @@ export function MessagesPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <input
                 type="text"
-                placeholder="Search conversationsâ€¦"
+                placeholder="Search conversations..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full h-9 pl-9 pr-3 text-[12px] border border-border bg-background text-foreground placeholder:text-muted-foreground outline-none focus:border-primary transition-colors"
@@ -421,7 +414,6 @@ export function MessagesPage() {
           </div>
         </div>
 
-        {/* â”€â”€ Thread / Conversation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <div className={`flex-1 flex flex-col bg-background min-w-0 ${
           mobileView === 'list' ? 'hidden md:flex' : 'flex'
         }`}>
@@ -526,7 +518,7 @@ export function MessagesPage() {
                   type="text"
                   value={messageText}
                   onChange={(e) => setMessageText(e.target.value)}
-                  placeholder="Type a messageâ€¦"
+                  placeholder="Type a message..."
                   className="flex-1 h-10 px-4 text-[13px] border border-border bg-background text-foreground placeholder:text-muted-foreground outline-none focus:border-primary transition-colors"
                   autoComplete="off"
                 />

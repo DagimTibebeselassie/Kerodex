@@ -39,6 +39,20 @@ const phoneVerifications = new Map();
 const pendingPresenceCodes = new Map();
 const TERMS_VERSION = "v1.0";
 const PRIVACY_VERSION = "v1.0";
+const IS_PRODUCTION = process.env.NODE_ENV === "production";
+const JSON_BODY_LIMIT_BYTES = Number(process.env.JSON_BODY_LIMIT_BYTES || 512 * 1024);
+const ALLOWED_CORS_ORIGINS = new Set([
+  "https://kerodexofficial.com",
+  "https://www.kerodexofficial.com",
+  "http://localhost:4100",
+  "http://localhost:4101",
+  "http://localhost:5173",
+  "http://127.0.0.1:4100",
+  "http://127.0.0.1:4101",
+  "http://127.0.0.1:5173"
+]);
+const rateLimitBuckets = new Map();
+const failedLoginAttempts = new Map();
 const SAFETY_NOTICE_TEXT = "Safety reminder: Meet in a public, well-lit place. Bring another person if possible. Do not send deposits or payments before verifying the vehicle and documents in person. Verify the title, VIN, seller identity, and vehicle condition before completing a purchase. If anything feels suspicious, stop the conversation and report the user.";
 const REPORT_CATEGORIES = new Set([
   "suspected_scam",
@@ -83,52 +97,110 @@ const mimeTypes = {
   ".webp": "image/webp"
 };
 
+function securityHeaders() {
+  const headers = {
+    "x-content-type-options": "nosniff",
+    "x-frame-options": "DENY",
+    "referrer-policy": "strict-origin-when-cross-origin",
+    "permissions-policy": "camera=(), microphone=(), geolocation=(self)",
+    "cross-origin-opener-policy": "same-origin",
+    "cross-origin-resource-policy": "same-site",
+    "x-dns-prefetch-control": "off",
+    "origin-agent-cluster": "?1"
+  };
+  if (IS_PRODUCTION) {
+    headers["strict-transport-security"] = "max-age=15552000; includeSubDomains";
+  }
+  return headers;
+}
+
+function isAllowedCorsOrigin(origin = "") {
+  if (!origin) return true;
+  if (ALLOWED_CORS_ORIGINS.has(origin)) return true;
+  if (!IS_PRODUCTION && /^http:\/\/(localhost|127\.0\.0\.1):\d+$/.test(origin)) return true;
+  return false;
+}
+
+function corsHeaders(req) {
+  const origin = String(req?.headers?.origin || "");
+  if (!origin || !isAllowedCorsOrigin(origin)) return {};
+  return {
+    "access-control-allow-origin": origin,
+    "access-control-allow-credentials": "true",
+    vary: "Origin"
+  };
+}
+
+function responseHeaders(res, extra = {}) {
+  return {
+    ...securityHeaders(),
+    ...(res._kerodexCorsHeaders || {}),
+    ...extra
+  };
+}
+
 function sendJson(res, status, body) {
-  res.writeHead(status, {
+  const payload = IS_PRODUCTION && body && typeof body === "object"
+    ? Object.fromEntries(Object.entries(body).filter(([key]) => !["detail", "stack"].includes(key)))
+    : body;
+  res.writeHead(status, responseHeaders(res, {
     "content-type": "application/json; charset=utf-8",
-    "cache-control": "no-store",
-    "access-control-allow-origin": "*"
-  });
-  res.end(JSON.stringify(body));
+    "cache-control": "no-store"
+  }));
+  res.end(JSON.stringify(payload));
 }
 
 function redirect(res, location) {
-  res.writeHead(302, {
+  res.writeHead(302, responseHeaders(res, {
     location,
     "cache-control": "no-store"
-  });
+  }));
   res.end();
 }
 
 function sendHtml(res, status, html) {
-  res.writeHead(status, {
+  res.writeHead(status, responseHeaders(res, {
     "content-type": "text/html; charset=utf-8",
     "cache-control": "no-store"
-  });
+  }));
   res.end(html);
 }
 
 function sendCsv(res, fileName, csv) {
-  res.writeHead(200, {
+  res.writeHead(200, responseHeaders(res, {
     "content-type": "text/csv; charset=utf-8",
     "content-disposition": `attachment; filename="${fileName}"`,
-    "cache-control": "no-store",
-    "access-control-allow-origin": "*"
-  });
+    "cache-control": "no-store"
+  }));
   res.end(csv);
 }
 
-function readJson(req) {
+function makePublicError(message, status = 400) {
+  const error = new Error(message);
+  error.status = status;
+  error.publicMessage = message;
+  return error;
+}
+
+function publicError(error, fallback = "Request failed.") {
+  return error?.publicMessage || (IS_PRODUCTION ? fallback : error?.message || fallback);
+}
+
+function readJson(req, options = {}) {
+  const maxBytes = Number(options.maxBytes || JSON_BODY_LIMIT_BYTES);
   return new Promise((resolve, reject) => {
     let body = "";
+    let rejected = false;
     req.on("data", (chunk) => {
+      if (rejected) return;
       body += chunk;
-      if (body.length > 1_000_000) {
-        req.destroy();
-        reject(new Error("Request body too large"));
+      if (Buffer.byteLength(body, "utf8") > maxBytes) {
+        rejected = true;
+        reject(makePublicError("Request body is too large.", 413));
       }
     });
     req.on("end", () => {
+      if (rejected) return;
       if (!body) {
         resolve({});
         return;
@@ -136,7 +208,7 @@ function readJson(req) {
       try {
         resolve(JSON.parse(body));
       } catch (error) {
-        reject(error);
+        reject(makePublicError("Invalid JSON request body.", 400));
       }
     });
     req.on("error", reject);
@@ -146,14 +218,18 @@ function readJson(req) {
 function readText(req) {
   return new Promise((resolve, reject) => {
     let body = "";
+    let rejected = false;
     req.on("data", (chunk) => {
+      if (rejected) return;
       body += chunk;
-      if (body.length > 1_000_000) {
-        req.destroy();
-        reject(new Error("Request body too large"));
+      if (Buffer.byteLength(body, "utf8") > JSON_BODY_LIMIT_BYTES) {
+        rejected = true;
+        reject(makePublicError("Request body is too large.", 413));
       }
     });
-    req.on("end", () => resolve(body));
+    req.on("end", () => {
+      if (!rejected) resolve(body);
+    });
     req.on("error", reject);
   });
 }
@@ -164,13 +240,13 @@ async function readForm(req) {
 }
 
 function makeToken() {
-  return `dev_${Date.now().toString(36)}_${Math.random().toString(36).slice(2)}`;
+  return `krx_${Date.now().toString(36)}_${crypto.randomBytes(24).toString("base64url")}`;
 }
 
 function makeCode(length = 6) {
   const min = 10 ** (length - 1);
   const max = 9 * min;
-  return String(Math.floor(min + Math.random() * max));
+  return String(crypto.randomInt(min, min + max));
 }
 
 function normalizePhone(value) {
@@ -208,19 +284,19 @@ async function sendPhoneVerificationCode(phone, code) {
 
 function createReportRecord({ reporter, reportedUserId = "", listingId = "", messageId = "", conversationId = "", category = "other", description = "", source = "user_report", metadata = {} }) {
   const now = new Date().toISOString();
-  const safeCategory = REPORT_CATEGORIES.has(category) ? category : "other";
+  const safeCategory = REPORT_CATEGORIES.has(String(category || "")) ? String(category) : "other";
   return {
     id: `rep_${Date.now().toString(36)}_${crypto.randomBytes(3).toString("hex")}`,
     type: safeCategory,
     category: safeCategory,
     reporterId: reporter?.id || "system",
     reporter: reporter?.name || reporter?.email || "Kerodex system",
-    reportedUserId,
-    reportedUser: reportedUserId || "",
-    listingId,
-    messageId,
-    conversationId,
-    description: String(description || "").slice(0, 2000),
+    reportedUserId: normalizeLimitedString(reportedUserId, 80),
+    reportedUser: normalizeLimitedString(reportedUserId, 80),
+    listingId: normalizeLimitedString(listingId, 80),
+    messageId: normalizeLimitedString(messageId, 80),
+    conversationId: normalizeLimitedString(conversationId, 80),
+    description: normalizeLimitedString(description, 1500),
     status: "open",
     priority: source === "scam_detector" ? "high" : "medium",
     source,
@@ -249,6 +325,61 @@ function eventFromRequest(req, eventType, user = null, metadata = {}) {
     createdAt: new Date().toISOString()
   };
 }
+
+function requestIp(req) {
+  const forwarded = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim();
+  return forwarded || req.socket.remoteAddress || "local";
+}
+
+function rateLimitCategory(pathname) {
+  if (
+    pathname === "/api/auth/email" ||
+    pathname === "/api/auth/password/forgot" ||
+    pathname === "/api/auth/password/reset" ||
+    pathname.startsWith("/api/auth/callback/") ||
+    pathname === "/api/auth/google" ||
+    pathname === "/api/auth/microsoft" ||
+    pathname === "/api/admin/auth/login"
+  ) {
+    return { name: "auth", limit: 10, windowMs: 15 * 60 * 1000 };
+  }
+  if (/^\/api\/uploads\b/.test(pathname) || /verification|vehicle-presence|documents\/ocr|persona|phone/i.test(pathname)) {
+    return { name: "verification_upload", limit: 20, windowMs: 60 * 60 * 1000 };
+  }
+  return { name: "general", limit: 100, windowMs: 15 * 60 * 1000 };
+}
+
+function applyRateLimit(req, res, pathname) {
+  if (!pathname.startsWith("/api/")) return true;
+  const category = rateLimitCategory(pathname);
+  const ip = requestIp(req);
+  const key = `${category.name}:${ip}`;
+  const now = Date.now();
+  const bucket = rateLimitBuckets.get(key);
+  const nextBucket = !bucket || bucket.resetAt <= now
+    ? { count: 1, resetAt: now + category.windowMs }
+    : { count: bucket.count + 1, resetAt: bucket.resetAt };
+  rateLimitBuckets.set(key, nextBucket);
+  if (nextBucket.count <= category.limit) return true;
+  console.warn(`[Kerodex security] rate_limit category=${category.name} ip=${ip} path=${pathname}`);
+  sendJson(res, 429, {
+    success: false,
+    error: "Too many requests. Please try again later."
+  });
+  return false;
+}
+
+function pruneRateLimitBuckets() {
+  const now = Date.now();
+  for (const [key, bucket] of rateLimitBuckets.entries()) {
+    if (bucket.resetAt <= now) rateLimitBuckets.delete(key);
+  }
+  for (const [key, attempt] of failedLoginAttempts.entries()) {
+    if (attempt.resetAt <= now) failedLoginAttempts.delete(key);
+  }
+}
+
+setInterval(pruneRateLimitBuckets, 5 * 60 * 1000).unref();
 
 async function trackEvent(req, eventType, user = null, metadata = {}) {
   if (typeof store.trackEvent !== "function") return null;
@@ -326,7 +457,7 @@ function requireAdmin(req, res, permission) {
 function adminLogin(body) {
   const email = normalize(body.email);
   const code = String(body.accessCode || "");
-  const expectedCode = process.env.ADMIN_ACCESS_CODE || "kerodex-admin-local";
+  const expectedCode = process.env.ADMIN_ACCESS_CODE || (!IS_PRODUCTION ? "kerodex-admin-local" : "");
   const admin = adminAccounts.find((account) => account.email === email);
   if (!admin || code !== expectedCode) return null;
   const token = makeToken();
@@ -339,10 +470,11 @@ function sendAdminEvents(req, res) {
   if (!admin) return;
 
   res.writeHead(200, {
+    ...securityHeaders(),
+    ...(res._kerodexCorsHeaders || {}),
     "content-type": "text/event-stream",
     "cache-control": "no-cache",
-    connection: "keep-alive",
-    "access-control-allow-origin": "*"
+    connection: "keep-alive"
   });
 
   res.write(`: admin event stream connected for ${admin.role}\n\n`);
@@ -426,13 +558,52 @@ function getAuthUser(req) {
   return user;
 }
 
+function authTokenFromRequest(req) {
+  const auth = req.headers.authorization || "";
+  return auth.startsWith("Bearer ") ? auth.slice(7) : "";
+}
+
+async function invalidateSession(token) {
+  if (!token) return;
+  sessions.delete(token);
+  if (typeof store.deleteAuthSession === "function") {
+    await store.deleteAuthSession(token);
+  }
+}
+
 function createSession(user) {
   const token = makeToken();
   user.lastLoginAt = new Date().toISOString();
   user.lastActiveAt = user.lastLoginAt;
   sessions.set(token, user.id);
   saveRuntimeUser(user).catch(() => {});
+  if (typeof store.saveAuthSession === "function") {
+    store.saveAuthSession({
+      token,
+      userId: user.id,
+      createdAt: user.lastLoginAt,
+      lastSeenAt: user.lastActiveAt
+    }).catch(() => {});
+  }
   return { token, user: publicUser(user) };
+}
+
+async function hydrateRuntimeAuthFromStore() {
+  if (typeof store.getUsers === "function") {
+    const storedUsers = await store.getUsers();
+    storedUsers.forEach((user) => {
+      if (user?.email) users.set(normalize(user.email), user);
+    });
+  }
+  if (typeof store.getActiveAuthSessions === "function") {
+    const storedSessions = await store.getActiveAuthSessions();
+    storedSessions.forEach((session) => {
+      if (session?.token && session?.userId) sessions.set(session.token, session.userId);
+    });
+    if (storedSessions.length) {
+      console.log(`[Kerodex] Restored ${storedSessions.length} auth session${storedSessions.length === 1 ? "" : "s"} from storage.`);
+    }
+  }
 }
 
 async function findUserByEmail(email) {
@@ -613,14 +784,14 @@ function uploadPurposeConfig(purpose = "listing-photo", contentType = "", docume
   const isTitleDocument = purpose === "title-document" || normalizedDocumentType === "title";
   const isMaintenanceDocument = purpose === "maintenance-document" || purpose === "document" || normalizedDocumentType === "maintenance";
   const isPresence = purpose === "vehicle-presence" || purpose === "verification-photo";
-  const isImage = /^image\/(jpeg|png|webp|gif)$/i.test(contentType || "");
+  const isImage = /^image\/(jpeg|png|webp)$/i.test(contentType || "");
   const isPdf = /^application\/pdf$/i.test(contentType || "");
   if (isProfilePicture) {
     return {
       prefix: "profile-pictures",
       allowed: isImage,
       maxBytes: 5 * 1024 * 1024,
-      message: "Only JPEG, PNG, WebP, and GIF images can be uploaded as profile pictures."
+      message: "Only JPEG, PNG, and WebP images can be uploaded as profile pictures."
     };
   }
   if (isPresence) {
@@ -628,7 +799,7 @@ function uploadPurposeConfig(purpose = "listing-photo", contentType = "", docume
       prefix: "verification",
       allowed: isImage,
       maxBytes: 10 * 1024 * 1024,
-      message: "Only JPEG, PNG, WebP, and GIF images can be uploaded as verification photos."
+      message: "Only JPEG, PNG, and WebP images can be uploaded as verification photos."
     };
   }
   if (isTitleDocument) {
@@ -636,7 +807,7 @@ function uploadPurposeConfig(purpose = "listing-photo", contentType = "", docume
       prefix: "title-documents",
       allowed: isImage || isPdf,
       maxBytes: 15 * 1024 * 1024,
-      message: "Only PDF, JPEG, PNG, WebP, and GIF files can be uploaded as title documents."
+      message: "Only PDF, JPEG, PNG, and WebP files can be uploaded as title documents."
     };
   }
   if (isMaintenanceDocument) {
@@ -644,15 +815,28 @@ function uploadPurposeConfig(purpose = "listing-photo", contentType = "", docume
       prefix: "maintenance-records",
       allowed: isImage || isPdf,
       maxBytes: 15 * 1024 * 1024,
-      message: "Only PDF, JPEG, PNG, WebP, and GIF files can be uploaded as maintenance records."
+      message: "Only PDF, JPEG, PNG, and WebP files can be uploaded as maintenance records."
     };
   }
   return {
     prefix: "listings",
     allowed: isImage,
     maxBytes: 10 * 1024 * 1024,
-    message: "Only JPEG, PNG, WebP, and GIF images can be uploaded."
+    message: "Only JPEG, PNG, and WebP images can be uploaded."
   };
+}
+
+function extensionMatchesContentType(extension, contentType) {
+  const ext = String(extension || "").toLowerCase();
+  const type = String(contentType || "").toLowerCase();
+  const allowed = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".webp": "image/webp",
+    ".pdf": "application/pdf"
+  };
+  return Boolean(allowed[ext] && allowed[ext] === type);
 }
 
 function createS3PresignedPut({ fileName, contentType, fileSize = 0, user, purpose = "listing-photo", documentType = "" }) {
@@ -680,7 +864,12 @@ function createS3PresignedPut({ fileName, contentType, fileSize = 0, user, purpo
     throw error;
   }
 
-  const extension = path.extname(String(fileName || "")).toLowerCase().replace(/[^a-z0-9.]/g, "") || ".jpg";
+  const extension = path.extname(String(fileName || "")).toLowerCase().replace(/[^a-z0-9.]/g, "") || "";
+  if (!extension || !extensionMatchesContentType(extension, contentType)) {
+    const error = new Error("File extension does not match the uploaded file type.");
+    error.status = 400;
+    throw error;
+  }
   const safeUserId = String(user.id || "user").replace(/[^a-zA-Z0-9_-]/g, "");
   const key = `${uploadPurpose.prefix}/${safeUserId}/${Date.now()}-${crypto.randomBytes(8).toString("hex")}${extension}`;
   const host = `${config.bucket}.s3.${config.region}.amazonaws.com`;
@@ -1011,6 +1200,63 @@ function sendAuthSetup(res, provider) {
 
 function normalize(value) {
   return String(value || "").trim().toLowerCase();
+}
+
+function normalizeLimitedString(value, maxLength = 500) {
+  return String(value ?? "").replace(/\s+/g, " ").trim().slice(0, maxLength);
+}
+
+function isValidEmail(value) {
+  const email = normalize(value);
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) && email.length <= 254;
+}
+
+function validateStrongPassword(password) {
+  const value = String(password || "");
+  const lower = value.toLowerCase();
+  const weak = new Set(["password", "password1", "password123", "12345678", "123456789", "qwerty123", "kerodex123"]);
+  if (value.length < 8) return "Use a password with at least 8 characters.";
+  if (value.length > 128) return "Use a password shorter than 128 characters.";
+  if (weak.has(lower)) return "Choose a stronger password.";
+  if (!/[a-z]/i.test(value) || !/\d/.test(value)) return "Use at least one letter and one number in your password.";
+  return "";
+}
+
+function hashPassword(password, salt = crypto.randomBytes(16).toString("base64url")) {
+  const iterations = 210000;
+  const hash = crypto.pbkdf2Sync(String(password), salt, iterations, 32, "sha256").toString("base64url");
+  return `pbkdf2_sha256$${iterations}$${salt}$${hash}`;
+}
+
+function verifyPassword(storedPassword, candidate) {
+  const stored = String(storedPassword || "");
+  const password = String(candidate || "");
+  if (stored.startsWith("pbkdf2_sha256$")) {
+    const [, iterationsRaw, salt, expected] = stored.split("$");
+    const iterations = Number(iterationsRaw);
+    if (!iterations || !salt || !expected) return false;
+    const actual = crypto.pbkdf2Sync(password, salt, iterations, 32, "sha256").toString("base64url");
+    if (actual.length !== expected.length) return false;
+    return crypto.timingSafeEqual(Buffer.from(actual), Buffer.from(expected));
+  }
+  return stored === password;
+}
+
+function recordFailedLogin(req, email) {
+  const key = `${requestIp(req)}:${normalize(email)}`;
+  const now = Date.now();
+  const existing = failedLoginAttempts.get(key);
+  const next = !existing || existing.resetAt <= now
+    ? { count: 1, resetAt: now + 15 * 60 * 1000 }
+    : { count: existing.count + 1, resetAt: existing.resetAt };
+  failedLoginAttempts.set(key, next);
+  if (next.count >= 5) {
+    console.warn(`[Kerodex security] repeated_failed_login ip=${requestIp(req)} email=${normalize(email)} count=${next.count}`);
+  }
+}
+
+function clearFailedLogin(req, email) {
+  failedLoginAttempts.delete(`${requestIp(req)}:${normalize(email)}`);
 }
 
 async function filterListings(params) {
@@ -1431,10 +1677,6 @@ async function processVehiclePresenceNow(listingId) {
     listing,
     ocrText
   });
-  if ((ocrError || !ocrText.trim()) && result.status === vehiclePresence.PRESENCE_STATUSES.VERIFIED) {
-    result.status = vehiclePresence.PRESENCE_STATUSES.MANUAL_REVIEW;
-    result.reason = `OCR could not confirm VIN/code text${ocrError ? `: ${ocrError}` : "."}`;
-  }
   const verified = result.status === vehiclePresence.PRESENCE_STATUSES.VERIFIED;
   const now = new Date().toISOString();
   const next = {
@@ -1684,7 +1926,7 @@ function createConversationRecord({ listing, buyer, message }) {
   const sellerId = listing.userId || listing.seller?.id || `seller_${listing.id}`;
   const id = `conv_${buyer.id}_${listing.id}`;
   const now = new Date().toISOString();
-  const content = String(message || "Hi, is this still available?").trim();
+  const content = normalizeLimitedString(message || "Hi, is this still available?", 2000);
   const scan = scanMessageForScamRisk(content);
   return {
     id,
@@ -1764,13 +2006,14 @@ function appendConversationMessage(conversation, user, content) {
   if (!currentIsBuyer && !currentIsSeller) return null;
   const now = new Date().toISOString();
   const receiverId = currentIsBuyer ? conversation.sellerId : conversation.buyerId;
-  const scan = scanMessageForScamRisk(content);
+  const cleanContent = normalizeLimitedString(content, 2000);
+  const scan = scanMessageForScamRisk(cleanContent);
   const message = {
     id: `msg_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`,
     senderId: user.id,
     receiverId,
     vehicleId: conversation.listingId,
-    content: String(content || "").trim(),
+    content: cleanContent,
     createdAt: now,
     scamRiskScore: scan.scamRiskScore,
     scamFlags: scan.scamFlags,
@@ -1864,7 +2107,7 @@ function serveStatic(req, res, pathname) {
           sendJson(res, 404, { error: "Not found" });
           return;
         }
-        res.writeHead(200, { "content-type": mimeTypes[".html"] });
+        res.writeHead(200, responseHeaders(res, { "content-type": mimeTypes[".html"] }));
         res.end(fallback);
       });
       return;
@@ -1873,21 +2116,20 @@ function serveStatic(req, res, pathname) {
     const ext = path.extname(filePath);
     const isHtml = ext === ".html";
     const cacheControl = isHtml ? "no-store" : "public, max-age=31536000, immutable";
-    res.writeHead(200, {
+    res.writeHead(200, responseHeaders(res, {
       "content-type": mimeTypes[ext] || "application/octet-stream",
       "cache-control": cacheControl
-    });
+    }));
     res.end(file);
   });
 }
 
 function handleEvents(req, res) {
-  res.writeHead(200, {
+  res.writeHead(200, responseHeaders(res, {
     "content-type": "text/event-stream",
     "cache-control": "no-cache",
-    connection: "keep-alive",
-    "access-control-allow-origin": "*"
-  });
+    connection: "keep-alive"
+  }));
 
   const send = async () => {
     const listings = await store.getListings();
@@ -1906,14 +2148,30 @@ function handleEvents(req, res) {
 
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
+  const origin = String(req.headers.origin || "");
+  res._kerodexCorsHeaders = corsHeaders(req);
+
+  if (origin && !isAllowedCorsOrigin(origin)) {
+    console.warn(`[Kerodex security] blocked_cors origin=${origin} path=${url.pathname}`);
+    sendJson(res, 403, { success: false, error: "Origin is not allowed." });
+    return;
+  }
 
   if (req.method === "OPTIONS") {
-    res.writeHead(204, {
-      "access-control-allow-origin": "*",
+    res.writeHead(204, responseHeaders(res, {
       "access-control-allow-methods": "GET,POST,PATCH,OPTIONS",
-      "access-control-allow-headers": "content-type,authorization"
-    });
+      "access-control-allow-headers": "content-type,authorization,x-kerodex-session",
+      "access-control-max-age": "600"
+    }));
     res.end();
+    return;
+  }
+
+  if (!applyRateLimit(req, res, url.pathname)) return;
+
+  const contentLength = Number(req.headers["content-length"] || 0);
+  if (contentLength > JSON_BODY_LIMIT_BYTES && url.pathname.startsWith("/api/")) {
+    sendJson(res, 413, { success: false, error: "Request body is too large." });
     return;
   }
 
@@ -1934,7 +2192,7 @@ const server = http.createServer((req, res) => {
           ok: false,
           kind: store.kind,
           databaseStatus: "unreachable",
-          error: error.message
+          error: IS_PRODUCTION ? "Database health check failed." : error.message
         },
         timestamp: new Date().toISOString()
       }));
@@ -2259,17 +2517,30 @@ const server = http.createServer((req, res) => {
         redirect(res, `/?auth=success&token=${encodeURIComponent(session.token)}&user=${encodeURIComponent(JSON.stringify(session.user))}`);
       })
       .catch((error) => {
-        redirect(res, `/?auth=error&message=${encodeURIComponent(error.message || "Authentication failed.")}`);
+        const message = error.code === "oauth_account_missing"
+          ? "No account exists for that Google or Microsoft sign-in yet. Create an account first, then connect this sign-in method."
+          : "Authentication failed. Please try again.";
+        console.warn(`[Kerodex security] oauth_callback_failed provider=${provider} ${error.message}`);
+        redirect(res, `/?auth=error&message=${encodeURIComponent(message)}`);
       });
     return;
   }
 
   if (url.pathname === "/api/auth/session" && req.method === "GET") {
-    const auth = req.headers.authorization || "";
-    const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+    const token = authTokenFromRequest(req);
     const userId = sessions.get(token);
     const user = Array.from(users.values()).find((item) => item.id === userId);
     sendJson(res, user ? 200 : 401, user ? { user: publicUser(user) } : { error: "Not signed in" });
+    return;
+  }
+
+  if (url.pathname === "/api/auth/logout" && req.method === "POST") {
+    invalidateSession(authTokenFromRequest(req))
+      .then(() => sendJson(res, 200, { success: true, message: "Signed out." }))
+      .catch((error) => {
+        console.warn(`[Kerodex security] logout_failed ${error.message}`);
+        sendJson(res, 200, { success: true, message: "Signed out." });
+      });
     return;
   }
 
@@ -2279,12 +2550,17 @@ const server = http.createServer((req, res) => {
         const mode = body.mode === "create" ? "create" : "signin";
         const email = normalize(body.email);
         const password = String(body.password || "");
-        const name = String(body.name || "").trim();
+        const name = normalizeLimitedString(body.name, 80);
         const termsAccepted = body.termsAccepted === true;
         const privacyAccepted = body.privacyAccepted === true;
 
-        if (!email || !email.includes("@") || password.length < 6) {
-          sendJson(res, 400, { error: "Use a valid email and a password with at least 6 characters." });
+        if (!isValidEmail(email)) {
+          sendJson(res, 400, { error: "Use a valid email address." });
+          return;
+        }
+        const passwordError = validateStrongPassword(password);
+        if (passwordError && mode === "create") {
+          sendJson(res, 400, { error: passwordError });
           return;
         }
 
@@ -2311,7 +2587,7 @@ const server = http.createServer((req, res) => {
             onboardingCompleted: false,
             favoriteBrands: [],
             preferredVehicleTypes: [],
-            password,
+            password: hashPassword(password),
             provider: "email",
             emailVerified: false,
             phoneVerified: false,
@@ -2344,9 +2620,15 @@ const server = http.createServer((req, res) => {
           return;
         }
 
-        if (!existing || existing.password !== password) {
+        if (!existing || !verifyPassword(existing.password, password)) {
+          recordFailedLogin(req, email);
           sendJson(res, 401, { error: "Email or password is incorrect." });
           return;
+        }
+        clearFailedLogin(req, email);
+        if (existing.password && !String(existing.password).startsWith("pbkdf2_sha256$")) {
+          existing.password = hashPassword(password);
+          await saveRuntimeUser(existing);
         }
 
         if (!existing.emailVerified) {
@@ -2437,11 +2719,12 @@ const server = http.createServer((req, res) => {
           sendJson(res, 400, { error: "Reset code is invalid or expired." });
           return;
         }
-        if (password.length < 6) {
-          sendJson(res, 400, { error: "Use a password with at least 6 characters." });
+        const passwordError = validateStrongPassword(password);
+        if (passwordError) {
+          sendJson(res, 400, { error: passwordError });
           return;
         }
-        user.password = password;
+        user.password = hashPassword(password);
         user.emailVerified = true;
         await saveRuntimeUser(user);
         passwordResets.delete(email);
@@ -2569,15 +2852,16 @@ const server = http.createServer((req, res) => {
           sendJson(res, 400, { error: "This account uses Google or Microsoft sign-in. Password changes are not available for this sign-in method." });
           return;
         }
-        if (storedUser.password !== currentPassword) {
+        if (!verifyPassword(storedUser.password, currentPassword)) {
           sendJson(res, 401, { error: "Current password is incorrect." });
           return;
         }
-        if (newPassword.length < 6) {
-          sendJson(res, 400, { error: "Use a new password with at least 6 characters." });
+        const passwordError = validateStrongPassword(newPassword);
+        if (passwordError) {
+          sendJson(res, 400, { error: passwordError });
           return;
         }
-        storedUser.password = newPassword;
+        storedUser.password = hashPassword(newPassword);
         storedUser.updatedAt = new Date().toISOString();
         const savedUser = await saveRuntimeUser(storedUser);
         sendJson(res, 200, { message: "Password updated.", user: publicUser(savedUser) });
@@ -2841,6 +3125,21 @@ const server = http.createServer((req, res) => {
           sendJson(res, 400, { error: "Add year, make, model, and asking price before publishing locally." });
           return;
         }
+        const price = Number(body.price);
+        const mileage = Number(body.mileage || 0);
+        const year = Number(body.year);
+        if (!Number.isFinite(price) || price < 500 || price > 500000) {
+          sendJson(res, 400, { error: "Enter a realistic asking price." });
+          return;
+        }
+        if (!Number.isFinite(mileage) || mileage < 0 || mileage > 1000000) {
+          sendJson(res, 400, { error: "Enter a realistic mileage." });
+          return;
+        }
+        if (!Number.isFinite(year) || year < 1981 || year > new Date().getFullYear() + 1) {
+          sendJson(res, 400, { error: "Enter a valid vehicle year." });
+          return;
+        }
         const cleanVin = normalizeVin(body.vin);
         if (!/^[A-HJ-NPR-Z0-9]{17}$/.test(cleanVin)) {
           sendJson(res, 400, { error: "A valid 17-character VIN is required for vehicle presence verification." });
@@ -2862,6 +3161,11 @@ const server = http.createServer((req, res) => {
         const listing = createSellerListing({
           ...body,
           vin: cleanVin,
+          title: normalizeLimitedString(body.title, 120),
+          description: normalizeLimitedString(body.description, 5000),
+          make: normalizeLimitedString(body.make, 40),
+          model: normalizeLimitedString(body.model, 60),
+          trim: normalizeLimitedString(body.trim, 80),
           vehiclePresenceCode: presenceRecord.code,
           vehiclePresenceGeneratedAt: presenceRecord.generatedAt,
           vehiclePresenceExpiresAt: presenceRecord.expiresAt,
@@ -2913,6 +3217,27 @@ const server = http.createServer((req, res) => {
           sendJson(res, 403, { error: "You can only update your own listings." });
           return;
         }
+        if (body.price !== undefined) {
+          const price = Number(body.price);
+          if (!Number.isFinite(price) || price < 500 || price > 500000) {
+            sendJson(res, 400, { error: "Enter a realistic asking price." });
+            return;
+          }
+        }
+        if (body.mileage !== undefined) {
+          const mileage = Number(body.mileage);
+          if (!Number.isFinite(mileage) || mileage < 0 || mileage > 1000000) {
+            sendJson(res, 400, { error: "Enter a realistic mileage." });
+            return;
+          }
+        }
+        if (body.year !== undefined) {
+          const year = Number(body.year);
+          if (!Number.isFinite(year) || year < 1981 || year > new Date().getFullYear() + 1) {
+            sendJson(res, 400, { error: "Enter a valid vehicle year." });
+            return;
+          }
+        }
         const updated = {
           ...existing,
           ...body,
@@ -2922,6 +3247,9 @@ const server = http.createServer((req, res) => {
           vin: body.vin !== undefined ? marketCheck.normalizeVin(body.vin) : existing.vin,
           updatedAt: new Date().toISOString()
         };
+        ["title", "description", "make", "model", "trim", "location"].forEach((field) => {
+          if (updated[field] !== undefined) updated[field] = normalizeLimitedString(updated[field], field === "description" ? 5000 : 120);
+        });
         if (Array.isArray(updated.maintenanceRecords)) {
           updated.maintenanceRecords = updated.maintenanceRecords.map((record) => normalizeListingDocument(record, "maintenance"));
           updated.maintenanceNames = updated.maintenanceRecords.map((record) => record.name).filter(Boolean);
@@ -3295,11 +3623,25 @@ const server = http.createServer((req, res) => {
   serveStatic(req, res, url.pathname);
 });
 
+function auditEnvironment() {
+  const warnings = [];
+  if (IS_PRODUCTION && !process.env.ADMIN_ACCESS_CODE) warnings.push("ADMIN_ACCESS_CODE is required in production.");
+  if (!process.env.ANALYTICS_IP_SALT) warnings.push("ANALYTICS_IP_SALT is not set; using local default for IP hashing.");
+  if (!process.env.DATABASE_URL && process.env.REQUIRE_DATABASE === "true") warnings.push("DATABASE_URL is required because REQUIRE_DATABASE=true.");
+  if (!process.env.RESEND_API_KEY || !process.env.AUTH_EMAIL_FROM) warnings.push("Resend email is not fully configured.");
+  if (!process.env.S3_BUCKET || !process.env.AWS_REGION || !process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) warnings.push("S3 uploads are not fully configured.");
+  if (!process.env.MARKETCHECK_API_KEY) warnings.push("MarketCheck API key is not configured.");
+  if (!process.env.OPENAI_API_KEY && !process.env.VEHICLE_PRESENCE_OPENAI_API_KEY) warnings.push("Vehicle presence AI verification is not configured; photo challenges will require manual review.");
+  warnings.forEach((warning) => console.warn(`[Kerodex security] env_warning ${warning}`));
+}
+
 async function startServer() {
   try {
+    auditEnvironment();
     const database = typeof store.connect === "function"
       ? await store.connect()
       : { ok: true, kind: store.kind, databaseStatus: store.kind };
+    await hydrateRuntimeAuthFromStore();
     if (store.kind === "postgres") {
       console.log(`[Kerodex] Postgres connected successfully (${database.databaseStatus}).`);
     } else {
