@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { useAuth } from '@/hooks/useAuth';
-import { ConversationRecord, createReport, listConversations, markSafetyNoticeSeen, sendConversationMessage } from '@/lib/api';
-import { Button, Input, toast } from '@blinkdotnew/ui';
+import { ConversationRecord, createReport, listConversations, markConversationRead, markSafetyNoticeSeen, sendConversationMessage } from '@/lib/api';
+import { Button, Input, toast } from '@/components/ui';
 import {
   MessageSquare, Send, Car, ArrowLeft, Search, User, Circle, AlertTriangle, Flag, X,
 } from 'lucide-react';
@@ -178,6 +178,23 @@ export function MessagesPage() {
   }, [threads, selectedThread]);
 
   const threadMessages = selectedThread?.messages ?? [];
+
+  useEffect(() => {
+    if (!selectedThread?.conversationId || !selectedThread.unread || !user) return;
+    let cancelled = false;
+    markConversationRead(selectedThread.conversationId)
+      .then((conversation) => {
+        if (cancelled) return;
+        queryClient.setQueryData<ConversationRecord[]>(['conversations', user.id], (current = []) =>
+          current.map((item) => item.id === conversation.id ? conversation : item)
+        );
+        queryClient.invalidateQueries({ queryKey: ['nav-unread-conversations', user.id] });
+      })
+      .catch(() => {
+        // A read receipt should not interrupt the conversation view.
+      });
+    return () => { cancelled = true; };
+  }, [queryClient, selectedThread?.conversationId, selectedThread?.unread, user]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {

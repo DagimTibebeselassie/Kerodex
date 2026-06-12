@@ -1,6 +1,6 @@
 import { createRouter, createRoute, createRootRoute, RouterProvider, useRouterState } from '@tanstack/react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster, BlinkUIProvider, toast } from '@blinkdotnew/ui';
+import { Toaster, KerodexUIProvider, toast } from '@/components/ui';
 import { useEffect } from 'react';
 import { Layout } from './components/Layout';
 import { HomePage } from './pages/Home';
@@ -18,8 +18,9 @@ import { PrivacyPage, TermsPage } from './pages/LegalPage';
 import { SafetyCenterPage } from './pages/SafetyCenter';
 import { AboutPage } from './pages/About';
 import { ContactPage, HowItWorksPage, SignInPage } from './pages/MarketingPages';
+import { OnboardingPage } from './pages/Onboarding';
 import { RouteSeo } from './components/Seo';
-import { consumeAuthRedirect, trackAnalyticsEvent } from './lib/api';
+import { consumeAuthRedirect, currentUser, trackAnalyticsEvent } from './lib/api';
 
 const queryClient = new QueryClient();
 
@@ -111,6 +112,12 @@ const signInRoute = createRoute({
   component: SignInPage,
 });
 
+const onboardingRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/onboarding',
+  component: OnboardingPage,
+});
+
 const savedRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/saved',
@@ -195,6 +202,7 @@ const routeTree = rootRoute.addChildren([
   dashboardRoute,
   sellRoute,
   signInRoute,
+  onboardingRoute,
   savedRoute,
   messagesRoute,
   profileRoute,
@@ -218,12 +226,26 @@ declare module '@tanstack/react-router' {
 }
 
 function AuthRedirectHandler() {
+  const navigate = router.navigate;
   useEffect(() => {
     const result = consumeAuthRedirect();
     if (!result) return;
-    if (result.ok) toast.success('Signed in successfully.');
-    else toast.error(result.error || 'Authentication failed.');
-  }, []);
+    if (result.ok) {
+      const user = currentUser();
+      toast.success('Signed in successfully.');
+      if (user && !user.onboardingCompleted) {
+        navigate({ to: '/onboarding' });
+      }
+    }
+    else {
+      toast.error(result.error || 'Authentication failed.');
+      if ((result.error || '').toLowerCase().includes('no account found')) {
+        window.setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('kerodex:auth-required', { detail: { tab: 'signup' } }));
+        }, 250);
+      }
+    }
+  }, [navigate]);
 
   return null;
 }
@@ -231,10 +253,10 @@ function AuthRedirectHandler() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BlinkUIProvider theme="minimal">
+      <KerodexUIProvider theme="minimal">
         <AuthRedirectHandler />
         <RouterProvider router={router} />
-      </BlinkUIProvider>
+      </KerodexUIProvider>
     </QueryClientProvider>
   );
 }

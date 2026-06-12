@@ -4,7 +4,7 @@ import { Vehicle } from '@/types';
 import { savedVehicleIds, saveVehicleLocal } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { Heart, MapPin, Gauge, BadgeCheck, Star } from 'lucide-react';
-import { toast } from '@blinkdotnew/ui';
+import { toast } from '@/components/ui';
 
 interface VehicleCardProps {
   vehicle: Vehicle;

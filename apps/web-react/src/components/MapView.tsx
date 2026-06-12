@@ -4,7 +4,7 @@ import { Heart, X, MapPin, Gauge, BadgeCheck, CheckCircle2 } from 'lucide-react'
 import { Vehicle } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
 import { saveVehicleLocal, savedVehicleIds } from '@/lib/api';
-import { toast } from '@blinkdotnew/ui';
+import { toast } from '@/components/ui';
 
 interface MapViewProps {
   vehicles?: Vehicle[];

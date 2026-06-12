@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { clearSession, currentUser, KerodexUser } from '@/lib/api';
+import { clearSession, currentUser, KerodexUser, refreshCurrentUser } from '@/lib/api';
 
 export function useAuth() {
   const [user, setUser] = useState<KerodexUser | null>(() => currentUser());
@@ -13,6 +13,13 @@ export function useAuth() {
     window.addEventListener('storage', refresh);
     window.addEventListener('kerodex:auth-changed', refresh);
     refresh();
+    if (currentUser()) {
+      setIsLoading(true);
+      refreshCurrentUser()
+        .then(setUser)
+        .catch(() => setUser(currentUser()))
+        .finally(() => setIsLoading(false));
+    }
 
     return () => {
       window.removeEventListener('storage', refresh);

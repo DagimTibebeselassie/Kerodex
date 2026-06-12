@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useAuth } from '@/hooks/useAuth';
-import { Button, Input } from '@blinkdotnew/ui';
+import { Button, Input } from '@/components/ui';
 import { listMyVehicles } from '@/lib/api';
 import {
   Plus, BarChart3, MessageSquare, Car, ExternalLink, Eye, Heart,

@@ -18,7 +18,7 @@ import {
   DialogTitle,
   Separator,
   toast,
-} from '@blinkdotnew/ui';
+} from '@/components/ui';
 import {
   MapPin, Gauge, Calendar, Shield, MessageSquare, Heart, Share2, ArrowLeft,
   CheckCircle2, ChevronDown, ChevronUp, ZoomIn, Car, User, AlertTriangle, X,

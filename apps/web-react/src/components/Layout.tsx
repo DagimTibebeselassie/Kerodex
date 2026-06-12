@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, Outlet, useNavigate } from '@tanstack/react-router';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
-import { Button, Input } from '@blinkdotnew/ui';
+import { Button, Input } from '@/components/ui';
+import { listConversations } from '@/lib/api';
+import { KERODEX_VERSION } from '@/version';
 import {
   Search,
   Heart,
@@ -19,7 +22,7 @@ import {
 } from 'lucide-react';
 import { AuthModal } from './AuthModal';
 
-// ── Dark mode helper ─────────────────────────────────────────────────────────
+// â”€â”€ Dark mode helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function useDarkMode() {
   const [isDark, setIsDark] = useState(() =>
     document.documentElement.classList.contains('dark')
@@ -58,6 +61,15 @@ export function Layout() {
   const { user, isLoading, logout } = useAuth();
   const navigate = useNavigate();
   const { isDark, toggle: toggleDark } = useDarkMode();
+  const firstName = (user?.name || user?.email || '').trim().split(/\s|@/)[0] || 'there';
+  const userInitial = firstName.charAt(0).toUpperCase() || 'U';
+  const { data: conversations = [] } = useQuery({
+    queryKey: ['nav-unread-conversations', user?.id],
+    queryFn: async () => user ? listConversations() : [],
+    enabled: !!user,
+    refetchInterval: 20000,
+  });
+  const unreadCount = conversations.reduce((sum, conversation) => sum + Number(conversation.unread || 0), 0);
 
   const [authOpen, setAuthOpen] = useState(false);
   const [authTab, setAuthTab] = useState<'login' | 'signup'>('login');
@@ -113,7 +125,7 @@ export function Layout() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      {/* â”€â”€ Header â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <header
         id="main-header"
         data-auth-state={user ? 'signed-in' : 'signed-out'}
@@ -161,7 +173,7 @@ export function Layout() {
           {!isLoading && (
             <>
               {user ? (
-                /* ── Signed In ── */
+                /* â”€â”€ Signed In â”€â”€ */
                 <>
                   <Link to="/saved" aria-label="Saved cars">
                     <button className="hidden md:flex h-9 w-9 items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
@@ -169,8 +181,13 @@ export function Layout() {
                     </button>
                   </Link>
                   <Link to="/messages" aria-label="Messages">
-                    <button className="hidden md:flex h-9 w-9 items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                    <button className="relative hidden md:flex h-9 w-9 items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
                       <MessageSquare className="h-4 w-4" />
+                      {unreadCount > 0 && (
+                        <span className="absolute right-1 top-1 min-w-[16px] h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold leading-4 text-center">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      )}
                     </button>
                   </Link>
 
@@ -182,9 +199,11 @@ export function Layout() {
                       aria-expanded={userMenuOpen}
                       className="flex items-center gap-1.5 h-9 px-2 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors text-[12px] font-medium"
                     >
-                      <User className="h-4 w-4" />
+                      <span className="h-5 w-5 rounded-full bg-foreground text-background inline-flex items-center justify-center overflow-hidden text-[10px] font-bold">
+                        {user.avatarUrl ? <img src={user.avatarUrl} alt="" className="h-full w-full object-cover" /> : userInitial}
+                      </span>
                       <span className="hidden lg:block max-w-[100px] truncate">
-                        {user.email?.split('@')[0] ?? 'Account'}
+                        Hi, {firstName}
                       </span>
                       <ChevronDown className={`h-3 w-3 transition-transform ${userMenuOpen ? 'rotate-180' : ''}`} />
                     </button>
@@ -240,7 +259,7 @@ export function Layout() {
                   </Link>
                 </>
               ) : (
-                /* ── Signed Out ── */
+                /* â”€â”€ Signed Out â”€â”€ */
                 <>
                   <Link to="/cars" className="hidden md:block">
                     <button className="h-9 px-3 text-[12px] text-muted-foreground hover:text-foreground transition-colors font-medium">
@@ -276,7 +295,7 @@ export function Layout() {
         </div>
       </header>
 
-      {/* ── Mobile Menu Drawer ───────────────────────────────────────────────── */}
+      {/* â”€â”€ Mobile Menu Drawer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {mobileMenuOpen && (
         <div
           className="fixed inset-0 z-40 md:hidden"
@@ -336,7 +355,15 @@ export function Layout() {
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center gap-3 px-3 py-2.5 text-[13px] font-medium hover:bg-muted transition-colors"
               >
-                <MessageSquare className="h-4 w-4 text-muted-foreground" /> Messages
+                <span className="relative">
+                  <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -right-2 -top-2 min-w-[16px] h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold leading-4 text-center">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </span>
+                Messages
               </Link>
               <Link
                 to="/profile"
@@ -381,12 +408,12 @@ export function Layout() {
         </nav>
       </div>
 
-      {/* ── Main Content ─────────────────────────────────────────────────────── */}
+      {/* â”€â”€ Main Content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <main className="flex-1">
         <Outlet />
       </main>
 
-      {/* ── Footer ──────────────────────────────────────────────────────────── */}
+      {/* â”€â”€ Footer â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <footer className="py-12 px-4 md:px-6 border-t border-border mt-20">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-10 md:gap-12">
           <div className="md:col-span-2">
@@ -475,7 +502,7 @@ export function Layout() {
         </div>
 
         <div className="max-w-7xl mx-auto pt-10 mt-10 border-t border-border flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <p className="text-[11px] text-muted-foreground">© 2026 Kerodex Auto. All rights reserved.</p>
+          <p className="text-[11px] text-muted-foreground">© 2026 Kerodex Auto. All rights reserved. Kerodex v{KERODEX_VERSION}</p>
           <button
             onClick={toggleDark}
             className="flex items-center gap-2 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
@@ -486,7 +513,7 @@ export function Layout() {
         </div>
       </footer>
 
-      {/* ── Auth Modal ───────────────────────────────────────────────────────── */}
+      {/* â”€â”€ Auth Modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <AuthModal
         isOpen={authOpen}
         onClose={() => setAuthOpen(false)}

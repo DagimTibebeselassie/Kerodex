@@ -676,7 +676,15 @@ export function SearchPage() {
 
   useEffect(() => {
     let alive = true;
-    listVehicles()
+    listVehicles({
+      q: urlParams.get('q') || undefined,
+      make: urlParams.get('make') || undefined,
+      model: urlParams.get('model') || undefined,
+      radius: urlParams.get('radius') || (nearbyMode ? '100' : undefined),
+      lat: hasInitialLocation ? initialLat : undefined,
+      lng: hasInitialLocation ? initialLng : undefined,
+      sort: urlParams.get('sort') || undefined,
+    })
       .then((items) => {
         if (alive) {
           setRemoteVehicles(items);

@@ -2,8 +2,8 @@ import { useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { useAuth } from '@/hooks/useAuth';
-import { createUploadUrl, listMyVehicles, savedVehicleIds, updateProfileAvatar } from '@/lib/api';
-import { Button, Input, toast } from '@blinkdotnew/ui';
+import { createUploadUrl, listMyVehicles, savedVehicleIds, updateAccountPassword, updateAccountProfile, updateProfileAvatar } from '@/lib/api';
+import { Button, Input, toast } from '@/components/ui';
 import {
   User, BadgeCheck, Shield, Bell, Lock, Car, Heart, MessageSquare,
   LayoutDashboard, ChevronRight, CheckCircle2, AlertCircle, Edit3,
@@ -64,7 +64,11 @@ export function ProfilePage() {
 
   const [editMode, setEditMode] = useState(false);
   const [displayName, setDisplayName] = useState('');
+  const [username, setUsername] = useState('');
+  const [birthday, setBirthday] = useState('');
   const [phone, setPhone] = useState('');
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
   const { data: myVehicles } = useQuery({
@@ -87,9 +91,12 @@ export function ProfilePage() {
 
   const updateMutation = useMutation({
     mutationFn: async () => {
-      const stored = JSON.parse(localStorage.getItem('kerodex-user') || '{}');
-      localStorage.setItem('kerodex-user', JSON.stringify({ ...stored, name: displayName }));
-      window.dispatchEvent(new CustomEvent('kerodex:auth-changed'));
+      return updateAccountProfile({
+        name: displayName,
+        username,
+        birthday,
+        phone,
+      });
     },
     onSuccess: () => {
       toast.success('Profile updated.');
@@ -120,8 +127,26 @@ export function ProfilePage() {
     onError: (error) => toast.error(error instanceof Error ? error.message : 'Failed to update profile picture.'),
   });
 
+  const passwordMutation = useMutation({
+    mutationFn: async () => updateAccountPassword(currentPassword, newPassword),
+    onSuccess: () => {
+      toast.success('Password updated.');
+      setCurrentPassword('');
+      setNewPassword('');
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : 'Unable to update password.'),
+  });
+
   const handleAvatarFile = (file?: File) => {
     if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Profile picture must be under 5 MB.');
+      return;
+    }
     avatarMutation.mutate(file);
   };
 
@@ -194,28 +219,50 @@ export function ProfilePage() {
         {/* Info */}
         <div className="flex-1 min-w-0">
           {editMode ? (
-            <div className="flex items-center gap-3">
-              <Input
-                value={displayName || user.name || ''}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Display name"
-                className="h-9 text-[14px] max-w-xs"
-                autoFocus
-              />
-              <Button
-                onClick={() => updateMutation.mutate()}
-                disabled={updateMutation.isPending}
-                className="h-9 px-4 text-[11px] font-bold uppercase tracking-wider"
-              >
-                Save
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={() => setEditMode(false)}
-                className="h-9 px-3 text-[11px]"
-              >
-                Cancel
-              </Button>
+            <div className="space-y-3 max-w-xl">
+              <div className="grid sm:grid-cols-2 gap-3">
+                <Input
+                  value={displayName || user.name || ''}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="Display name"
+                  className="h-9 text-[14px]"
+                  autoFocus
+                />
+                <Input
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                  placeholder="Username"
+                  className="h-9 text-[14px]"
+                />
+                <Input
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="Phone number"
+                  className="h-9 text-[14px]"
+                />
+                <Input
+                  type="date"
+                  value={birthday}
+                  onChange={(e) => setBirthday(e.target.value)}
+                  className="h-9 text-[14px]"
+                />
+              </div>
+              <div className="flex items-center gap-3">
+                <Button
+                  onClick={() => updateMutation.mutate()}
+                  disabled={updateMutation.isPending}
+                  className="h-9 px-4 text-[11px] font-bold uppercase tracking-wider"
+                >
+                  {updateMutation.isPending ? 'Saving...' : 'Save'}
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={() => setEditMode(false)}
+                  className="h-9 px-3 text-[11px]"
+                >
+                  Cancel
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="flex items-center gap-3">
@@ -223,7 +270,13 @@ export function ProfilePage() {
                 {user.name || user.email?.split('@')[0] || 'My Account'}
               </h1>
               <button
-                onClick={() => { setEditMode(true); setDisplayName(user.name || ''); }}
+                onClick={() => {
+                  setEditMode(true);
+                  setDisplayName(user.name || '');
+                  setUsername(user.username || '');
+                  setBirthday(user.birthday || '');
+                  setPhone(user.phone || '');
+                }}
                 className="text-muted-foreground hover:text-foreground transition-colors"
               >
                 <Edit3 className="h-4 w-4" />
@@ -314,7 +367,7 @@ export function ProfilePage() {
               <Phone className="h-4 w-4 text-muted-foreground" />
               <div>
                 <div className="text-[11px] text-muted-foreground uppercase tracking-widest font-bold">Phone</div>
-                <div className="text-[13px] font-medium text-muted-foreground">Not added</div>
+                <div className="text-[13px] font-medium text-muted-foreground">{user.phone || 'Not added'}</div>
               </div>
             </div>
             <Link to="/verify">
@@ -322,6 +375,40 @@ export function ProfilePage() {
                 Add Phone
               </Button>
             </Link>
+          </div>
+
+          <div className="p-4 border border-border bg-card">
+            <div className="flex items-center gap-3 mb-4">
+              <Lock className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <div className="text-[11px] text-muted-foreground uppercase tracking-widest font-bold">Password</div>
+                <div className="text-[13px] font-medium">Update password for email sign-in</div>
+              </div>
+            </div>
+            <div className="grid sm:grid-cols-[1fr_1fr_auto] gap-3">
+              <Input
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                placeholder="Current password"
+                className="h-9 text-[13px]"
+              />
+              <Input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="New password"
+                className="h-9 text-[13px]"
+              />
+              <Button
+                variant="outline"
+                disabled={passwordMutation.isPending || !currentPassword || newPassword.length < 6}
+                onClick={() => passwordMutation.mutate()}
+                className="h-9 px-4 text-[11px] font-bold uppercase tracking-wider"
+              >
+                {passwordMutation.isPending ? 'Saving...' : 'Update'}
+              </Button>
+            </div>
           </div>
         </div>
       </section>

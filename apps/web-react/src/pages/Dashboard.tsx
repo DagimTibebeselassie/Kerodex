@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Vehicle } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
 import { listConversations, listMyVehicles } from '@/lib/api';
-import { Button, Stat, StatGroup, DataTable, EmptyState } from '@blinkdotnew/ui';
+import { Button, Stat, StatGroup, DataTable, EmptyState } from '@/components/ui';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { Plus, BarChart3, MessageSquare, Car, ExternalLink } from 'lucide-react';
 

@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { listVehicles, savedVehicleIds } from '@/lib/api';
 import { Link } from '@tanstack/react-router';
 import { useNavigate } from '@tanstack/react-router';
-import { Button, EmptyState } from '@blinkdotnew/ui';
+import { Button, EmptyState } from '@/components/ui';
 import { Heart, MapPin, Gauge, ArrowRight } from 'lucide-react';
 
 export function SavedVehiclesPage() {

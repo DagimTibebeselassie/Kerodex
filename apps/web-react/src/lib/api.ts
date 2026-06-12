@@ -18,6 +18,15 @@ export interface KerodexUser {
   identityVerifiedAt?: string;
   avatarUrl?: string;
   avatarS3Key?: string;
+  firstName?: string;
+  lastName?: string;
+  username?: string;
+  birthday?: string;
+  phone?: string;
+  favoriteBrands?: string[];
+  preferredVehicleTypes?: string[];
+  onboardingCompleted?: boolean;
+  onboardingCompletedAt?: string;
   lastActiveAt?: string;
   termsVersion?: string;
   acceptedTermsAt?: string;
@@ -279,6 +288,41 @@ export async function updateProfileAvatar(avatarUrl: string, avatarS3Key: string
   return body;
 }
 
+export async function refreshCurrentUser() {
+  const body = await request<{ user: KerodexUser }>('/api/me', {
+    headers: authHeaders(),
+  });
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (token) saveSession({ token, user: body.user });
+  return body.user;
+}
+
+export async function checkUsername(username: string) {
+  const search = new URLSearchParams({ username });
+  return request<{ username: string; available: boolean; error?: string }>(`/api/users/check-username?${search}`, {
+    headers: authHeaders(),
+  });
+}
+
+export async function updateAccountProfile(payload: Partial<KerodexUser> & { name?: string }) {
+  const body = await request<{ message: string; user: KerodexUser }>('/api/me', {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (token) saveSession({ token, user: body.user });
+  return body;
+}
+
+export async function updateAccountPassword(currentPassword: string, newPassword: string) {
+  return request<{ message: string; user: KerodexUser }>('/api/me/password', {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+}
+
 export async function createReport(payload: {
   reportedUserId?: string;
   listingId?: string;
@@ -479,6 +523,14 @@ export async function sendConversationMessage(conversationId: string, content: s
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({ content }),
+  });
+  return body.conversation;
+}
+
+export async function markConversationRead(conversationId: string) {
+  const body = await request<{ conversation: ConversationRecord }>(`/api/conversations/${encodeURIComponent(conversationId)}/read`, {
+    method: 'POST',
+    headers: authHeaders(),
   });
   return body.conversation;
 }

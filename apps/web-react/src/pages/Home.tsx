@@ -5,7 +5,7 @@ import { MAKES, getModelsForMake } from '@/data/makes-models';
 import { VehicleCard } from '@/components/VehicleCard';
 import { MapView } from '@/components/MapView';
 import { listVehicles } from '@/lib/api';
-import { Button } from '@blinkdotnew/ui';
+import { Button } from '@/components/ui';
 import {
   Search,
   X,

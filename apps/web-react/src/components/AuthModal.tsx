@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
-import { emailAuth, requestPasswordReset, resetPassword, socialAuth, verifyEmail } from '@/lib/api';
-import { Button, Input } from '@blinkdotnew/ui';
+import { useNavigate } from '@tanstack/react-router';
+import { currentUser, emailAuth, requestPasswordReset, resetPassword, socialAuth, verifyEmail } from '@/lib/api';
+import { Button, Input } from '@/components/ui';
 import { X, Loader2, Mail, Lock, User } from 'lucide-react';
 
 interface AuthModalProps {
@@ -29,6 +30,7 @@ function MicrosoftLogo() {
 }
 
 export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalProps) {
+  const navigate = useNavigate();
   const [tab, setTab] = useState<'login' | 'signup'>(defaultTab);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -67,6 +69,14 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
 
   if (!isOpen) return null;
 
+  const closeAfterAuth = () => {
+    const user = currentUser();
+    onClose();
+    if (user && !user.onboardingCompleted) {
+      window.setTimeout(() => navigate({ to: '/onboarding' }), 120);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -74,14 +84,14 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
     try {
       if (pendingEmail) {
         await verifyEmail(pendingEmail, verificationCode);
-        onClose();
+        closeAfterAuth();
         return;
       }
 
       if (resetMode) {
         if (resetEmail && resetCode) {
           await resetPassword(resetEmail, resetCode, newPassword);
-          onClose();
+          closeAfterAuth();
           return;
         }
         const result = await requestPasswordReset(email);
@@ -111,7 +121,7 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
         setVerificationCode(result.devCode || '');
         return;
       }
-      onClose();
+      closeAfterAuth();
     } catch (err: any) {
       setError(err.message || 'Authentication failed');
     } finally {

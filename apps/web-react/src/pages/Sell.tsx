@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import { Button, toast } from '@blinkdotnew/ui';
+import { Button, toast } from '@/components/ui';
 import { MAKES, MAKES_MODELS } from '@/data/makes-models';
 import { createUploadUrl, createVehicle, createVehiclePresenceCode, getVehicle, updateVehicle } from '@/lib/api';
 import {

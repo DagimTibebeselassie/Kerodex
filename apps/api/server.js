@@ -351,10 +351,16 @@ function sendAdminEvents(req, res) {
 }
 
 function publicUser(user) {
+  const avatarS3Key = user.avatarS3Key || user.profileImageS3Key || "";
   return {
     id: user.id,
     email: user.email,
     name: user.name,
+    firstName: user.firstName || "",
+    lastName: user.lastName || "",
+    username: user.username || "",
+    birthday: user.birthday || "",
+    phone: user.phone || "",
     provider: user.provider,
     emailVerified: Boolean(user.emailVerified),
     phoneVerified: Boolean(user.phoneVerified),
@@ -364,8 +370,12 @@ function publicUser(user) {
     personaReferenceId: user.personaReferenceId || "",
     identityVerificationStatus: user.identityVerificationStatus || "unverified",
     identityVerifiedAt: user.identityVerifiedAt || "",
-    avatarUrl: user.avatarUrl || user.profileImageUrl || "",
-    avatarS3Key: user.avatarS3Key || user.profileImageS3Key || "",
+    avatarUrl: avatarS3Key ? createS3PresignedGet(avatarS3Key, 3600) || user.avatarUrl || user.profileImageUrl || "" : user.avatarUrl || user.profileImageUrl || "",
+    avatarS3Key,
+    favoriteBrands: Array.isArray(user.favoriteBrands) ? user.favoriteBrands : [],
+    preferredVehicleTypes: Array.isArray(user.preferredVehicleTypes) ? user.preferredVehicleTypes : [],
+    onboardingCompleted: Boolean(user.onboardingCompleted),
+    onboardingCompletedAt: user.onboardingCompletedAt || "",
     lastActiveAt: user.lastActiveAt || user.lastLoginAt || "",
     termsVersion: user.termsVersion || "",
     acceptedTermsAt: user.acceptedTermsAt || "",
@@ -443,9 +453,27 @@ async function findUserByEmail(email) {
 async function saveRuntimeUser(user) {
   if (!user?.email) return user;
   user.email = normalize(user.email);
+  Array.from(users.entries()).forEach(([email, cached]) => {
+    if (cached?.id === user.id && email !== user.email) users.delete(email);
+  });
   users.set(user.email, user);
   if (typeof store.saveUser === "function") await store.saveUser(user);
   return user;
+}
+
+function normalizeUsername(value) {
+  return String(value || "").trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
+}
+
+async function isUsernameAvailable(username, currentUserId = "") {
+  const normalized = normalizeUsername(username);
+  if (!normalized || normalized.length < 3) return false;
+  const runtimeUsers = Array.from(users.values());
+  const storedUsers = typeof store.getUsers === "function" ? await store.getUsers() : [];
+  return [...runtimeUsers, ...storedUsers].every((user) => {
+    if (!user?.username) return true;
+    return normalizeUsername(user.username) !== normalized || user.id === currentUserId;
+  });
 }
 
 function nextUserId() {
@@ -496,7 +524,9 @@ async function upsertOAuthUser(provider, profile, legalConsent = {}) {
   }
 
   if (!legalConsent.termsAccepted || !legalConsent.privacyAccepted) {
-    throw new Error("Agree to the Terms of Service and Privacy Policy before creating an account.");
+    const error = new Error(`No account found with this ${provider === "microsoft" ? "Microsoft" : "Google"} login. Please create an account first.`);
+    error.code = "oauth_account_missing";
+    throw error;
   }
 
   const acceptedAt = new Date().toISOString();
@@ -505,6 +535,13 @@ async function upsertOAuthUser(provider, profile, legalConsent = {}) {
     id: nextUserId(),
     email,
     name: profile.name || email.split("@")[0],
+    firstName: String(profile.name || "").trim().split(/\s+/)[0] || "",
+    lastName: String(profile.name || "").trim().split(/\s+/).slice(1).join(" "),
+    username: "",
+    birthday: "",
+    onboardingCompleted: false,
+    favoriteBrands: [],
+    preferredVehicleTypes: [],
     password: null,
     provider,
     emailVerified: Boolean(profile.emailVerified),
@@ -1658,7 +1695,8 @@ function createConversationRecord({ listing, buyer, message }) {
     sellerName: listing.seller?.name || "Kerodex seller",
     vehicleTitle: listing.title || `${listing.year} ${listing.make} ${listing.model}`,
     lastMessage: content,
-    unread: 0,
+    unread: 1,
+    unreadByUser: { [sellerId]: 1 },
     scamRiskScore: scan.scamRiskScore,
     scamFlags: scan.scamFlags,
     moderationStatus: scan.moderationStatus,
@@ -1712,6 +1750,7 @@ function decorateConversation(conversation, user) {
     partnerId,
     partnerName,
     partnerLastActiveAt,
+    unread: Number(conversation.unreadByUser?.[user.id] ?? conversation.unread ?? 0),
     scamRiskScore: visibleRiskScore,
     scamFlags: visibleScamFlags,
     moderationStatus: visibleModerationStatus,
@@ -1743,11 +1782,17 @@ function appendConversationMessage(conversation, user, content) {
   const nextModerationStatus = scan.moderationStatus === "high_risk" || conversation.moderationStatus === "high_risk"
     ? "high_risk"
     : (scan.moderationStatus === "needs_review" || conversation.moderationStatus === "needs_review" ? "needs_review" : "clear");
+  const unreadByUser = {
+    ...(conversation.unreadByUser || {}),
+    [receiverId]: Number(conversation.unreadByUser?.[receiverId] || 0) + 1
+  };
+  const unreadTotal = Object.values(unreadByUser).reduce((sum, value) => sum + Number(value || 0), 0);
   return {
     ...conversation,
     messages: [...(conversation.messages || []), message],
     lastMessage: message.content,
-    unread: Number(conversation.unread || 0) + 1,
+    unread: unreadTotal,
+    unreadByUser,
     scamRiskScore: nextRiskScore,
     scamFlags: nextFlags,
     moderationStatus: nextModerationStatus,
@@ -2259,6 +2304,13 @@ const server = http.createServer((req, res) => {
             id: nextUserId(),
             email,
             name: name || email.split("@")[0],
+            firstName: String(name || "").trim().split(/\s+/)[0] || "",
+            lastName: String(name || "").trim().split(/\s+/).slice(1).join(" "),
+            username: "",
+            birthday: "",
+            onboardingCompleted: false,
+            favoriteBrands: [],
+            preferredVehicleTypes: [],
             password,
             provider: "email",
             emailVerified: false,
@@ -2425,6 +2477,112 @@ const server = http.createServer((req, res) => {
         listings: listingsWithReadableImages(listings.filter((listing) => listing.userId === user.id))
       }))
       .catch((error) => sendJson(res, 500, { error: "Unable to load your listings.", detail: error.message }));
+    return;
+  }
+
+  if (url.pathname === "/api/users/check-username" && req.method === "GET") {
+    const username = normalizeUsername(url.searchParams.get("username"));
+    const user = getAuthUser(req);
+    if (!username || username.length < 3) {
+      sendJson(res, 400, { available: false, error: "Username must be at least 3 characters." });
+      return;
+    }
+    isUsernameAvailable(username, user?.id || "")
+      .then((available) => sendJson(res, 200, { username, available }))
+      .catch((error) => sendJson(res, 500, { available: false, error: error.message || "Unable to check username." }));
+    return;
+  }
+
+  if (url.pathname === "/api/me" && req.method === "GET") {
+    const user = getAuthUser(req);
+    if (!user) {
+      sendJson(res, 401, { error: "Sign in to view your account." });
+      return;
+    }
+    sendJson(res, 200, { user: publicUser(user) });
+    return;
+  }
+
+  if (url.pathname === "/api/me" && req.method === "PATCH") {
+    const user = getAuthUser(req);
+    if (!user) {
+      sendJson(res, 401, { error: "Sign in to update your account." });
+      return;
+    }
+    readJson(req)
+      .then(async (body) => {
+        const next = { ...user };
+        const firstName = String(body.firstName ?? "").trim();
+        const lastName = String(body.lastName ?? "").trim();
+        const name = String(body.name ?? "").trim();
+        const username = body.username !== undefined ? normalizeUsername(body.username) : normalizeUsername(next.username);
+        const phone = body.phone !== undefined ? normalizePhone(body.phone) || String(body.phone || "").trim() : next.phone || "";
+        const birthday = String(body.birthday ?? next.birthday ?? "").trim();
+
+        if (body.username !== undefined) {
+          if (username.length < 3) {
+            sendJson(res, 400, { error: "Username must be at least 3 characters." });
+            return;
+          }
+          if (!(await isUsernameAvailable(username, user.id))) {
+            sendJson(res, 409, { error: "That username is already taken." });
+            return;
+          }
+          next.username = username;
+        }
+        if (body.firstName !== undefined) next.firstName = firstName;
+        if (body.lastName !== undefined) next.lastName = lastName;
+        if (body.name !== undefined || body.firstName !== undefined || body.lastName !== undefined) {
+          next.name = name || [firstName || next.firstName, lastName || next.lastName].filter(Boolean).join(" ") || next.name;
+        }
+        if (body.phone !== undefined) next.phone = phone;
+        if (body.birthday !== undefined) next.birthday = birthday;
+        if (Array.isArray(body.favoriteBrands)) next.favoriteBrands = body.favoriteBrands.map(String).slice(0, 12);
+        if (Array.isArray(body.preferredVehicleTypes)) next.preferredVehicleTypes = body.preferredVehicleTypes.map(String).slice(0, 12);
+        if (body.onboardingCompleted === true) {
+          if (!next.firstName || !next.username || !next.birthday) {
+            sendJson(res, 400, { error: "Complete your name, username, and birthday before finishing onboarding." });
+            return;
+          }
+          next.onboardingCompleted = true;
+          next.onboardingCompletedAt = new Date().toISOString();
+        }
+        await saveRuntimeUser(next);
+        sendJson(res, 200, { message: "Account updated.", user: publicUser(next) });
+      })
+      .catch((error) => sendJson(res, 400, { error: error.message || "Unable to update account." }));
+    return;
+  }
+
+  if (url.pathname === "/api/me/password" && req.method === "PATCH") {
+    const user = getAuthUser(req);
+    if (!user) {
+      sendJson(res, 401, { error: "Sign in to change your password." });
+      return;
+    }
+    readJson(req)
+      .then(async (body) => {
+        const currentPassword = String(body.currentPassword || "");
+        const newPassword = String(body.newPassword || "");
+        const storedUser = await store.getUserByEmail(user.email);
+        if (!storedUser || !storedUser.password) {
+          sendJson(res, 400, { error: "This account uses Google or Microsoft sign-in. Password changes are not available for this sign-in method." });
+          return;
+        }
+        if (storedUser.password !== currentPassword) {
+          sendJson(res, 401, { error: "Current password is incorrect." });
+          return;
+        }
+        if (newPassword.length < 6) {
+          sendJson(res, 400, { error: "Use a new password with at least 6 characters." });
+          return;
+        }
+        storedUser.password = newPassword;
+        storedUser.updatedAt = new Date().toISOString();
+        const savedUser = await saveRuntimeUser(storedUser);
+        sendJson(res, 200, { message: "Password updated.", user: publicUser(savedUser) });
+      })
+      .catch((error) => sendJson(res, 400, { error: "Unable to change password.", detail: error.message }));
     return;
   }
 
@@ -3053,6 +3211,37 @@ const server = http.createServer((req, res) => {
         sendJson(res, 201, { conversation: decorateConversation(created, user) });
       })
       .catch((error) => sendJson(res, 400, { error: "Unable to start conversation.", detail: error.message }));
+    return;
+  }
+
+  const conversationReadMatch = url.pathname.match(/^\/api\/conversations\/([^/]+)\/read$/);
+  if (conversationReadMatch && req.method === "POST") {
+    const user = getAuthUser(req);
+    if (!user) {
+      sendJson(res, 401, { error: "Sign in to update conversations." });
+      return;
+    }
+    const conversationId = decodeURIComponent(conversationReadMatch[1]);
+    Promise.resolve()
+      .then(async () => {
+        const conversation = typeof store.getConversationById === "function"
+          ? await store.getConversationById(conversationId)
+          : (await store.getConversations()).find((item) => item.id === conversationId);
+        if (!conversation) {
+          sendJson(res, 404, { error: "Conversation not found." });
+          return;
+        }
+        if (conversation.buyerId !== user.id && conversation.sellerId !== user.id) {
+          sendJson(res, 403, { error: "You cannot update this conversation." });
+          return;
+        }
+        const unreadByUser = { ...(conversation.unreadByUser || {}) };
+        unreadByUser[user.id] = 0;
+        const unread = Object.values(unreadByUser).reduce((sum, value) => sum + Number(value || 0), 0);
+        const saved = await store.createConversation({ ...conversation, unread, unreadByUser });
+        sendJson(res, 200, { conversation: decorateConversation(saved, user) });
+      })
+      .catch((error) => sendJson(res, 500, { error: "Unable to mark conversation read.", detail: error.message }));
     return;
   }
 

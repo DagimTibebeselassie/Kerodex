@@ -707,7 +707,7 @@ class PostgresStore {
     await this.pool.query(
       `INSERT INTO user_records (id, email, payload, updated_at)
        VALUES ($1, $2, $3, NOW())
-       ON CONFLICT (email) DO UPDATE SET payload = EXCLUDED.payload, updated_at = NOW()`,
+       ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, payload = EXCLUDED.payload, updated_at = NOW()`,
       [user.id, String(user.email || "").toLowerCase(), user]
     );
     return user;
