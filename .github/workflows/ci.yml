@@ -89,7 +89,11 @@ jobs:
 
       - name: Ensure local env files are not tracked
         run: |
-          ! git ls-files | grep -E '(^|/)\.env(\.|$)'
+          tracked_env_files="$(git ls-files | grep -E '(^|/)\.env(\.|$)' | grep -vE '(^|/)\.env\.example$' || true)"
+          if [ -n "$tracked_env_files" ]; then
+            echo "$tracked_env_files"
+            exit 1
+          fi
 
       - name: Scan for committed secret patterns
         run: |
@@ -97,10 +101,11 @@ jobs:
             --exclude-dir=.git \
             --exclude-dir=node_modules \
             --exclude-dir=dist \
+            --exclude=.env.example \
             --exclude=README.md \
             --exclude=SECURITY.md \
             --exclude=security-hardening-report.md \
-            -E 'AKIA[0-9A-Z]{16}|GOCSPX-|sk-[A-Za-z0-9_-]{20,}|AWS_SECRET_ACCESS_KEY=|DATABASE_URL=postgres|JWT_SECRET=|OPENAI_API_KEY=' .
+            -E 'AKIA[0-9A-Z]{16}|GOCSPX-|sk-[A-Za-z0-9_-]{20,}|AWS_SECRET_ACCESS_KEY=[^[:space:]]+|DATABASE_URL=postgres[^[:space:]]+|JWT_SECRET=[^[:space:]]+|OPENAI_API_KEY=[^[:space:]]+' .
 
   dependency-review:
     name: Dependency review

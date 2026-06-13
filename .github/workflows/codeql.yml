@@ -1,14 +1,11 @@
 name: CodeQL
 
 on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
-  schedule:
-    - cron: "23 8 * * 1"
+  workflow_dispatch:
+
+# CodeQL upload requires GitHub code scanning to be enabled for the repository.
+# Keep this workflow available for manual runs after code scanning is enabled,
+# but avoid failing every push/PR while the repository setting is off.
 
 permissions:
   security-events: write
