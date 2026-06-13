@@ -23,6 +23,14 @@ const DRIVE_OPTIONS = ['FWD', 'RWD', 'AWD', '4WD'] as const;
 const TITLE_OPTIONS = ['Clean Title', 'Lienholder / Loan', 'Rebuilt Title', 'Salvage Title', 'Not Sure'] as const;
 const ACCIDENT_OPTIONS = ['No accidents reported', 'Minor accident disclosed', 'Major accident disclosed', 'Not sure'] as const;
 const OWNER_OPTIONS = ['1 previous owner', '2 previous owners', '3+ previous owners', 'Not sure'] as const;
+const SELLER_CHECKLIST = [
+  ['accurateInformation', 'The VIN, mileage, price, title, accident history, and condition are accurate.'],
+  ['authorizedToList', 'I own this vehicle or am authorized by the owner to list it.'],
+  ['privateParty', 'This is a private-party listing, not dealership inventory.'],
+  ['vinMatchesVehicle', 'The VIN entered matches the vehicle and uploaded verification photo.'],
+  ['noProhibitedContent', 'This listing does not include prohibited, stolen, or misleading content.'],
+  ['safeCommunication', 'I agree to keep buyer communication safe and accurate on Kerodex.'],
+] as const;
 const FEATURE_OPTIONS = [
   'Apple CarPlay', 'Android Auto', 'Backup Camera', 'Blind Spot Monitoring',
   'Bluetooth', 'Heated Seats', 'Ventilated Seats', 'Leather Interior',
@@ -97,9 +105,9 @@ const vehicleSchema = z.object({
   transmission: z.string().optional(),
   fuelType:     z.string().optional(),
   driveType:    z.string().optional(),
-  titleStatus:  z.string().optional(),
-  accidentHistory: z.string().optional(),
-  ownerCount:   z.string().optional(),
+  titleStatus:  z.string().min(1, 'Title status is required'),
+  accidentHistory: z.string().min(1, 'Accident history is required'),
+  ownerCount:   z.string().min(1, 'Ownership history is required'),
   description:  z.string().min(20, 'Description must be at least 20 characters'),
 });
 type VehicleForm = z.infer<typeof vehicleSchema>;
@@ -243,6 +251,7 @@ export function SellPage() {
   const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
   const [editLoading, setEditLoading] = useState(false);
   const [accuracyCertified, setAccuracyCertified] = useState(false);
+  const [sellerChecklist, setSellerChecklist] = useState<Record<string, boolean>>({});
   const [presenceCode, setPresenceCode] = useState<{ token: string; code: string; generatedAt: string; expiresAt: string } | null>(null);
   const [presencePhoto, setPresencePhoto] = useState<{ url: string; s3Key: string; name: string } | null>(null);
   const [presenceLoading, setPresenceLoading] = useState(false);
@@ -423,6 +432,7 @@ export function SellPage() {
           notes: event.notes || '',
         })));
         setAccuracyCertified(Boolean(vehicle.listingAccuracyCertifiedAt || vehicle.listingAccuracyCertified));
+        setSellerChecklist(vehicle.sellerChecklist || {});
       })
       .catch((error) => {
         if (!active) return;
@@ -713,6 +723,11 @@ export function SellPage() {
       toast.error('Certify that the listing is accurate before publishing.');
       return;
     }
+    const checklistComplete = SELLER_CHECKLIST.every(([key]) => sellerChecklist[key]);
+    if (!checklistComplete) {
+      toast.error('Complete the seller checklist before publishing.');
+      return;
+    }
     if (!editId && (!presenceCode?.token || !presenceCode.code || !presencePhoto?.url)) {
       toast.error('Complete the vehicle presence photo challenge before submitting.');
       return;
@@ -787,6 +802,7 @@ export function SellPage() {
         listingAccuracyCertified: true,
         listingAccuracyVersion: 'v1.0',
         listingAccuracyCertifiedAt: new Date().toISOString(),
+        sellerChecklist,
       };
 
       const vehicle = editId
@@ -1494,6 +1510,21 @@ export function SellPage() {
               Add at least one photo before publishing.
             </div>
           )}
+          <div className="border border-border bg-muted/20 rounded-md p-3 space-y-2">
+            <div className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Seller Checklist</div>
+            {SELLER_CHECKLIST.map(([key, label]) => (
+              <label key={key} className="flex items-start gap-3 text-[12px] text-muted-foreground leading-relaxed">
+                <input
+                  type="checkbox"
+                  checked={Boolean(sellerChecklist[key])}
+                  onChange={(e) => setSellerChecklist((prev) => ({ ...prev, [key]: e.target.checked }))}
+                  className="mt-0.5 h-4 w-4 accent-foreground"
+                  required
+                />
+                <span>{label}</span>
+              </label>
+            ))}
+          </div>
           <label className="flex items-start gap-3 p-3 border border-border bg-muted/20 rounded-md text-[12px] text-muted-foreground leading-relaxed">
             <input
               type="checkbox"
@@ -1509,7 +1540,7 @@ export function SellPage() {
           </label>
           <Button
             type="submit"
-            disabled={isSubmitting || images.length === 0 || !accuracyCertified}
+            disabled={isSubmitting || images.length === 0 || !accuracyCertified || !SELLER_CHECKLIST.every(([key]) => sellerChecklist[key])}
             className="w-full h-12 text-[13px] font-bold uppercase tracking-widest"
           >
             {isSubmitting
@@ -1518,7 +1549,7 @@ export function SellPage() {
           </Button>
           <p className="text-[11px] text-muted-foreground text-center">
             By listing, you agree to Kerodex's <a href="/terms" className="underline underline-offset-2">Terms of Service</a>.
-            Your listing will be live immediately.
+            Your listing becomes public after vehicle presence verification or review.
           </p>
         </div>
       </form>

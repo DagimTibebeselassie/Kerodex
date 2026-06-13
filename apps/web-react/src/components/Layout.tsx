@@ -479,6 +479,21 @@ export function Layout() {
                 </Link>
               </li>
               <li>
+                <Link to="/support" className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">
+                  Support
+                </Link>
+              </li>
+              <li>
+                <Link to="/prohibited-listings" className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">
+                  Prohibited Listings
+                </Link>
+              </li>
+              <li>
+                <Link to="/dealer-policy" className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">
+                  Dealer Policy
+                </Link>
+              </li>
+              <li>
                 <Link to="/terms" className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">
                   Terms
                 </Link>

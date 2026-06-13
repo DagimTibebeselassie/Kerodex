@@ -59,12 +59,27 @@ const REPORT_CATEGORIES = new Set([
   "fake_listing",
   "stolen_photos",
   "vin_mismatch",
+  "title_issue",
+  "misleading_price",
+  "dealer_or_commercial_listing",
+  "prohibited_item",
   "unsafe_behavior",
   "spam",
   "payment_request",
   "harassment",
   "other"
 ]);
+const REQUIRED_TITLE_STATUSES = new Set(["Clean Title", "Lienholder / Loan", "Rebuilt Title", "Salvage Title", "Lien Reported", "Not Sure"]);
+const REQUIRED_ACCIDENT_OPTIONS = new Set(["No accidents reported", "Minor accident disclosed", "Major accident disclosed", "Not sure"]);
+const REQUIRED_OWNER_OPTIONS = new Set(["One previous owner", "Two previous owners", "Three or more owners", "1 previous owner", "2 previous owners", "3+ previous owners", "Not sure"]);
+const SELLER_CHECKLIST_KEYS = [
+  "accurateInformation",
+  "authorizedToList",
+  "privateParty",
+  "vinMatchesVehicle",
+  "noProhibitedContent",
+  "safeCommunication"
+];
 
 if (typeof store.setRuntimeUserProvider === "function") {
   store.setRuntimeUserProvider(() => Array.from(users.values()).map(adminRuntimeUser));
@@ -387,6 +402,32 @@ async function trackEvent(req, eventType, user = null, metadata = {}) {
     return await store.trackEvent(eventFromRequest(req, eventType, user, metadata));
   } catch (error) {
     console.warn(`[Kerodex] Unable to track event ${eventType}: ${error.message}`);
+    return null;
+  }
+}
+
+async function auditMarketplaceAction(req, actionType, targetType, targetId, actor = null, details = {}) {
+  if (typeof store.saveAuditLog !== "function") return null;
+  try {
+    const log = {
+      id: `audit_${Date.now().toString(36)}_${crypto.randomBytes(4).toString("hex")}`,
+      timestamp: new Date().toISOString(),
+      adminAccount: actor?.email || actor?.id || "system",
+      actionType,
+      targetType,
+      targetId: normalizeLimitedString(targetId, 120),
+      previousValue: details.previousValue ?? null,
+      newValue: details.newValue ?? null,
+      notes: normalizeLimitedString(details.notes || "", 1000),
+      actorId: actor?.id || "",
+      actorType: details.actorType || (actor ? "user" : "system"),
+      ipHash: crypto.createHash("sha256").update(`${requestIp(req)}:${process.env.ANALYTICS_IP_SALT || "kerodex-local"}`).digest("hex").slice(0, 24),
+      metadata: details.metadata || {},
+      immutable: true
+    };
+    return await store.saveAuditLog(log);
+  } catch (error) {
+    console.warn(`[Kerodex] Unable to write audit log ${actionType}: ${error.message}`);
     return null;
   }
 }
@@ -1174,6 +1215,47 @@ async function sendCodeEmail({ email, code, subject, heading, intro, reason, fal
   };
 }
 
+async function sendTransactionalEmail({ to, subject, heading, body, actionUrl = "", actionLabel = "Open Kerodex" }) {
+  const email = normalizeLimitedString(to, 254);
+  if (!isValidEmail(email) || !subject || !body) return { sent: false, skipped: true };
+  if (!process.env.RESEND_API_KEY || !process.env.AUTH_EMAIL_FROM) return { sent: false, skipped: true };
+  const button = actionUrl
+    ? `<p style="margin:24px 0 0;"><a href="${actionUrl}" style="display:inline-block;background:#111827;color:#fff;text-decoration:none;border-radius:6px;padding:10px 14px;font-weight:700;font-size:14px;">${actionLabel}</a></p>`
+    : "";
+  const html = `<!doctype html><html><body style="margin:0;background:#fff;color:#111827;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+    <div style="max-width:600px;margin:0 auto;padding:48px 24px;">
+      <div style="font-weight:800;letter-spacing:-.03em;font-size:26px;margin-bottom:28px;">Kerodex</div>
+      <h1 style="font-size:22px;line-height:1.35;margin:0 0 16px;">${heading}</h1>
+      <p style="font-size:15px;line-height:1.6;color:#374151;margin:0;">${body}</p>
+      ${button}
+      <hr style="border:0;border-top:1px solid #e5e7eb;margin:32px 0 0;" />
+      <p style="font-size:12px;line-height:1.5;color:#6b7280;">Kerodex marketplace notification. If this was unexpected, contact founder@kerodexofficial.com.</p>
+    </div>
+  </body></html>`;
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        from: process.env.AUTH_EMAIL_FROM,
+        to: email,
+        subject,
+        text: `${heading}\n\n${body}${actionUrl ? `\n\n${actionUrl}` : ""}`,
+        html
+      })
+    });
+    if (response.ok) return { sent: true };
+    const detail = await response.text().catch(() => "");
+    console.warn(`[Kerodex transactional email failed] ${detail || response.status}`);
+  } catch (error) {
+    console.warn(`[Kerodex transactional email failed] ${error.message}`);
+  }
+  return { sent: false };
+}
+
 function sendAuthSetup(res, provider) {
   const label = provider === "microsoft" ? "Microsoft" : "Google";
   const expectedEnv = provider === "microsoft"
@@ -1204,6 +1286,62 @@ function normalize(value) {
 
 function normalizeLimitedString(value, maxLength = 500) {
   return String(value ?? "").replace(/\s+/g, " ").trim().slice(0, maxLength);
+}
+
+function sellerChecklistComplete(value = {}) {
+  if (!value || typeof value !== "object") return false;
+  return SELLER_CHECKLIST_KEYS.every((key) => value[key] === true);
+}
+
+function activeListingMatchesVin(listing, vin, excludeId = "") {
+  if (!listing || normalizeVin(listing.vin) !== vin || listing.id === excludeId) return false;
+  const status = String(listing.status || "active");
+  return !["deleted", "removed", "sold", "expired"].includes(status);
+}
+
+async function findActiveListingByVin(vin, excludeId = "") {
+  const listings = await store.getListings();
+  return listings.find((listing) => activeListingMatchesVin(listing, vin, excludeId)) || null;
+}
+
+function validateSellerListingInput(body = {}, { requirePresence = false } = {}) {
+  const errors = [];
+  const price = Number(body.price);
+  const mileage = Number(body.mileage);
+  const year = Number(body.year);
+  const cleanVin = normalizeVin(body.vin);
+  const titleStatus = normalizeLimitedString(body.titleStatus, 80);
+  const accidentHistory = normalizeLimitedString(body.accidentHistory, 80);
+  const ownerCount = normalizeLimitedString(body.ownerCount, 80);
+  const description = normalizeLimitedString(body.description, 5000);
+  const photos = Array.isArray(body.images) ? body.images.filter(Boolean) : [];
+  const uploads = Array.isArray(body.imageUploads) ? body.imageUploads.filter((item) => item?.url || item?.fileUrl) : [];
+
+  if (!normalizeLimitedString(body.make, 40)) errors.push("Make is required.");
+  if (!normalizeLimitedString(body.model, 60)) errors.push("Model is required.");
+  if (!Number.isFinite(year) || year < 1981 || year > new Date().getFullYear() + 1) errors.push("Enter a valid vehicle year.");
+  if (!Number.isFinite(price) || price < 500 || price > 500000) errors.push("Enter a realistic asking price.");
+  if (!Number.isFinite(mileage) || mileage < 0 || mileage > 1000000) errors.push("Enter a realistic mileage.");
+  if (!/^[A-HJ-NPR-Z0-9]{17}$/.test(cleanVin)) errors.push("A valid 17-character VIN is required for vehicle presence verification.");
+  if (!REQUIRED_TITLE_STATUSES.has(titleStatus)) errors.push("Choose a title status before publishing.");
+  if (!REQUIRED_ACCIDENT_OPTIONS.has(accidentHistory)) errors.push("Choose an accident history disclosure before publishing.");
+  if (!REQUIRED_OWNER_OPTIONS.has(ownerCount)) errors.push("Choose an ownership history disclosure before publishing.");
+  if (description.length < 20) errors.push("Add a description with at least 20 characters.");
+  if (photos.length + uploads.length < 1) errors.push("Add at least one vehicle photo before publishing.");
+  if (body.listingAccuracyCertified !== true) errors.push("Certify that this listing is accurate before publishing.");
+  if (!sellerChecklistComplete(body.sellerChecklist)) errors.push("Complete the seller checklist before publishing.");
+  if (requirePresence && (!String(body.vehiclePresencePhotoUrl || "").trim() || !String(body.vehiclePresenceToken || "").trim())) {
+    errors.push("Upload a vehicle presence verification photo before submitting this listing.");
+  }
+
+  return { errors, cleanVin, price, mileage, year, titleStatus, accidentHistory, ownerCount };
+}
+
+function listingNeedsPriceReview(listing) {
+  const marketValue = Number(listing.marketValue || 0);
+  const price = Number(listing.price || 0);
+  if (!marketValue || !price) return false;
+  return price < marketValue * 0.65 || price > marketValue * 1.45;
 }
 
 function isValidEmail(value) {
@@ -1845,6 +1983,10 @@ function createSellerListing(body = {}, user = null) {
   const listingAccuracyCertifiedAt = body.listingAccuracyCertified
     ? String(body.listingAccuracyCertifiedAt || new Date().toISOString())
     : "";
+  const sellerChecklist = SELLER_CHECKLIST_KEYS.reduce((acc, key) => {
+    acc[key] = Boolean(body.sellerChecklist?.[key]);
+    return acc;
+  }, {});
   const presenceCode = String(body.vehiclePresenceCode || body.verification_code || body.verificationCode || "").trim();
   const presenceGeneratedAt = String(body.vehiclePresenceGeneratedAt || body.generated_at || "").trim();
   const presenceExpiresAt = String(body.vehiclePresenceExpiresAt || body.expires_at || "").trim();
@@ -1874,6 +2016,8 @@ function createSellerListing(body = {}, user = null) {
     dealScore: numberFrom(body.dealScore, 75),
     fairValueDelta: numberFrom(body.fairValueDelta, 0),
     status: "pending_verification",
+    expiresAt: String(body.expiresAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()),
+    reviewFlags: [],
     vin: normalizeVin(body.vin),
     titleStatus,
     accidentHistory,
@@ -1910,6 +2054,7 @@ function createSellerListing(body = {}, user = null) {
     listingAccuracyVersion: String(body.listingAccuracyVersion || (body.listingAccuracyCertified ? "v1.0" : "")),
     listingAccuracyCertifiedAt,
     listingAccuracyCertifiedIp: String(body.listingAccuracyCertifiedIp || ""),
+    sellerChecklist,
     badges: [
       "Private seller",
       "Seller draft",
@@ -2069,6 +2214,22 @@ function appendConversationMessage(conversation, user, content) {
     sellerLastActiveAt: currentIsSeller ? now : conversation.sellerLastActiveAt,
     updatedAt: now
   };
+}
+
+async function notifyMessageRecipient(conversation, sender, listing) {
+  const lastMessage = (conversation.messages || [])[conversation.messages.length - 1];
+  const recipientId = lastMessage?.receiverId;
+  if (!recipientId) return;
+  const recipient = runtimeUserById(recipientId) || (typeof store.getUserById === "function" ? await store.getUserById(recipientId) : null);
+  if (!recipient?.email) return;
+  await sendTransactionalEmail({
+    to: recipient.email,
+    subject: `[Kerodex] New message about ${conversation.vehicleTitle || listing?.title || "a vehicle"}`,
+    heading: "You have a new Kerodex message",
+    body: `${sender.name || sender.email || "A Kerodex member"} sent you a message about ${conversation.vehicleTitle || listing?.title || "your vehicle"}. Open Kerodex to reply safely inside the marketplace.`,
+    actionUrl: `${process.env.PUBLIC_SITE_URL || "https://kerodexofficial.com"}/messages`,
+    actionLabel: "Open messages"
+  });
 }
 
 async function decodeVin(vin) {
@@ -2406,14 +2567,45 @@ const server = http.createServer((req, res) => {
     const admin = requireAdmin(req, res, permissionMap[collection]);
     if (!admin) return;
     readJson(req)
-      .then((body) => {
+      .then(async (body) => {
         const action = String(body.action || "");
         const notes = String(body.notes || "").trim();
         const sensitive = new Set(["ban", "unban", "suspend", "unsuspend", "delete", "remove", "restore", "approve", "reject", "request_resubmission", "shadow_ban", "disable_messaging", "disable_listing_creation", "resolve", "warn_user", "escalate", "mark_fraud_confirmed"]);
         if (sensitive.has(action) && notes.length < 5) {
           throw new Error("Admin action reason is required.");
         }
-        return store.applyAdminAction(collection, decodeURIComponent(adminActionMatch[2]), action, admin.email, notes);
+        const id = decodeURIComponent(adminActionMatch[2]);
+        const result = await store.applyAdminAction(collection, id, action, admin.email, notes);
+        if (result && collection === "listings" && ["remove", "restore", "flag", "mark_sold"].includes(action)) {
+          const listing = await store.getListingById(id);
+          const owner = listing?.userId && typeof store.getUserById === "function" ? await store.getUserById(listing.userId) : null;
+          if (owner?.email) {
+            sendTransactionalEmail({
+              to: owner.email,
+              subject: `[Kerodex] Listing ${action.replace(/_/g, " ")}`,
+              heading: "Your Kerodex listing was updated",
+              body: `A Kerodex moderator marked "${listing.title || "your listing"}" as ${action.replace(/_/g, " ")}. Reason: ${notes}`,
+              actionUrl: `${process.env.PUBLIC_SITE_URL || "https://kerodexofficial.com"}/vehicle/${listing.id}`,
+              actionLabel: "View listing"
+            }).catch(() => {});
+          }
+        }
+        if (result && collection === "verifications" && ["approve", "reject", "request_resubmission"].includes(action)) {
+          const listingId = result.item?.listingId;
+          const listing = listingId ? await store.getListingById(listingId) : null;
+          const owner = listing?.userId && typeof store.getUserById === "function" ? await store.getUserById(listing.userId) : null;
+          if (owner?.email) {
+            sendTransactionalEmail({
+              to: owner.email,
+              subject: `[Kerodex] Vehicle verification ${action.replace(/_/g, " ")}`,
+              heading: "Vehicle verification update",
+              body: `Kerodex updated the verification status for "${listing?.title || "your listing"}". Status: ${action.replace(/_/g, " ")}. ${notes}`,
+              actionUrl: `${process.env.PUBLIC_SITE_URL || "https://kerodexofficial.com"}/vehicle/${listing?.id || ""}`,
+              actionLabel: "Open listing"
+            }).catch(() => {});
+          }
+        }
+        return result;
       })
       .then((result) => sendJson(res, result ? 200 : 404, result || { error: "Admin record not found." }))
       .catch((error) => sendJson(res, 400, { error: "Unable to apply admin action.", detail: error.message }));
@@ -3078,14 +3270,24 @@ const server = http.createServer((req, res) => {
     }
     readJson(req)
       .then(async (body) => {
+        const description = normalizeLimitedString(body.description, 1500);
+        const category = String(body.category || "other");
+        if (!REPORT_CATEGORIES.has(category)) {
+          sendJson(res, 400, { error: "Choose a valid report category." });
+          return;
+        }
+        if (description.length < 10) {
+          sendJson(res, 400, { error: "Add at least 10 characters so Kerodex can review the report." });
+          return;
+        }
         const report = createReportRecord({
           reporter: user,
           reportedUserId: String(body.reportedUserId || ""),
           listingId: String(body.listingId || ""),
           messageId: String(body.messageId || ""),
           conversationId: String(body.conversationId || ""),
-          category: String(body.category || "other"),
-          description: String(body.description || ""),
+          category,
+          description,
           source: "user_report"
         });
         await saveReport(report);
@@ -3093,6 +3295,11 @@ const server = http.createServer((req, res) => {
           listingId: report.listingId,
           reportedUserId: report.reportedUserId,
           category: report.category
+        });
+        await auditMarketplaceAction(req, "report.submitted", report.listingId ? "listing" : "user", report.listingId || report.reportedUserId || report.id, user, {
+          newValue: report.status,
+          notes: `Report category: ${report.category}`,
+          metadata: { reportId: report.id, conversationId: report.conversationId, messageId: report.messageId }
         });
         sendJson(res, 201, { report, message: "Report submitted for Kerodex review." });
       })
@@ -3147,32 +3354,18 @@ const server = http.createServer((req, res) => {
     }
     readJson(req)
       .then(async (body) => {
-        if (!String(body.make || "").trim() || !String(body.model || "").trim() || !Number(body.year) || !Number(body.price)) {
-          sendJson(res, 400, { error: "Add year, make, model, and asking price before publishing locally." });
+        const validation = validateSellerListingInput(body, { requirePresence: true });
+        if (validation.errors.length) {
+          sendJson(res, 400, { error: validation.errors[0], errors: validation.errors });
           return;
         }
-        const price = Number(body.price);
-        const mileage = Number(body.mileage || 0);
-        const year = Number(body.year);
-        if (!Number.isFinite(price) || price < 500 || price > 500000) {
-          sendJson(res, 400, { error: "Enter a realistic asking price." });
-          return;
-        }
-        if (!Number.isFinite(mileage) || mileage < 0 || mileage > 1000000) {
-          sendJson(res, 400, { error: "Enter a realistic mileage." });
-          return;
-        }
-        if (!Number.isFinite(year) || year < 1981 || year > new Date().getFullYear() + 1) {
-          sendJson(res, 400, { error: "Enter a valid vehicle year." });
-          return;
-        }
-        const cleanVin = normalizeVin(body.vin);
-        if (!/^[A-HJ-NPR-Z0-9]{17}$/.test(cleanVin)) {
-          sendJson(res, 400, { error: "A valid 17-character VIN is required for vehicle presence verification." });
-          return;
-        }
-        if (body.listingAccuracyCertified !== true) {
-          sendJson(res, 400, { error: "Certify that this listing is accurate before publishing." });
+        const cleanVin = validation.cleanVin;
+        const duplicate = await findActiveListingByVin(cleanVin);
+        if (duplicate) {
+          sendJson(res, 409, {
+            error: "This VIN is already attached to an active Kerodex listing.",
+            code: "duplicate_vin"
+          });
           return;
         }
         const presenceRecord = consumePresenceCode({
@@ -3198,8 +3391,29 @@ const server = http.createServer((req, res) => {
           listingAccuracyCertifiedIp: req.socket.remoteAddress || ""
         }, user);
         const enriched = listing.vin ? await enrichListingWithMarketCheck(listing) : listing;
+        if (listingNeedsPriceReview(enriched)) {
+          enriched.status = "pending_review";
+          enriched.reviewFlags = Array.from(new Set([...(enriched.reviewFlags || []), "price_outlier"]));
+        }
         const created = await store.createListing(enriched);
         await trackEvent(req, "create_listing", user, { listingId: created.id, route: "/sell" });
+        await auditMarketplaceAction(req, "listing.created", "listing", created.id, user, {
+          newValue: created.status,
+          notes: created.reviewFlags?.length ? `Review flags: ${created.reviewFlags.join(", ")}` : "Seller submitted listing.",
+          metadata: { vin: created.vin, price: created.price, mileage: created.mileage }
+        });
+        if (created.reviewFlags?.includes("price_outlier")) {
+          const report = createReportRecord({
+            reporter: null,
+            listingId: created.id,
+            reportedUserId: user.id,
+            category: "misleading_price",
+            description: "Listing price is far outside the saved market valuation and needs moderator review.",
+            source: "system_review",
+            metadata: { price: created.price, marketValue: created.marketValue, reviewFlags: created.reviewFlags }
+          });
+          await saveReport(report);
+        }
         scheduleListingDocumentOcr(created.id);
         scheduleVehiclePresenceVerification(created.id);
         sendJson(res, 201, { listing: listingWithReadableImages(created) });
@@ -3276,6 +3490,25 @@ const server = http.createServer((req, res) => {
         ["title", "description", "make", "model", "trim", "location"].forEach((field) => {
           if (updated[field] !== undefined) updated[field] = normalizeLimitedString(updated[field], field === "description" ? 5000 : 120);
         });
+        const mergedValidation = validateSellerListingInput(updated, { requirePresence: false });
+        if (mergedValidation.errors.length) {
+          sendJson(res, 400, { error: mergedValidation.errors[0], errors: mergedValidation.errors });
+          return;
+        }
+        if (updated.vin) {
+          const duplicate = await findActiveListingByVin(normalizeVin(updated.vin), existing.id);
+          if (duplicate) {
+            sendJson(res, 409, {
+              error: "This VIN is already attached to another active Kerodex listing.",
+              code: "duplicate_vin"
+            });
+            return;
+          }
+        }
+        updated.sellerChecklist = SELLER_CHECKLIST_KEYS.reduce((acc, key) => {
+          acc[key] = Boolean(updated.sellerChecklist?.[key]);
+          return acc;
+        }, {});
         if (Array.isArray(updated.maintenanceRecords)) {
           updated.maintenanceRecords = updated.maintenanceRecords.map((record) => normalizeListingDocument(record, "maintenance"));
           updated.maintenanceNames = updated.maintenanceRecords.map((record) => record.name).filter(Boolean);
@@ -3334,8 +3567,30 @@ const server = http.createServer((req, res) => {
         const finalListing = shouldRefresh
           ? await enrichListingWithMarketCheck(updated, { forceValuationRefresh: true })
           : updated;
+        if (listingNeedsPriceReview(finalListing)) {
+          finalListing.reviewFlags = Array.from(new Set([...(finalListing.reviewFlags || []), "price_outlier"]));
+          if (finalListing.status === "active") finalListing.status = "pending_review";
+        } else {
+          finalListing.reviewFlags = (finalListing.reviewFlags || []).filter((flag) => flag !== "price_outlier");
+        }
         const saved = await store.createListing(finalListing);
         await trackEvent(req, "update_listing", user, { listingId: saved.id, marketCheckRefreshed: Boolean(shouldRefresh) });
+        await auditMarketplaceAction(req, "listing.updated", "listing", saved.id, user, {
+          previousValue: JSON.stringify({
+            price: existing.price,
+            mileage: existing.mileage,
+            vin: existing.vin,
+            titleStatus: existing.titleStatus
+          }),
+          newValue: JSON.stringify({
+            price: saved.price,
+            mileage: saved.mileage,
+            vin: saved.vin,
+            titleStatus: saved.titleStatus,
+            status: saved.status
+          }),
+          metadata: { marketCheckRefreshed: Boolean(shouldRefresh), reviewFlags: saved.reviewFlags || [] }
+        });
         scheduleListingDocumentOcr(saved.id);
         if (shouldVerifyPresence) scheduleVehiclePresenceVerification(saved.id);
         sendJson(res, 200, { listing: listingWithReadableImages(saved), marketCheckRefreshed: Boolean(shouldRefresh) });
@@ -3570,6 +3825,7 @@ const server = http.createServer((req, res) => {
             }));
           }
           await trackEvent(req, "send_message", user, { listingId: listing.id, conversationId: saved.id });
+          notifyMessageRecipient(saved, user, listing).catch(() => {});
           sendJson(res, 200, { conversation: decorateConversation(saved, user) });
           return;
         }
@@ -3592,6 +3848,7 @@ const server = http.createServer((req, res) => {
           }));
         }
         await trackEvent(req, "send_message", user, { listingId: listing.id, conversationId: created.id });
+        notifyMessageRecipient(created, user, listing).catch(() => {});
         sendJson(res, 201, { conversation: decorateConversation(created, user) });
       })
       .catch((error) => sendJson(res, 400, { error: "Unable to start conversation.", detail: error.message }));
@@ -3665,6 +3922,9 @@ const server = http.createServer((req, res) => {
           }));
         }
         await trackEvent(req, "send_message", user, { listingId: updated.listingId, conversationId: updated.id });
+        store.getListingById(updated.listingId)
+          .then((listing) => notifyMessageRecipient(saved, user, listing))
+          .catch(() => {});
         sendJson(res, 201, { conversation: decorateConversation(saved, user) });
       })
       .catch((error) => sendJson(res, 400, { error: "Unable to send message.", detail: error.message }));

@@ -620,6 +620,12 @@ class PostgresStore {
         expires_at TIMESTAMPTZ
       )
     `);
+    await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_listing_records_status ON listing_records ((payload->>'status'))`);
+    await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_listing_records_vin ON listing_records ((payload->>'vin'))`);
+    await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_report_records_status_created ON report_records (status, created_at DESC)`);
+    await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_analytics_events_type_created ON analytics_events (event_type, created_at DESC)`);
+    await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_audit_records_created ON audit_records (created_at DESC)`);
+    await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_auth_sessions_user ON auth_sessions (user_id, last_seen_at DESC)`);
     this.coreTablesReady = true;
   }
 

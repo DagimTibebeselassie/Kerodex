@@ -17,7 +17,7 @@ import { MessagesPage } from './pages/Messages';
 import { PrivacyPage, TermsPage } from './pages/LegalPage';
 import { SafetyCenterPage } from './pages/SafetyCenter';
 import { AboutPage } from './pages/About';
-import { ContactPage, HowItWorksPage, SignInPage } from './pages/MarketingPages';
+import { ContactPage, DealerPolicyPage, HowItWorksPage, ProhibitedListingsPage, SignInPage, SupportPage } from './pages/MarketingPages';
 import { OnboardingPage } from './pages/Onboarding';
 import { RouteSeo } from './components/Seo';
 import { consumeAuthRedirect, currentUser, trackAnalyticsEvent } from './lib/api';
@@ -209,6 +209,24 @@ const contactRoute = createRoute({
   component: ContactPage,
 });
 
+const supportRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/support',
+  component: SupportPage,
+});
+
+const prohibitedListingsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/prohibited-listings',
+  component: ProhibitedListingsPage,
+});
+
+const dealerPolicyRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/dealer-policy',
+  component: DealerPolicyPage,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   searchRoute,
@@ -233,6 +251,9 @@ const routeTree = rootRoute.addChildren([
   safetyRoute,
   howItWorksRoute,
   contactRoute,
+  supportRoute,
+  prohibitedListingsRoute,
+  dealerPolicyRoute,
 ]);
 
 const router = createRouter({ routeTree });

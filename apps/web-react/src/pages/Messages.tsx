@@ -26,6 +26,15 @@ interface ThreadPreview {
 }
 
 const SAFETY_NOTICE_TEXT = 'Safety reminder: Meet in a public, well-lit place. Bring another person if possible. Do not send deposits or payments before verifying the vehicle and documents in person. Verify the title, VIN, seller identity, and vehicle condition before completing a purchase. If anything feels suspicious, stop the conversation and report the user.';
+const REPORT_CATEGORIES = [
+  ['suspected_scam', 'Suspected scam'],
+  ['payment_request', 'Payment or deposit request'],
+  ['unsafe_behavior', 'Unsafe behavior'],
+  ['harassment', 'Harassment'],
+  ['spam', 'Spam'],
+  ['vin_mismatch', 'VIN or listing mismatch'],
+  ['other', 'Other concern'],
+] as const;
 
 function fmtTime(iso: string): string {
   const d = new Date(iso);
@@ -147,6 +156,7 @@ export function MessagesPage() {
   const [search, setSearch] = useState('');
   const [reportOpen, setReportOpen] = useState(false);
   const [reportText, setReportText] = useState('');
+  const [reportCategory, setReportCategory] = useState('suspected_scam');
   const [safetyDismissed, setSafetyDismissed] = useState(Boolean(user?.safetyNoticeSeenAt || localStorage.getItem('kerodex_safety_notice_seen')));
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -257,7 +267,7 @@ export function MessagesPage() {
         reportedUserId: selectedThread.partnerId,
         listingId: selectedThread.vehicleId,
         conversationId: selectedThread.conversationId,
-        category: 'suspected_scam',
+        category: reportCategory,
         description,
       });
     },
@@ -265,6 +275,7 @@ export function MessagesPage() {
       toast.success('Report submitted for Kerodex review.');
       setReportOpen(false);
       setReportText('');
+      setReportCategory('suspected_scam');
     },
     onError: (error: any) => toast.error(error?.message || 'Unable to submit report.'),
   });
@@ -344,6 +355,15 @@ export function MessagesPage() {
                 Reporting <span className="text-foreground font-semibold">{selectedThread.partnerName}</span> about{' '}
                 <span className="text-foreground font-semibold">{selectedThread.vehicleTitle}</span>.
               </div>
+              <select
+                value={reportCategory}
+                onChange={(event) => setReportCategory(event.target.value)}
+                className="w-full h-10 border border-border bg-background px-3 text-[13px] text-foreground outline-none focus:border-primary"
+              >
+                {REPORT_CATEGORIES.map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
               <textarea
                 value={reportText}
                 onChange={(event) => setReportText(event.target.value)}

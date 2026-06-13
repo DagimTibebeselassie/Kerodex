@@ -68,6 +68,50 @@ requiredFiles.forEach((file) => {
   assert(adminHtml.includes("Website Analytics"), "Admin app must include website analytics section.");
   assert(adminHtml.includes("Audit Logs"), "Admin app must include audit logs section.");
 
+  const appSource = fs.readFileSync(path.join(root, "apps/web-react/src/App.tsx"), "utf8");
+  ["/support", "/prohibited-listings", "/dealer-policy"].forEach((route) => {
+    assert(appSource.includes(route), `React app must expose crawlable ${route} route.`);
+  });
+
+  const seoSource = fs.readFileSync(path.join(root, "apps/web-react/src/components/Seo.tsx"), "utf8");
+  assert(seoSource.includes("Prohibited Listings"), "SEO metadata must include prohibited listings page.");
+  assert(seoSource.includes("Dealer Policy"), "SEO metadata must include dealer policy page.");
+
+  const serverSource = fs.readFileSync(path.join(root, "apps/api/server.js"), "utf8");
+  assert(serverSource.includes("SELLER_CHECKLIST_KEYS"), "API must define seller checklist validation.");
+  assert(serverSource.includes("duplicate_vin"), "API must reject duplicate active VINs.");
+  assert(serverSource.includes("auditMarketplaceAction"), "API must write marketplace audit actions.");
+
+  const report = await store.createReport({
+    id: `rep_smoke_${Date.now()}`,
+    type: "fake_listing",
+    category: "fake_listing",
+    reporterId: "smoke",
+    reporter: "Smoke Test",
+    listingId: listings[0].id,
+    status: "open",
+    description: "Smoke test report record.",
+    createdAt: new Date().toISOString()
+  });
+  assert(report.id, "Report store must persist report records.");
+  const reports = await store.getReports();
+  assert(reports.some((item) => item.id === report.id), "Admin reports must read persisted reports.");
+
+  if (typeof store.saveAuditLog === "function") {
+    const audit = await store.saveAuditLog({
+      id: `audit_smoke_${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      adminAccount: "smoke",
+      actionType: "smoke.audit",
+      targetType: "system",
+      targetId: "smoke",
+      immutable: true
+    });
+    assert(audit.id, "Audit store must persist audit records.");
+    const auditLogs = await store.getAuditLogs();
+    assert(auditLogs.some((item) => item.id === audit.id), "Admin audit logs must read persisted audit records.");
+  }
+
   console.log(`Smoke test passed with ${listings.length} listings using ${store.kind} storage and admin dashboard coverage.`);
 })().catch((error) => {
   console.error(error.message);

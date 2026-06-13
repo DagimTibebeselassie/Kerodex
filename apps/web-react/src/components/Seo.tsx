@@ -87,6 +87,21 @@ const seoByPath: Record<string, SeoEntry> = {
     description: 'Contact Kerodex for marketplace support, seller questions, safety concerns, or general feedback.',
     canonicalPath: '/contact',
   },
+  '/support': {
+    title: 'Support | Kerodex',
+    description: 'Get Kerodex support for account access, listings, verification, messaging, and marketplace safety.',
+    canonicalPath: '/support',
+  },
+  '/prohibited-listings': {
+    title: 'Prohibited Listings | Kerodex',
+    description: 'Review what cannot be listed on Kerodex, including copied listings, misleading vehicle details, unsafe payment requests, and unauthorized inventory.',
+    canonicalPath: '/prohibited-listings',
+  },
+  '/dealer-policy': {
+    title: 'Dealer Policy | Kerodex',
+    description: 'Kerodex is focused on private-party vehicle listings and limits dealer, broker, and commercial inventory.',
+    canonicalPath: '/dealer-policy',
+  },
   '/terms': {
     title: 'Terms of Service | Kerodex',
     description: 'Read the Kerodex Terms of Service for using the private-party car marketplace.',

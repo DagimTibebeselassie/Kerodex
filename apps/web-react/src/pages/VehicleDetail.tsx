@@ -483,6 +483,16 @@ const DOCUMENT_CHECK_TOOLTIP =
   'Kerodex uses automated document checks to determine whether an uploaded file appears to match the selected document type. This does not guarantee that the document is authentic, accurate, current, or legally valid.';
 const VEHICLE_PRESENCE_TOOLTIP =
   'Kerodex verified that a recent photo containing both the vehicle VIN and a listing-specific verification code was uploaded. This confirms recent physical access to the vehicle but does not guarantee ownership, title status, condition, authenticity, or legal validity.';
+const REPORT_CATEGORIES = [
+  ['fake_listing', 'Fake or copied listing'],
+  ['stolen_photos', 'Stolen photos'],
+  ['vin_mismatch', 'VIN or vehicle details mismatch'],
+  ['title_issue', 'Title or ownership concern'],
+  ['misleading_price', 'Misleading price'],
+  ['dealer_or_commercial_listing', 'Dealer or commercial listing'],
+  ['unsafe_behavior', 'Unsafe behavior'],
+  ['other', 'Other concern'],
+] as const;
 
 function documentStatus(document: any): string {
   return String(document?.document_check_status || document?.documentCheckStatus || '');
@@ -982,6 +992,7 @@ export function VehicleDetailPage() {
   const [challengeSubmitting, setChallengeSubmitting] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportText, setReportText] = useState('');
+  const [reportCategory, setReportCategory] = useState('fake_listing');
   const [reportSubmitting, setReportSubmitting] = useState(false);
 
   useEffect(() => {
@@ -1122,12 +1133,13 @@ export function VehicleDetailPage() {
       await createReport({
         reportedUserId: vehicle.userId || (vehicle as any).seller?.id || '',
         listingId: vehicle.id,
-        category: 'fake_listing',
+        category: reportCategory,
         description,
       });
       toast.success('Report submitted for Kerodex review.');
       setReportOpen(false);
       setReportText('');
+      setReportCategory('fake_listing');
     } catch (error: any) {
       toast.error(error.message || 'Unable to submit report.');
     } finally {
@@ -1163,6 +1175,15 @@ export function VehicleDetailPage() {
               <div className="text-[12px] text-muted-foreground">
                 Reporting <span className="text-foreground font-semibold">{vehicle.year} {vehicle.make} {vehicle.model}</span>.
               </div>
+              <select
+                value={reportCategory}
+                onChange={(event) => setReportCategory(event.target.value)}
+                className="w-full h-10 border border-border bg-background px-3 text-[13px] text-foreground outline-none focus:border-primary"
+              >
+                {REPORT_CATEGORIES.map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
               <textarea
                 value={reportText}
                 onChange={(event) => setReportText(event.target.value)}
