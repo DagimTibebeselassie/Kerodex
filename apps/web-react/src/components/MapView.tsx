@@ -49,24 +49,22 @@ function tileUrlForTheme(isDark: boolean) {
 
 const MAP_BOUNDS: [[number, number], [number, number]] = [[18, -170], [72, -50]];
 
-function tileOptions(L: any) {
+function tileOptions() {
   return {
     subdomains: 'abcd',
     maxZoom: 19,
     minZoom: 3,
-    attribution: '&copy; OpenStreetMap &copy; CARTO',
+    attribution: '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OSM</a> · <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>',
   };
 }
 
 function PopupCard({
   vehicle,
-  isDark,
   onClose,
   saved,
   onSave,
 }: {
   vehicle: Vehicle;
-  isDark: boolean;
   onClose: () => void;
   saved: boolean;
   onSave: () => void;
@@ -76,11 +74,8 @@ function PopupCard({
   return (
     <div
       className={[
-        'popup-card absolute z-[1200] overflow-hidden',
-        'rounded-xl border shadow-2xl',
-        isDark
-          ? 'bg-zinc-900 border-zinc-700 text-zinc-100'
-          : 'bg-white border-zinc-200 text-zinc-900',
+        'kerodex-map-card absolute z-[1200] overflow-hidden',
+        'border border-border bg-background text-foreground shadow-2xl',
         'bottom-4 left-4 right-4 max-h-[72%] w-auto',
         'md:bottom-auto md:top-3 md:right-3 md:left-auto md:w-72 md:max-h-none',
       ].join(' ')}
@@ -95,7 +90,7 @@ function PopupCard({
             className="w-full h-full object-cover"
           />
         ) : (
-          <div className={`w-full h-full flex items-center justify-center text-sm ${isDark ? 'bg-zinc-800 text-zinc-500' : 'bg-zinc-100 text-zinc-400'}`}>
+          <div className="w-full h-full flex items-center justify-center text-sm bg-muted text-muted-foreground">
             No photo
           </div>
         )}
@@ -103,7 +98,7 @@ function PopupCard({
         {/* Close */}
         <button
           onClick={onClose}
-          className="absolute top-2 right-2 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 hover:bg-black/75 text-white transition-colors"
+          className="absolute top-2 right-2 flex h-9 w-9 items-center justify-center border border-border bg-background/90 text-foreground backdrop-blur transition-colors hover:bg-muted"
           aria-label="Close"
         >
           <X className="h-4 w-4" />
@@ -113,10 +108,8 @@ function PopupCard({
         <button
           onClick={onSave}
           className={[
-            'absolute top-2 left-2 flex h-9 w-9 items-center justify-center rounded-full transition-colors',
-            saved
-              ? 'bg-rose-500 text-white'
-              : 'bg-black/50 hover:bg-black/70 text-white',
+            'absolute top-2 left-2 flex h-9 w-9 items-center justify-center border border-border bg-background/90 text-foreground backdrop-blur transition-colors hover:bg-muted',
+            saved ? 'text-foreground' : '',
           ].join(' ')}
           aria-label={saved ? 'Unsave listing' : 'Save listing'}
         >
@@ -125,19 +118,19 @@ function PopupCard({
       </div>
 
       {/* Body */}
-      <div className="p-3 space-y-2">
+      <div className="p-4 space-y-3">
         {/* Price */}
-        <p className="text-xl font-bold tracking-tight leading-none">
+        <p className="text-xl font-black tracking-tight leading-none">
           ${fmt(vehicle.price)}
         </p>
 
         {/* Year Make Model */}
-        <p className={`text-sm font-medium ${isDark ? 'text-zinc-300' : 'text-zinc-700'}`}>
+        <p className="text-[13px] font-bold">
           {vehicle.year} {vehicle.make} {vehicle.model}
         </p>
 
         {/* Mileage + Location */}
-        <div className={`flex items-center gap-3 text-xs ${isDark ? 'text-zinc-400' : 'text-zinc-500'}`}>
+        <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
           <span className="flex items-center gap-1">
             <Gauge className="h-3 w-3 shrink-0" />
             {fmt(vehicle.mileage)} mi
@@ -151,14 +144,12 @@ function PopupCard({
         {/* Badges */}
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className={[
-            'inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full',
-            isDark ? 'bg-emerald-900/60 text-emerald-400' : 'bg-emerald-50 text-emerald-700',
+            'inline-flex items-center gap-1 border border-border px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground',
           ].join(' ')}>
             <BadgeCheck className="h-3 w-3" /> Verified
           </span>
           <span className={[
-            'inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full',
-            isDark ? 'bg-sky-900/60 text-sky-400' : 'bg-sky-50 text-sky-700',
+            'inline-flex items-center gap-1 border border-border px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground',
           ].join(' ')}>
             <CheckCircle2 className="h-3 w-3" /> Clean Title
           </span>
@@ -169,10 +160,7 @@ function PopupCard({
           to="/vehicle/$id"
           params={{ id: vehicle.id }}
           className={[
-            'block w-full text-center text-xs font-semibold py-2 px-3 rounded-lg transition-colors',
-            isDark
-              ? 'bg-white text-zinc-900 hover:bg-zinc-200'
-              : 'bg-zinc-900 text-white hover:bg-zinc-700',
+            'block w-full border border-foreground bg-foreground px-3 py-2 text-center text-[11px] font-bold uppercase tracking-widest text-background transition-opacity hover:opacity-90',
           ].join(' ')}
         >
           View Listing
@@ -234,10 +222,10 @@ export function MapView({
       map.setMaxBounds(MAP_BOUNDS);
 
       L.control.zoom({ position: 'bottomright' }).addTo(map);
-      L.control.attribution({ position: 'bottomleft', prefix: '&copy; OpenStreetMap' }).addTo(map);
+      L.control.attribution({ position: 'bottomleft', prefix: false }).addTo(map);
 
       const tileUrl = tileUrlForTheme(isDark);
-      const tile = L.tileLayer(tileUrl, tileOptions(L));
+      const tile = L.tileLayer(tileUrl, tileOptions());
       tile.on('tileerror', () => {
         setTileFailed(false);
       });
@@ -268,7 +256,7 @@ export function MapView({
     import('leaflet').then((L) => {
       tileLayerRef.current.remove();
       const tileUrl = tileUrlForTheme(isDark);
-      const tile = L.tileLayer(tileUrl, tileOptions(L));
+      const tile = L.tileLayer(tileUrl, tileOptions());
       tile.on('tileerror', () => {
         setTileFailed(false);
       });
@@ -417,7 +405,6 @@ export function MapView({
       {activeVehicle && (
         <PopupCard
           vehicle={activeVehicle}
-          isDark={isDark}
           onClose={handleClose}
           saved={savedIds.has(activeVehicle.id)}
           onSave={() => handleSave(activeVehicle.id)}

@@ -183,6 +183,25 @@
 .leaflet-bottom { z-index: 1000; }
 .leaflet-control { z-index: 1000; }
 
+.leaflet-control-attribution {
+  border: 1px solid hsl(var(--border)) !important;
+  background: hsl(var(--background) / 0.82) !important;
+  color: hsl(var(--muted-foreground)) !important;
+  font-size: 9px !important;
+  line-height: 1.35 !important;
+  padding: 2px 5px !important;
+  backdrop-filter: blur(8px);
+}
+
+.leaflet-control-attribution a {
+  color: hsl(var(--muted-foreground)) !important;
+  text-decoration: none !important;
+}
+
+.leaflet-control-attribution a:hover {
+  color: hsl(var(--foreground)) !important;
+}
+
 .kerodex-vehicle-rail {
   scrollbar-width: none;
   scroll-padding-inline: 0.25rem;
