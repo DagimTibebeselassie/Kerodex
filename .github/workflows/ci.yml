@@ -105,6 +105,7 @@ jobs:
             --exclude=README.md \
             --exclude=SECURITY.md \
             --exclude=security-hardening-report.md \
+            --exclude=ci.yml \
             -E 'AKIA[0-9A-Z]{16}|GOCSPX-|sk-[A-Za-z0-9_-]{20,}|AWS_SECRET_ACCESS_KEY=[^[:space:]]+|DATABASE_URL=postgres[^[:space:]]+|JWT_SECRET=[^[:space:]]+|OPENAI_API_KEY=[^[:space:]]+' .
 
   dependency-review:
