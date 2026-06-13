@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, Outlet, useNavigate } from '@tanstack/react-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { Button, Input } from '@blinkdotnew/ui';
 import { listConversations } from '@/lib/api';
@@ -59,6 +59,7 @@ function useDarkMode() {
 export function Layout() {
   const { user, isLoading, logout } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { isDark, toggle: toggleDark } = useDarkMode();
   const firstName = (user?.name || user?.email || '').trim().split(/\s|@/)[0] || 'there';
   const userInitial = firstName.charAt(0).toUpperCase() || 'U';
@@ -118,7 +119,9 @@ export function Layout() {
 
   const handleLogout = async () => {
     setUserMenuOpen(false);
-    logout();
+    setMobileMenuOpen(false);
+    await logout();
+    queryClient.clear();
     navigate({ to: '/' });
   };
 

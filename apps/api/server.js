@@ -346,7 +346,7 @@ function rateLimitCategory(pathname) {
   if (/^\/api\/uploads\b/.test(pathname) || /verification|vehicle-presence|documents\/ocr|persona|phone/i.test(pathname)) {
     return { name: "verification_upload", limit: 20, windowMs: 60 * 60 * 1000 };
   }
-  return { name: "general", limit: 100, windowMs: 15 * 60 * 1000 };
+  return { name: "general", limit: 600, windowMs: 15 * 60 * 1000 };
 }
 
 function applyRateLimit(req, res, pathname) {

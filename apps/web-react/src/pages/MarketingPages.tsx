@@ -1,8 +1,19 @@
-import { Link } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { Button } from '@blinkdotnew/ui';
 import { ArrowRight, BadgeCheck, Car, Mail, MessageSquare, Search, ShieldCheck } from 'lucide-react';
+import { useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 
 export function SignInPage() {
+  const { user, isLoading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isLoading && user) {
+      navigate({ to: '/' });
+    }
+  }, [isLoading, navigate, user]);
+
   const openAuth = (tab: 'login' | 'signup') => {
     window.dispatchEvent(new CustomEvent('kerodex:auth-required', { detail: { tab } }));
   };

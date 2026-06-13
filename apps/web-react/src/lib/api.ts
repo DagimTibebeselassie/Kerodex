@@ -182,17 +182,18 @@ export function saveSession(session: AuthSession) {
   window.dispatchEvent(new CustomEvent('kerodex:auth-changed'));
 }
 
-export function clearSession() {
+export async function clearSession() {
   const token = localStorage.getItem(TOKEN_KEY);
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+  window.dispatchEvent(new CustomEvent('kerodex:auth-changed'));
+
   if (token) {
-    fetch(`${API_BASE}/api/auth/logout`, {
+    await fetch(apiUrl('/api/auth/logout'), {
       method: 'POST',
       headers: { authorization: `Bearer ${token}` },
     }).catch(() => {});
   }
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(USER_KEY);
-  window.dispatchEvent(new CustomEvent('kerodex:auth-changed'));
 }
 
 export async function emailAuth(

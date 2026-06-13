@@ -72,6 +72,10 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
   const closeAfterAuth = () => {
     const user = currentUser();
     onClose();
+    if (window.location.pathname === '/signin') {
+      window.setTimeout(() => navigate({ to: '/' }), 120);
+      return;
+    }
     if (user && !user.onboardingCompleted) {
       window.setTimeout(() => navigate({ to: '/onboarding' }), 120);
     }

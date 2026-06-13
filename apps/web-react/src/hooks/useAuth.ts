@@ -31,8 +31,8 @@ export function useAuth() {
     window.dispatchEvent(new CustomEvent('kerodex:auth-required', { detail: { tab: 'login' } }));
   };
 
-  const logout = () => {
-    clearSession();
+  const logout = async () => {
+    await clearSession();
   };
 
   return {
