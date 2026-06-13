@@ -43,6 +43,65 @@ function money(value) {
   return Math.round(value);
 }
 
+function initialsForName(name) {
+  return String(name || "Kerodex Seller")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("") || "KS";
+}
+
+function splitLocation(location = "") {
+  const [city = "", state = ""] = String(location).split(",").map((part) => part.trim());
+  return { city, state };
+}
+
+function sellerProfileFromRecords(id, user = null, listings = []) {
+  const listing = listings.find((item) => item.userId === id || item.seller?.id === id) || {};
+  const listingSeller = listing.seller || {};
+  const name = listingSeller.name || user?.name || user?.fullName || user?.email?.split("@")[0] || "Kerodex Seller";
+  const location = splitLocation(listing.location || listingSeller.location || "");
+  return {
+    id,
+    name,
+    initials: listingSeller.initials || initialsForName(name),
+    city: listingSeller.city || location.city,
+    state: listingSeller.state || location.state,
+    memberSince: user?.createdAt || user?.accountCreatedAt || listing.createdAt || new Date().toISOString(),
+    bio: listingSeller.bio || "Private-party seller on Kerodex.",
+    responseTime: listingSeller.responseTime || "Response time not available yet",
+    responseRate: listingSeller.responseRate || 0,
+    completedSales: listingSeller.completedSales || 0,
+    rating: null,
+    reviewCount: 0,
+    reviews: [],
+    verification: {
+      email: Boolean(user?.emailVerified),
+      phone: Boolean(user?.phoneVerified),
+      identity: Boolean(user?.identityVerified || user?.identityVerificationStatus === "approved"),
+      selfie: Boolean(user?.selfieVerified)
+    }
+  };
+}
+
+function applySellerReview(seller, review) {
+  const existingReviews = Array.isArray(seller.reviews) ? seller.reviews : [];
+  const nextReviews = [
+    review,
+    ...existingReviews.filter((item) => item.reviewerId !== review.reviewerId)
+  ].sort((a, b) => Date.parse(b.createdAt || "") - Date.parse(a.createdAt || ""));
+  const ratingTotal = nextReviews.reduce((sum, item) => sum + Number(item.rating || 0), 0);
+  const rating = nextReviews.length ? Math.round((ratingTotal / nextReviews.length) * 10) / 10 : null;
+  return {
+    ...seller,
+    reviews: nextReviews,
+    rating,
+    reviewCount: nextReviews.length,
+    updatedAt: new Date().toISOString()
+  };
+}
+
 function buildDemoUsers(listings, conversations) {
   const sellerNames = listings.map((listing, index) => listing.seller?.name || `Kerodex Seller ${index + 1}`);
   const buyerNames = conversations.flatMap((conversation) => conversation.participants || []);
@@ -434,6 +493,21 @@ class JsonStore {
     const listings = this.listings.filter((listing) => listing.userId === id);
     return { ...seller, listings };
   }
+
+  async addSellerReview(sellerId, review) {
+    const listings = this.listings.filter((listing) => listing.userId === sellerId || listing.seller?.id === sellerId);
+    const existingIndex = this.sellers.findIndex((item) => item.id === sellerId);
+    const current = existingIndex >= 0
+      ? this.sellers[existingIndex]
+      : sellerProfileFromRecords(sellerId, null, listings);
+    const next = applySellerReview(current, review);
+    if (existingIndex >= 0) {
+      this.sellers[existingIndex] = next;
+    } else {
+      this.sellers.push(next);
+    }
+    return { ...next, listings };
+  }
 }
 
 class PostgresStore {
@@ -773,10 +847,41 @@ class PostgresStore {
   async getSellerById(id) {
     await this.ensureCoreTables();
     const sellerResult = await this.pool.query("SELECT payload FROM seller_records WHERE id = $1 LIMIT 1", [id]);
-    const seller = sellerResult.rows[0]?.payload;
-    if (!seller) return null;
+    let seller = sellerResult.rows[0]?.payload;
     const listingsResult = await this.pool.query("SELECT payload FROM listing_records WHERE payload->>'userId' = $1 ORDER BY updated_at DESC", [id]);
+    if (!seller) {
+      const userResult = await this.pool.query("SELECT payload FROM user_records WHERE id = $1 LIMIT 1", [id]);
+      const user = userResult.rows[0]?.payload || null;
+      if (!user && !listingsResult.rows.length) return null;
+      seller = sellerProfileFromRecords(id, user, listingsResult.rows.map((row) => row.payload));
+      await this.pool.query(
+        "INSERT INTO seller_records (id, payload, updated_at) VALUES ($1, $2, NOW()) ON CONFLICT (id) DO NOTHING",
+        [id, seller]
+      );
+    }
     return { ...seller, listings: listingsResult.rows.map((row) => row.payload) };
+  }
+
+  async addSellerReview(sellerId, review) {
+    await this.ensureCoreTables();
+    const sellerResult = await this.pool.query("SELECT payload FROM seller_records WHERE id = $1 LIMIT 1", [sellerId]);
+    const listingsResult = await this.pool.query("SELECT payload FROM listing_records WHERE payload->>'userId' = $1 ORDER BY updated_at DESC", [sellerId]);
+    const listings = listingsResult.rows.map((row) => row.payload);
+    let seller = sellerResult.rows[0]?.payload;
+    if (!seller) {
+      const userResult = await this.pool.query("SELECT payload FROM user_records WHERE id = $1 LIMIT 1", [sellerId]);
+      const user = userResult.rows[0]?.payload || null;
+      if (!user && !listings.length) return null;
+      seller = sellerProfileFromRecords(sellerId, user, listings);
+    }
+    const next = applySellerReview(seller, review);
+    await this.pool.query(
+      `INSERT INTO seller_records (id, payload, updated_at)
+       VALUES ($1, $2, NOW())
+       ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload, updated_at = NOW()`,
+      [sellerId, next]
+    );
+    return { ...next, listings };
   }
 }
 

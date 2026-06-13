@@ -102,8 +102,19 @@ export interface SellerProfileRecord {
   completedSales?: number;
   rating?: number | null;
   reviewCount?: number;
+  reviews?: SellerReviewRecord[];
   verification?: Record<string, boolean>;
   listings?: ListingPayload[];
+}
+
+export interface SellerReviewRecord {
+  id: string;
+  sellerId: string;
+  reviewerId: string;
+  reviewerName: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
 }
 
 type ListingPayload = Record<string, any>;
@@ -413,6 +424,21 @@ export async function getSellerProfile(id: string): Promise<Omit<SellerProfileRe
   return {
     ...seller,
     listings: (seller.listings || []).map(toVehicle),
+  };
+}
+
+export async function leaveSellerReview(sellerId: string, rating: number, comment: string) {
+  const body = await request<{ seller: SellerProfileRecord; review: SellerReviewRecord }>(`/api/sellers/${encodeURIComponent(sellerId)}/reviews`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ rating, comment }),
+  });
+  return {
+    ...body,
+    seller: {
+      ...body.seller,
+      listings: (body.seller.listings || []).map(toVehicle),
+    },
   };
 }
 

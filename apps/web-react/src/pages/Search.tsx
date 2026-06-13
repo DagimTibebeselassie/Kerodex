@@ -54,6 +54,8 @@ const SORT_OPTIONS = [
   { label: 'Fastest response',  value: 'response_time' },
 ];
 
+const DEFAULT_SEARCH_LOCATION = { lat: 33.749, lng: -84.388 };
+
 interface FilterState {
   priceMin: string;
   priceMax: string;
@@ -374,7 +376,7 @@ function FilterSidebarContent({
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-5 pr-0.5">
+      <div className="kerodex-scrollbar-hidden flex-1 min-h-0 overflow-y-auto space-y-5 pr-0.5">
 
         {/* 1. Price Range */}
         <div>
@@ -659,7 +661,7 @@ export function SearchPage() {
   const [remoteVehicles, setRemoteVehicles] = useState<Vehicle[]>([]);
   const [vehicleLoadError, setVehicleLoadError] = useState('');
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(
-    hasInitialLocation ? { lat: initialLat, lng: initialLng } : null
+    hasInitialLocation ? { lat: initialLat, lng: initialLng } : (nearbyMode || urlParams.get('radius') ? DEFAULT_SEARCH_LOCATION : null)
   );
   const [locationError, setLocationError] = useState('');
   const mapListRef                      = useRef<HTMLDivElement>(null);
@@ -672,8 +674,8 @@ export function SearchPage() {
       make: urlParams.get('make') || undefined,
       model: urlParams.get('model') || undefined,
       radius: urlParams.get('radius') || (nearbyMode ? '100' : undefined),
-      lat: hasInitialLocation ? initialLat : undefined,
-      lng: hasInitialLocation ? initialLng : undefined,
+      lat: hasInitialLocation ? initialLat : (nearbyMode || urlParams.get('radius') ? DEFAULT_SEARCH_LOCATION.lat : undefined),
+      lng: hasInitialLocation ? initialLng : (nearbyMode || urlParams.get('radius') ? DEFAULT_SEARCH_LOCATION.lng : undefined),
       sort: urlParams.get('sort') || undefined,
     })
       .then((items) => {
@@ -693,12 +695,13 @@ export function SearchPage() {
 
   // Filtered + sorted vehicles
   const vehicles = useMemo(() => {
+    const locationAnchor = userLocation || (filters.radius ? DEFAULT_SEARCH_LOCATION : null);
     const filtered = applyLocationFilter(
       applyFilters(remoteVehicles, filters, searchText),
-      userLocation,
+      locationAnchor,
       filters.radius
     );
-    return applySort(filtered, sortBy, userLocation);
+    return applySort(filtered, sortBy, locationAnchor);
   }, [filters, remoteVehicles, sortBy, searchText, userLocation]);
 
   const filterCount = countFilters(filters);
@@ -837,7 +840,7 @@ export function SearchPage() {
       <div className="flex flex-1 overflow-hidden">
 
         <aside
-          className="hidden lg:flex w-64 h-[calc(100vh-7rem)] shrink-0 flex-col border-r border-border px-5 pt-3 pb-5 overflow-y-auto"
+          className="hidden lg:flex w-64 h-[calc(100vh-7rem)] shrink-0 flex-col border-r border-border px-5 pt-3 pb-5 overflow-hidden"
         >
           <FilterSidebarContent filters={filters} setFilters={setFilters} onClear={clearFilters} />
         </aside>
@@ -868,7 +871,7 @@ export function SearchPage() {
             </div>
           </div>
           {/* Scrollable content */}
-          <div className="flex-1 overflow-y-auto px-5 py-5">
+          <div className="flex-1 overflow-hidden px-5 py-5">
             <FilterSidebarContent filters={filters} setFilters={setFilters} onClear={clearFilters} />
           </div>
           {/* Apply button */}
@@ -958,7 +961,7 @@ export function SearchPage() {
                   selectedId={selectedMapId}
                   onSelectPin={setSelectedMapId}
                   isDark={isDark}
-                  userLocation={userLocation}
+                  userLocation={userLocation || (filters.radius ? DEFAULT_SEARCH_LOCATION : null)}
                   className="w-full h-full"
                 />
               </div>

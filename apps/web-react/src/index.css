@@ -192,6 +192,15 @@
   display: none;
 }
 
+.kerodex-scrollbar-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.kerodex-scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
 .kerodex-price-pin {
   background: transparent;
   border: 0;

@@ -1274,9 +1274,12 @@ async function filterListings(params) {
   const maxYear = Number(params.get("maxYear") || 0);
   const cleanTitleOnly = params.get("cleanTitle") === "1";
   const noAccidentsOnly = params.get("noAccidents") === "1";
-  const userLat = Number(params.get("lat") || "");
-  const userLng = Number(params.get("lng") || "");
   const radius = Number(params.get("radius") || 0);
+  const requestedLat = Number(params.get("lat") || "");
+  const requestedLng = Number(params.get("lng") || "");
+  const fallbackLocation = radius > 0 ? { lat: 33.749, lng: -84.388 } : null;
+  const userLat = Number.isFinite(requestedLat) ? requestedLat : fallbackLocation?.lat;
+  const userLng = Number.isFinite(requestedLng) ? requestedLng : fallbackLocation?.lng;
   const sort = normalize(params.get("sort"));
   const hasLocation = Number.isFinite(userLat) && Number.isFinite(userLng);
 
@@ -1331,6 +1334,29 @@ async function filterListings(params) {
       if (sort === "mileage_low") return Number(a.mileage || 0) - Number(b.mileage || 0);
       return Number(b.dealScore || 0) - Number(a.dealScore || 0);
     });
+}
+
+function normalizeSellerReviewBody(body, user, sellerId) {
+  const rating = Number(body.rating);
+  const comment = String(body.comment || "").trim().replace(/\s+/g, " ");
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+    throw makePublicError("Choose a review rating from 1 to 5.", 400);
+  }
+  if (comment.length < 10) {
+    throw makePublicError("Write at least 10 characters for the review.", 400);
+  }
+  if (comment.length > 800) {
+    throw makePublicError("Keep reviews under 800 characters.", 400);
+  }
+  return {
+    id: `rev_${Date.now().toString(36)}_${crypto.randomBytes(4).toString("hex")}`,
+    sellerId,
+    reviewerId: user.id,
+    reviewerName: user.name || user.email?.split("@")[0] || "Kerodex buyer",
+    rating,
+    comment,
+    createdAt: new Date().toISOString()
+  };
 }
 
 function distanceMiles(lat1, lng1, lat2, lng2) {
@@ -3450,6 +3476,36 @@ const server = http.createServer((req, res) => {
         sendJson(res, 200, listingWithReadableImages(listing));
       })
       .catch((error) => sendJson(res, 500, { error: "Unable to load listing.", detail: error.message }));
+    return;
+  }
+
+  const sellerReviewMatch = url.pathname.match(/^\/api\/sellers\/([^/]+)\/reviews$/);
+  if (sellerReviewMatch && req.method === "POST") {
+    const user = getAuthUser(req);
+    if (!user) {
+      sendJson(res, 401, { error: "Sign in to leave a seller review." });
+      return;
+    }
+    const sellerId = decodeURIComponent(sellerReviewMatch[1] || "");
+    if (!sellerId || sellerId === user.id) {
+      sendJson(res, 400, { error: "You cannot review this seller." });
+      return;
+    }
+    readJson(req)
+      .then(async (body) => {
+        const review = normalizeSellerReviewBody(body, user, sellerId);
+        const seller = await store.addSellerReview(sellerId, review);
+        if (!seller) {
+          sendJson(res, 404, { error: "Seller not found." });
+          return;
+        }
+        trackEvent(req, "seller_review_created", user, {
+          sellerId,
+          rating: review.rating
+        }).catch(() => {});
+        sendJson(res, 201, { seller: sellerWithReadableImages(seller), review });
+      })
+      .catch((error) => sendJson(res, error.status || 400, { error: publicError(error, "Unable to save review.") }));
     return;
   }
 
