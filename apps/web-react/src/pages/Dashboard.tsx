@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { Vehicle } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
-import { listConversations, listMyVehicles } from '@/lib/api';
+import { listBuyerGuides, listConversations, listMyVehicles, toVehicle } from '@/lib/api';
 import { Button, Stat, StatGroup, DataTable, EmptyState } from '@blinkdotnew/ui';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { Plus, BarChart3, MessageSquare, Car, ExternalLink } from 'lucide-react';
+import { Plus, BarChart3, MessageSquare, Car, ExternalLink, BookOpenCheck } from 'lucide-react';
 
 export function DashboardPage() {
   const { user, isLoading: authLoading } = useAuth();
@@ -25,7 +25,13 @@ export function DashboardPage() {
     enabled: !!user,
   });
 
-  if (authLoading || vehiclesLoading) return <div className="p-12 animate-pulse space-y-8">
+  const { data: buyerGuides = [], isLoading: guidesLoading } = useQuery({
+    queryKey: ['buyer-guides', user?.id],
+    queryFn: async () => user ? listBuyerGuides() : [],
+    enabled: !!user,
+  });
+
+  if (authLoading || vehiclesLoading || guidesLoading) return <div className="p-12 animate-pulse space-y-8">
     <div className="h-10 w-1/4 bg-muted" />
     <div className="grid grid-cols-4 gap-6"><div className="h-24 bg-muted" /></div>
   </div>;
@@ -116,6 +122,56 @@ export function DashboardPage() {
           className="bg-background border border-border p-6 shadow-none"
         />
       </StatGroup>
+
+      <div className="space-y-6">
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <h2 className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground">My Buying Guides</h2>
+            <p className="text-[12px] text-muted-foreground mt-2">Resume optional private-party purchase checklists tied to listings you are considering.</p>
+          </div>
+          <Link to="/cars" className="hidden sm:inline-flex">
+            <Button variant="outline" className="h-9 px-4 text-[11px] font-bold uppercase tracking-widest">Browse Cars</Button>
+          </Link>
+        </div>
+        {buyerGuides.length === 0 ? (
+          <EmptyState
+            title="No buying guides yet"
+            description="Start a guide from a vehicle listing when you are interested in buying."
+            icon={<BookOpenCheck className="h-8 w-8 text-muted-foreground" />}
+            action={{ label: 'Browse Listings', onClick: () => navigate({ to: '/cars' }) }}
+            className="border border-border py-14"
+          />
+        ) : (
+          <div className="grid md:grid-cols-2 gap-4">
+            {buyerGuides.map((guide: any) => {
+              const listing = guide.listing ? toVehicle(guide.listing) : null;
+              const completed = (guide.completedSteps || guide.completed_steps || []).length;
+              const total = 11;
+              return (
+                <div key={guide.id} className="border border-border bg-background p-4 flex gap-4">
+                  <div className="h-20 w-28 bg-muted overflow-hidden shrink-0">
+                    {listing?.images?.[0] ? <img src={listing.images[0]} alt="" className="h-full w-full object-cover" /> : null}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="text-[13px] font-bold truncate">{listing ? `${listing.year} ${listing.make} ${listing.model}` : 'Listing unavailable'}</h3>
+                        <p className="text-[12px] text-muted-foreground mt-1">{completed} of {total} complete · {guide.status}</p>
+                      </div>
+                      <Link to="/buyer-guides/$guideId" params={{ guideId: guide.id }}>
+                        <Button size="sm" variant="outline" className="h-8 px-3 text-[10px] font-bold uppercase tracking-widest">Resume</Button>
+                      </Link>
+                    </div>
+                    <div className="h-1.5 bg-muted mt-4 overflow-hidden">
+                      <div className="h-full bg-foreground" style={{ width: `${Math.round((completed / total) * 100)}%` }} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       <div className="space-y-6">
         <h2 className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Your Active Listings</h2>

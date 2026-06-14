@@ -14,6 +14,7 @@ import { SellerCockpitPage } from './pages/SellerCockpit';
 import { SellerProfilePage } from './pages/SellerProfile';
 import { VerificationPage } from './pages/Verification';
 import { MessagesPage } from './pages/Messages';
+import { BuyerGuidePage } from './pages/BuyerGuide';
 import { PrivacyPage, TermsPage } from './pages/LegalPage';
 import { SafetyCenterPage } from './pages/SafetyCenter';
 import { AboutPage } from './pages/About';
@@ -149,6 +150,12 @@ const messagesRoute = createRoute({
   component: MessagesPage,
 });
 
+const buyerGuideRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/buyer-guides/$guideId',
+  component: BuyerGuidePage,
+});
+
 const profileRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/profile',
@@ -241,6 +248,7 @@ const routeTree = rootRoute.addChildren([
   onboardingRoute,
   savedRoute,
   messagesRoute,
+  buyerGuideRoute,
   profileRoute,
   legacyProfileRoute,
   cockpitRoute,

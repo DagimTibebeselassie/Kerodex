@@ -47,6 +47,11 @@ const seoByPath: Record<string, SeoEntry> = {
     description: 'Message private-party car buyers and sellers securely through Kerodex.',
     canonicalPath: '/messages',
   },
+  '/buyer-guides': {
+    title: 'Buyer Purchase Guide | Kerodex',
+    description: 'Continue a saved Kerodex buyer purchase guide for a private-party vehicle listing.',
+    canonicalPath: '/dashboard',
+  },
   '/profile': {
     title: 'Account Settings | Kerodex',
     description: 'Manage your Kerodex account, saved vehicles, verification, and seller settings.',
@@ -171,13 +176,16 @@ export function RouteSeo() {
 
   useEffect(() => {
     const isVehicle = pathname.startsWith('/vehicle/');
+    const isBuyerGuide = pathname.startsWith('/buyer-guides/');
     const entry = seoByPath[pathname] || (isVehicle
       ? {
           title: 'Vehicle Listing | Kerodex',
           description: 'View a private-party vehicle listing on Kerodex with seller details, market guidance, and safety information.',
           canonicalPath: pathname,
         }
-      : seoByPath['/']);
+      : isBuyerGuide
+        ? seoByPath['/buyer-guides']
+        : seoByPath['/']);
 
     const canonical = `${SITE_URL}${entry.canonicalPath}`;
     document.title = entry.title;

@@ -117,6 +117,32 @@ export interface SellerReviewRecord {
   createdAt: string;
 }
 
+export interface BuyerPurchaseGuideRecord {
+  id: string;
+  buyer_id?: string;
+  buyerId?: string;
+  listing_id?: string;
+  listingId?: string;
+  seller_id?: string;
+  sellerId?: string;
+  status: 'active' | 'completed' | 'cancelled';
+  current_step?: string;
+  currentStep?: string;
+  completed_steps?: string[];
+  completedSteps?: string[];
+  buyer_state?: string;
+  buyerState?: string;
+  seller_state?: string;
+  sellerState?: string;
+  notes?: Record<string, string>;
+  created_at?: string;
+  createdAt?: string;
+  updated_at?: string;
+  updatedAt?: string;
+  listing?: ListingPayload;
+  seller?: SellerProfileRecord | Record<string, any>;
+}
+
 type ListingPayload = Record<string, any>;
 
 function apiUrl(path: string) {
@@ -355,6 +381,38 @@ export async function createReport(payload: {
     headers: authHeaders(),
     body: JSON.stringify(payload),
   });
+}
+
+export async function startBuyerGuide(listingId: string) {
+  const body = await request<{ guide: BuyerPurchaseGuideRecord }>('/api/buyer-guides/start', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ listingId }),
+  });
+  return body.guide;
+}
+
+export async function listBuyerGuides() {
+  const body = await request<{ guides: BuyerPurchaseGuideRecord[] }>('/api/buyer-guides', {
+    headers: authHeaders(),
+  });
+  return body.guides;
+}
+
+export async function getBuyerGuide(id: string) {
+  const body = await request<{ guide: BuyerPurchaseGuideRecord }>(`/api/buyer-guides/${encodeURIComponent(id)}`, {
+    headers: authHeaders(),
+  });
+  return body.guide;
+}
+
+export async function updateBuyerGuide(id: string, payload: Partial<BuyerPurchaseGuideRecord>) {
+  const body = await request<{ guide: BuyerPurchaseGuideRecord }>(`/api/buyer-guides/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+  return body.guide;
 }
 
 export async function trackAnalyticsEvent(payload: {

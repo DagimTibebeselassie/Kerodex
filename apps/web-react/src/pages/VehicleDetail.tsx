@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useParams, Link } from '@tanstack/react-router';
-import { createReport, createUploadUrl, getVehicle, listVehicles, saveVehicleLocal, savedVehicleIds, startConversation, updateVehicle } from '@/lib/api';
+import { createReport, createUploadUrl, getVehicle, listVehicles, saveVehicleLocal, savedVehicleIds, startBuyerGuide, startConversation, updateVehicle } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { Vehicle } from '@/types';
 import { VehicleCard } from '@/components/VehicleCard';
@@ -23,7 +23,8 @@ import {
 import {
   MapPin, Gauge, Calendar, Shield, MessageSquare, Heart, Share2, ArrowLeft,
   CheckCircle2, ChevronDown, ChevronUp, ZoomIn, Car, User, AlertTriangle, X,
-  FileText, Clock, Zap, Star, TrendingDown, Camera, Award, Flag,
+  FileText, Clock, Zap, Star, TrendingDown, Camera, Award, Flag, BookOpenCheck,
+  Loader2,
 } from 'lucide-react';
 
 const APR_MAP: Record<string, number> = { excellent: 5.9, good: 8.4, fair: 12.9, poor: 18.9 };
@@ -994,6 +995,7 @@ export function VehicleDetailPage() {
   const [reportText, setReportText] = useState('');
   const [reportCategory, setReportCategory] = useState('fake_listing');
   const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [guideStarting, setGuideStarting] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -1112,6 +1114,27 @@ export function VehicleDetailPage() {
       navigate({ to: '/messages' });
     } catch (error: any) {
       toast.error(error.message || 'Unable to open message thread.');
+    }
+  };
+
+  const handleStartBuyerGuide = async () => {
+    if (!user) {
+      login();
+      return;
+    }
+    if (vehicle.userId === user.id) {
+      toast.error('Buyer guides are for listings you are interested in buying.');
+      return;
+    }
+    setGuideStarting(true);
+    try {
+      const guide = await startBuyerGuide(vehicle.id);
+      toast.success('Buyer guide ready.');
+      navigate({ to: '/buyer-guides/$guideId', params: { guideId: guide.id } });
+    } catch (error: any) {
+      toast.error(error.message || 'Unable to start buyer guide.');
+    } finally {
+      setGuideStarting(false);
     }
   };
 
@@ -1282,6 +1305,19 @@ export function VehicleDetailPage() {
                 <Button className="w-full h-12 text-[12px] font-bold uppercase tracking-widest"
                   onClick={handleMessageSeller}>
                   <MessageSquare className="h-4 w-4 mr-2" /> Message Seller
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full h-11 text-[11px] font-bold uppercase tracking-widest"
+                  onClick={handleStartBuyerGuide}
+                  disabled={guideStarting}
+                >
+                  {guideStarting ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <BookOpenCheck className="h-4 w-4 mr-2" />
+                  )}
+                  Buying Guide
                 </Button>
                 <div className="grid grid-cols-2 gap-3">
                   <Button variant="outline"

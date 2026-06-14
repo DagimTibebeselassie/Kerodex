@@ -80,6 +80,19 @@ const SELLER_CHECKLIST_KEYS = [
   "noProhibitedContent",
   "safeCommunication"
 ];
+const BUYER_GUIDE_STEP_IDS = [
+  "review_listing",
+  "message_seller",
+  "verify_title_ownership",
+  "schedule_safe_meetup",
+  "inspect_vehicle",
+  "mechanic_inspection",
+  "agree_on_price",
+  "complete_paperwork",
+  "make_payment_safely",
+  "insurance_registration",
+  "complete_purchase"
+];
 
 if (typeof store.setRuntimeUserProvider === "function") {
   store.setRuntimeUserProvider(() => Array.from(users.values()).map(adminRuntimeUser));
@@ -319,6 +332,71 @@ function createReportRecord({ reporter, reportedUserId = "", listingId = "", mes
     reviewedAt: "",
     adminNotes: "",
     metadata
+  };
+}
+
+function createBuyerGuideRecord({ buyer, listing }) {
+  const now = new Date().toISOString();
+  const sellerId = listing.userId || listing.seller?.id || "";
+  return {
+    id: `bg_${Date.now().toString(36)}_${crypto.randomBytes(4).toString("hex")}`,
+    buyer_id: buyer.id,
+    buyerId: buyer.id,
+    listing_id: listing.id,
+    listingId: listing.id,
+    seller_id: sellerId,
+    sellerId,
+    status: "active",
+    current_step: BUYER_GUIDE_STEP_IDS[0],
+    currentStep: BUYER_GUIDE_STEP_IDS[0],
+    completed_steps: [],
+    completedSteps: [],
+    buyer_state: "",
+    buyerState: "",
+    seller_state: "",
+    sellerState: "",
+    notes: {},
+    created_at: now,
+    createdAt: now,
+    updated_at: now,
+    updatedAt: now
+  };
+}
+
+async function decorateBuyerGuide(guide) {
+  if (!guide) return null;
+  const listingId = guide.listing_id || guide.listingId;
+  const sellerId = guide.seller_id || guide.sellerId;
+  const listing = listingId ? await store.getListingById(listingId) : null;
+  const seller = sellerId && typeof store.getSellerById === "function" ? await store.getSellerById(sellerId) : null;
+  return {
+    ...guide,
+    buyer_id: guide.buyer_id || guide.buyerId,
+    buyerId: guide.buyerId || guide.buyer_id,
+    listing_id: listingId,
+    listingId,
+    seller_id: sellerId,
+    sellerId,
+    current_step: guide.current_step || guide.currentStep || BUYER_GUIDE_STEP_IDS[0],
+    currentStep: guide.currentStep || guide.current_step || BUYER_GUIDE_STEP_IDS[0],
+    completed_steps: Array.isArray(guide.completed_steps) ? guide.completed_steps : (guide.completedSteps || []),
+    completedSteps: Array.isArray(guide.completedSteps) ? guide.completedSteps : (guide.completed_steps || []),
+    buyer_state: guide.buyer_state || guide.buyerState || "",
+    buyerState: guide.buyerState || guide.buyer_state || "",
+    seller_state: guide.seller_state || guide.sellerState || "",
+    sellerState: guide.sellerState || guide.seller_state || "",
+    updated_at: guide.updated_at || guide.updatedAt,
+    updatedAt: guide.updatedAt || guide.updated_at,
+    listing: listing ? listingWithReadableImages(listing) : null,
+    seller: seller ? sellerWithReadableImages(seller) : {
+      id: sellerId,
+      name: listing?.seller?.name || "Kerodex seller",
+      verification: {
+        email: Boolean(listing?.seller?.emailVerified),
+        phone: Boolean(listing?.seller?.phoneVerified),
+        identity: Boolean(listing?.seller?.verified)
+      }
+    }
   };
 }
 
@@ -3304,6 +3382,130 @@ const server = http.createServer((req, res) => {
         sendJson(res, 201, { report, message: "Report submitted for Kerodex review." });
       })
       .catch((error) => sendJson(res, 400, { error: "Unable to submit report.", detail: error.message }));
+    return;
+  }
+
+  if (url.pathname === "/api/buyer-guides/start" && req.method === "POST") {
+    const user = getAuthUser(req);
+    if (!user) {
+      sendJson(res, 401, { error: "Sign in to start a buyer guide." });
+      return;
+    }
+    readJson(req)
+      .then(async (body) => {
+        const listingId = normalizeLimitedString(body.listingId, 120);
+        if (!listingId) {
+          sendJson(res, 400, { error: "Listing ID is required." });
+          return;
+        }
+        const listing = await store.getListingById(listingId);
+        if (!listing || !["active", "sold"].includes(String(listing.status || "active"))) {
+          sendJson(res, 404, { error: "Listing not found." });
+          return;
+        }
+        if (listing.userId === user.id) {
+          sendJson(res, 400, { error: "You cannot start a buyer guide for your own listing." });
+          return;
+        }
+        const existing = typeof store.getActiveBuyerGuide === "function"
+          ? await store.getActiveBuyerGuide(user.id, listing.id)
+          : null;
+        const guide = existing || await store.saveBuyerGuide(createBuyerGuideRecord({ buyer: user, listing }));
+        await trackEvent(req, existing ? "buyer_guide_resumed" : "buyer_guide_started", user, {
+          listingId: listing.id,
+          guideId: guide.id
+        });
+        sendJson(res, existing ? 200 : 201, { guide: await decorateBuyerGuide(guide) });
+      })
+      .catch((error) => sendJson(res, error.status || 400, { error: "Unable to start buyer guide.", detail: error.message }));
+    return;
+  }
+
+  if (url.pathname === "/api/buyer-guides" && req.method === "GET") {
+    const user = getAuthUser(req);
+    if (!user) {
+      sendJson(res, 401, { error: "Sign in to view buyer guides." });
+      return;
+    }
+    Promise.resolve(typeof store.getBuyerGuidesByBuyer === "function" ? store.getBuyerGuidesByBuyer(user.id) : [])
+      .then(async (guides) => {
+        const decorated = await Promise.all(guides.map((guide) => decorateBuyerGuide(guide)));
+        sendJson(res, 200, { guides: decorated.filter(Boolean) });
+      })
+      .catch((error) => sendJson(res, 500, { error: "Unable to load buyer guides.", detail: error.message }));
+    return;
+  }
+
+  const buyerGuideMatch = url.pathname.match(/^\/api\/buyer-guides\/([^/]+)$/);
+  if (buyerGuideMatch && req.method === "GET") {
+    const user = getAuthUser(req);
+    if (!user) {
+      sendJson(res, 401, { error: "Sign in to view this buyer guide." });
+      return;
+    }
+    const id = decodeURIComponent(buyerGuideMatch[1]);
+    Promise.resolve(typeof store.getBuyerGuideById === "function" ? store.getBuyerGuideById(id) : null)
+      .then(async (guide) => {
+        if (!guide || (guide.buyer_id || guide.buyerId) !== user.id) {
+          sendJson(res, 404, { error: "Buyer guide not found." });
+          return;
+        }
+        sendJson(res, 200, { guide: await decorateBuyerGuide(guide) });
+      })
+      .catch((error) => sendJson(res, 500, { error: "Unable to load buyer guide.", detail: error.message }));
+    return;
+  }
+
+  if (buyerGuideMatch && req.method === "PATCH") {
+    const user = getAuthUser(req);
+    if (!user) {
+      sendJson(res, 401, { error: "Sign in to update this buyer guide." });
+      return;
+    }
+    const id = decodeURIComponent(buyerGuideMatch[1]);
+    readJson(req)
+      .then(async (body) => {
+        const guide = typeof store.getBuyerGuideById === "function" ? await store.getBuyerGuideById(id) : null;
+        if (!guide || (guide.buyer_id || guide.buyerId) !== user.id) {
+          sendJson(res, 404, { error: "Buyer guide not found." });
+          return;
+        }
+        const currentStep = BUYER_GUIDE_STEP_IDS.includes(String(body.current_step || body.currentStep || ""))
+          ? String(body.current_step || body.currentStep)
+          : (guide.current_step || guide.currentStep || BUYER_GUIDE_STEP_IDS[0]);
+        const completedSteps = Array.isArray(body.completed_steps || body.completedSteps)
+          ? Array.from(new Set((body.completed_steps || body.completedSteps).map(String).filter((step) => BUYER_GUIDE_STEP_IDS.includes(step))))
+          : (guide.completed_steps || guide.completedSteps || []);
+        const status = ["active", "completed", "cancelled"].includes(String(body.status || ""))
+          ? String(body.status)
+          : guide.status || "active";
+        const notes = body.notes && typeof body.notes === "object" ? body.notes : (guide.notes || {});
+        const updatedAt = new Date().toISOString();
+        const updated = {
+          ...guide,
+          status,
+          current_step: currentStep,
+          currentStep,
+          completed_steps: completedSteps,
+          completedSteps,
+          buyer_state: normalizeLimitedString(body.buyer_state ?? body.buyerState ?? guide.buyer_state ?? guide.buyerState ?? "", 40),
+          buyerState: normalizeLimitedString(body.buyerState ?? body.buyer_state ?? guide.buyerState ?? guide.buyer_state ?? "", 40),
+          seller_state: normalizeLimitedString(body.seller_state ?? body.sellerState ?? guide.seller_state ?? guide.sellerState ?? "", 40),
+          sellerState: normalizeLimitedString(body.sellerState ?? body.seller_state ?? guide.sellerState ?? guide.seller_state ?? "", 40),
+          notes,
+          updated_at: updatedAt,
+          updatedAt
+        };
+        const saved = await store.saveBuyerGuide(updated);
+        await trackEvent(req, "buyer_guide_updated", user, {
+          listingId: saved.listing_id || saved.listingId,
+          guideId: saved.id,
+          status: saved.status,
+          completedCount: completedSteps.length
+        });
+        sendJson(res, 200, { guide: await decorateBuyerGuide(saved) });
+      })
+      .catch((error) => sendJson(res, error.status || 400, { error: "Unable to update buyer guide.", detail: error.message }));
     return;
   }
 

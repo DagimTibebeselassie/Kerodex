@@ -360,6 +360,7 @@ class JsonStore {
     this.sellers = readJsonFile("sellers.json");
     this.reports = [];
     this.events = [];
+    this.buyerGuides = [];
     this.marketCheckCache = new Map();
     this.authSessions = new Map();
   }
@@ -442,6 +443,34 @@ class JsonStore {
     const state = await ensureAdminState(this);
     state.reports = this.reports;
     return report;
+  }
+
+  async getBuyerGuidesByBuyer(buyerId) {
+    return this.buyerGuides
+      .filter((guide) => guide.buyer_id === buyerId || guide.buyerId === buyerId)
+      .sort((a, b) => Date.parse(b.updated_at || b.updatedAt || "") - Date.parse(a.updated_at || a.updatedAt || ""));
+  }
+
+  async getBuyerGuideById(id) {
+    return this.buyerGuides.find((guide) => guide.id === id) || null;
+  }
+
+  async getActiveBuyerGuide(buyerId, listingId) {
+    return this.buyerGuides.find((guide) =>
+      (guide.buyer_id === buyerId || guide.buyerId === buyerId) &&
+      (guide.listing_id === listingId || guide.listingId === listingId) &&
+      String(guide.status || "active") === "active"
+    ) || null;
+  }
+
+  async saveBuyerGuide(guide) {
+    const existingIndex = this.buyerGuides.findIndex((item) => item.id === guide.id);
+    if (existingIndex >= 0) {
+      this.buyerGuides[existingIndex] = { ...this.buyerGuides[existingIndex], ...guide };
+      return this.buyerGuides[existingIndex];
+    }
+    this.buyerGuides.unshift(guide);
+    return guide;
   }
 
   async trackEvent(event) {
@@ -620,12 +649,31 @@ class PostgresStore {
         expires_at TIMESTAMPTZ
       )
     `);
+    await this.pool.query(`
+      CREATE TABLE IF NOT EXISTS buyer_purchase_guides (
+        id TEXT PRIMARY KEY,
+        buyer_id TEXT NOT NULL,
+        listing_id TEXT NOT NULL,
+        seller_id TEXT,
+        status TEXT NOT NULL DEFAULT 'active',
+        current_step TEXT,
+        completed_steps JSONB NOT NULL DEFAULT '[]'::jsonb,
+        buyer_state TEXT,
+        seller_state TEXT,
+        notes JSONB NOT NULL DEFAULT '{}'::jsonb,
+        payload JSONB NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
     await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_listing_records_status ON listing_records ((payload->>'status'))`);
     await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_listing_records_vin ON listing_records ((payload->>'vin'))`);
     await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_report_records_status_created ON report_records (status, created_at DESC)`);
     await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_analytics_events_type_created ON analytics_events (event_type, created_at DESC)`);
     await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_audit_records_created ON audit_records (created_at DESC)`);
     await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_auth_sessions_user ON auth_sessions (user_id, last_seen_at DESC)`);
+    await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_buyer_guides_buyer_updated ON buyer_purchase_guides (buyer_id, updated_at DESC)`);
+    await this.pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_buyer_guides_active_unique ON buyer_purchase_guides (buyer_id, listing_id) WHERE status = 'active'`);
     this.coreTablesReady = true;
   }
 
@@ -723,6 +771,66 @@ class PostgresStore {
     );
     if (this.adminState) this.adminState.reports = await this.getReports();
     return report;
+  }
+
+  async getBuyerGuidesByBuyer(buyerId) {
+    await this.ensureCoreTables();
+    const result = await this.pool.query(
+      "SELECT payload FROM buyer_purchase_guides WHERE buyer_id = $1 ORDER BY updated_at DESC",
+      [buyerId]
+    );
+    return result.rows.map((row) => row.payload);
+  }
+
+  async getBuyerGuideById(id) {
+    await this.ensureCoreTables();
+    const result = await this.pool.query("SELECT payload FROM buyer_purchase_guides WHERE id = $1 LIMIT 1", [id]);
+    return result.rows[0]?.payload || null;
+  }
+
+  async getActiveBuyerGuide(buyerId, listingId) {
+    await this.ensureCoreTables();
+    const result = await this.pool.query(
+      "SELECT payload FROM buyer_purchase_guides WHERE buyer_id = $1 AND listing_id = $2 AND status = 'active' LIMIT 1",
+      [buyerId, listingId]
+    );
+    return result.rows[0]?.payload || null;
+  }
+
+  async saveBuyerGuide(guide) {
+    await this.ensureCoreTables();
+    await this.pool.query(
+      `INSERT INTO buyer_purchase_guides
+        (id, buyer_id, listing_id, seller_id, status, current_step, completed_steps, buyer_state, seller_state, notes, payload, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
+       ON CONFLICT (id) DO UPDATE SET
+        buyer_id = EXCLUDED.buyer_id,
+        listing_id = EXCLUDED.listing_id,
+        seller_id = EXCLUDED.seller_id,
+        status = EXCLUDED.status,
+        current_step = EXCLUDED.current_step,
+        completed_steps = EXCLUDED.completed_steps,
+        buyer_state = EXCLUDED.buyer_state,
+        seller_state = EXCLUDED.seller_state,
+        notes = EXCLUDED.notes,
+        payload = EXCLUDED.payload,
+        updated_at = NOW()`,
+      [
+        guide.id,
+        guide.buyer_id || guide.buyerId,
+        guide.listing_id || guide.listingId,
+        guide.seller_id || guide.sellerId || "",
+        guide.status || "active",
+        guide.current_step || guide.currentStep || "",
+        guide.completed_steps || guide.completedSteps || [],
+        guide.buyer_state || guide.buyerState || "",
+        guide.seller_state || guide.sellerState || "",
+        guide.notes || {},
+        guide,
+        guide.created_at || guide.createdAt || new Date().toISOString()
+      ]
+    );
+    return guide;
   }
 
   async trackEvent(event) {

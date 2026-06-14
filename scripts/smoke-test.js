@@ -81,6 +81,32 @@ requiredFiles.forEach((file) => {
   assert(serverSource.includes("SELLER_CHECKLIST_KEYS"), "API must define seller checklist validation.");
   assert(serverSource.includes("duplicate_vin"), "API must reject duplicate active VINs.");
   assert(serverSource.includes("auditMarketplaceAction"), "API must write marketplace audit actions.");
+  assert(serverSource.includes("/api/buyer-guides/start"), "API must expose buyer guide start route.");
+
+  if (typeof store.saveBuyerGuide === "function") {
+    const guide = await store.saveBuyerGuide({
+      id: `bg_smoke_${Date.now()}`,
+      buyer_id: "smoke_buyer",
+      buyerId: "smoke_buyer",
+      listing_id: listings[0].id,
+      listingId: listings[0].id,
+      seller_id: listings[0].seller.id,
+      sellerId: listings[0].seller.id,
+      status: "active",
+      current_step: "review_listing",
+      currentStep: "review_listing",
+      completed_steps: ["review_listing"],
+      completedSteps: ["review_listing"],
+      notes: { review_listing: "Smoke test note" },
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+    assert(guide.id, "Buyer guide store must save guide records.");
+    const fetchedGuide = await store.getBuyerGuideById(guide.id);
+    assert(fetchedGuide?.id === guide.id, "Buyer guide store must fetch guide by id.");
+    const buyerGuides = await store.getBuyerGuidesByBuyer("smoke_buyer");
+    assert(buyerGuides.some((item) => item.id === guide.id), "Buyer guide store must list guides by buyer.");
+  }
 
   const report = await store.createReport({
     id: `rep_smoke_${Date.now()}`,
