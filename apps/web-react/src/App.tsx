@@ -20,6 +20,7 @@ import { SafetyCenterPage } from './pages/SafetyCenter';
 import { AboutPage } from './pages/About';
 import { ContactPage, DealerPolicyPage, HowItWorksPage, ProhibitedListingsPage, SignInPage, SupportPage } from './pages/MarketingPages';
 import { OnboardingPage } from './pages/Onboarding';
+import { FeatureTourPage } from './pages/FeatureTour';
 import { RouteSeo } from './components/Seo';
 import { consumeAuthRedirect, currentUser, trackAnalyticsEvent } from './lib/api';
 
@@ -138,6 +139,12 @@ const onboardingRoute = createRoute({
   component: OnboardingPage,
 });
 
+const featureTourRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/feature-tour',
+  component: FeatureTourPage,
+});
+
 const savedRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/saved',
@@ -246,6 +253,7 @@ const routeTree = rootRoute.addChildren([
   sellRoute,
   signInRoute,
   onboardingRoute,
+  featureTourRoute,
   savedRoute,
   messagesRoute,
   buyerGuideRoute,

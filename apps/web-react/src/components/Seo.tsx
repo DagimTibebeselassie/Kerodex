@@ -3,7 +3,7 @@ import { useRouterState } from '@tanstack/react-router';
 
 const SITE_URL = 'https://kerodexofficial.com';
 const SITE_NAME = 'Kerodex';
-const DEFAULT_IMAGE = `${SITE_URL}/icon-512.png`;
+const DEFAULT_IMAGE = `${SITE_URL}/assets/darkmodeNonTransparent.png`;
 
 type SeoEntry = {
   title: string;
@@ -21,6 +21,11 @@ const seoByPath: Record<string, SeoEntry> = {
     title: 'Sign In | Kerodex',
     description: 'Sign in or create a Kerodex account to save vehicles, message sellers, and manage private-party listings.',
     canonicalPath: '/signin',
+  },
+  '/feature-tour': {
+    title: 'Kerodex Guide | Kerodex',
+    description: 'Learn the key Kerodex features for safer private-party car buying, listing verification, messaging, and buyer guides.',
+    canonicalPath: '/feature-tour',
   },
   '/cars': {
     title: 'Browse Cars | Kerodex',
@@ -153,7 +158,7 @@ function homepageStructuredData() {
       '@type': 'Organization',
       name: SITE_NAME,
       url: SITE_URL,
-      logo: `${SITE_URL}/icon-512.png`,
+      logo: DEFAULT_IMAGE,
       email: 'founder@kerodexofficial.com',
       sameAs,
     },

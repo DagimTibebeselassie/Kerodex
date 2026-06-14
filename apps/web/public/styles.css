@@ -2016,7 +2016,7 @@ body.dark #resultsMap .leaflet-tile {
 }
 
 .app-loader img {
-  content: url("/assets/kerodex-logo-transparent-light.png");
+  content: url("/assets/darkmodeTransparent.png");
   max-width: min(520px, 82vw) !important;
 }
 
@@ -4436,7 +4436,7 @@ body.dark .search-categories button:hover {
 }
 
 .app-loader img {
-  content: url("/assets/kerodex-logo-transparent-light.png");
+  content: url("/assets/darkmodeTransparent.png");
   max-width: min(520px, 82vw) !important;
 }
 

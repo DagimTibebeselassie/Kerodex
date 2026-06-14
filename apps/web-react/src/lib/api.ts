@@ -27,6 +27,7 @@ export interface KerodexUser {
   preferredVehicleTypes?: string[];
   onboardingCompleted?: boolean;
   onboardingCompletedAt?: string;
+  featureTourCompletedAt?: string;
   lastActiveAt?: string;
   termsVersion?: string;
   acceptedTermsAt?: string;
@@ -233,6 +234,17 @@ export async function clearSession() {
   }
 }
 
+export async function deleteAccountImmediately() {
+  const body = await request<{ message: string }>('/api/me', {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(USER_KEY);
+  window.dispatchEvent(new CustomEvent('kerodex:auth-changed'));
+  return body;
+}
+
 export async function emailAuth(
   mode: 'signin' | 'create',
   email: string,
@@ -354,6 +366,17 @@ export async function updateAccountProfile(payload: Partial<KerodexUser> & { nam
     method: 'PATCH',
     headers: authHeaders(),
     body: JSON.stringify(payload),
+  });
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (token) saveSession({ token, user: body.user });
+  return body;
+}
+
+export async function completeFeatureTour() {
+  const body = await request<{ message: string; user: KerodexUser }>('/api/me/feature-tour', {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify({ completed: true }),
   });
   const token = localStorage.getItem(TOKEN_KEY);
   if (token) saveSession({ token, user: body.user });

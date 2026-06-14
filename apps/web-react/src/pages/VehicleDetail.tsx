@@ -1129,6 +1129,9 @@ export function VehicleDetailPage() {
     setGuideStarting(true);
     try {
       const guide = await startBuyerGuide(vehicle.id);
+      if (!guide?.id) {
+        throw new Error('Buyer guide could not be opened. Please try again.');
+      }
       toast.success('Buyer guide ready.');
       navigate({ to: '/buyer-guides/$guideId', params: { guideId: guide.id } });
     } catch (error: any) {

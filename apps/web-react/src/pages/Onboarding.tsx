@@ -7,88 +7,6 @@ import { MAKES } from '@/data/makes-models';
 const vehicleTypes = ['Sedan', 'Coupe', 'SUV', 'Truck', 'EV', 'Hybrid', 'Luxury', 'Sports Car', 'Van', 'Motorcycle'];
 const priorityMakes = ['Toyota', 'Honda', 'Ford', 'Chevrolet', 'Nissan', 'Hyundai', 'Kia', 'BMW', 'Mercedes', 'Tesla', 'Lexus', 'Subaru'];
 
-function makeInitials(make: string) {
-  return make
-    .replace(/_/g, ' ')
-    .split(/\s+/)
-    .map((part) => part[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
-}
-
-function BrandMark({ make }: { make: string }) {
-  const normalized = make.toLowerCase().replace(/[_\s-]/g, '');
-  if (normalized === 'toyota') {
-    return (
-      <>
-        <span className="absolute h-7 w-10 rounded-full border border-current" />
-        <span className="absolute h-7 w-4 rounded-full border border-current" />
-      </>
-    );
-  }
-  if (normalized === 'mercedes' || normalized === 'mercedesbenz') {
-    return <span className="text-[22px] font-light leading-none">*</span>;
-  }
-  if (normalized === 'bmw') {
-    return (
-      <span className="grid h-8 w-8 grid-cols-2 overflow-hidden rounded-full border border-current text-[0px]">
-        <span className="bg-current opacity-90" />
-        <span />
-        <span />
-        <span className="bg-current opacity-90" />
-      </span>
-    );
-  }
-  if (normalized === 'chevrolet') {
-    return <span className="h-4 w-9 border border-current bg-current/10 [clip-path:polygon(0_35%,35%_35%,35%_0,65%_0,65%_35%,100%_35%,100%_65%,65%_65%,65%_100%,35%_100%,35%_65%,0_65%)]" />;
-  }
-  if (normalized === 'ford') {
-    return <span className="flex h-6 w-10 items-center justify-center rounded-full border border-current text-[9px] font-black italic">F</span>;
-  }
-  if (normalized === 'honda') {
-    return <span className="flex h-8 w-7 items-center justify-center rounded-sm border border-current text-[18px] font-black leading-none">H</span>;
-  }
-  if (normalized === 'hyundai') {
-    return <span className="flex h-7 w-10 -skew-x-12 items-center justify-center rounded-full border border-current text-[17px] font-black leading-none">H</span>;
-  }
-  if (normalized === 'kia') {
-    return <span className="text-[14px] font-black tracking-[-0.12em]">KIA</span>;
-  }
-  if (normalized === 'nissan') {
-    return <span className="flex h-8 w-8 items-center justify-center rounded-full border border-current text-[9px] font-black">N</span>;
-  }
-  if (normalized === 'tesla') {
-    return <span className="text-[24px] font-black leading-none">T</span>;
-  }
-  if (normalized === 'lexus') {
-    return <span className="flex h-8 w-10 items-center justify-center rounded-full border border-current text-[18px] font-black italic">L</span>;
-  }
-  if (normalized === 'subaru') {
-    return (
-      <span className="relative flex h-7 w-10 items-center justify-center rounded-full border border-current">
-        <span className="absolute left-2 top-2 h-1.5 w-1.5 rounded-full bg-current" />
-        <span className="absolute right-2 top-2.5 h-1 w-1 rounded-full bg-current" />
-        <span className="absolute right-3 bottom-2 h-1.5 w-1.5 rounded-full bg-current" />
-      </span>
-    );
-  }
-  return <span className="relative">{makeInitials(make)}</span>;
-}
-
-function MakeLogo({ make, selected }: { make: string; selected: boolean }) {
-  return (
-    <span
-      className={`relative flex h-12 w-12 items-center justify-center rounded-full border text-[12px] font-black tracking-tight transition-colors ${
-        selected ? 'border-background bg-background text-foreground' : 'border-border bg-muted/30 text-foreground'
-      }`}
-      aria-hidden="true"
-    >
-      <BrandMark make={make} />
-    </span>
-  );
-}
-
 export function OnboardingPage() {
   const navigate = useNavigate();
   const user = currentUser();
@@ -129,9 +47,9 @@ export function OnboardingPage() {
       }
       if (step === 3) await updateAccountProfile({ favoriteBrands });
       if (step === 4) {
-        await updateAccountProfile({ preferredVehicleTypes, onboardingCompleted: true });
+        const result = await updateAccountProfile({ preferredVehicleTypes, onboardingCompleted: true });
         toast.success(`Welcome to Kerodex, ${firstName}.`);
-        navigate({ to: '/' });
+        navigate({ to: result.user.featureTourCompletedAt ? '/cars' : '/feature-tour' });
         return;
       }
       setStep((value) => value + 1);
@@ -178,8 +96,8 @@ export function OnboardingPage() {
                 <button key={make} type="button" onClick={() => toggle(make, favoriteBrands, setFavoriteBrands)}
                   title={make.replace(/_/g, ' ')}
                   aria-label={make.replace(/_/g, ' ')}
-                  className={`flex h-20 items-center justify-center border transition-colors ${favoriteBrands.includes(make) ? 'bg-foreground text-background border-foreground' : 'border-border hover:bg-muted'}`}>
-                  <MakeLogo make={make} selected={favoriteBrands.includes(make)} />
+                  className={`flex min-h-12 items-center justify-center border px-3 py-3 text-center text-[12px] font-bold transition-colors ${favoriteBrands.includes(make) ? 'bg-foreground text-background border-foreground' : 'border-border hover:bg-muted'}`}>
+                  {make.replace(/_/g, ' ')}
                 </button>
               ))}
             </div>

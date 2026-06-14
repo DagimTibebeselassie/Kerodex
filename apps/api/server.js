@@ -390,7 +390,7 @@ async function decorateBuyerGuide(guide) {
     listing: listing ? listingWithReadableImages(listing) : null,
     seller: seller ? sellerWithReadableImages(seller) : {
       id: sellerId,
-      name: listing?.seller?.name || "Kerodex seller",
+      name: listing?.seller?.name || listing?.sellerName || "Kerodex seller",
       verification: {
         email: Boolean(listing?.seller?.emailVerified),
         phone: Boolean(listing?.seller?.phoneVerified),
@@ -627,6 +627,7 @@ function publicUser(user) {
     preferredVehicleTypes: Array.isArray(user.preferredVehicleTypes) ? user.preferredVehicleTypes : [],
     onboardingCompleted: Boolean(user.onboardingCompleted),
     onboardingCompletedAt: user.onboardingCompletedAt || "",
+    featureTourCompletedAt: user.featureTourCompletedAt || user.feature_tour_completed_at || "",
     lastActiveAt: user.lastActiveAt || user.lastLoginAt || "",
     termsVersion: user.termsVersion || "",
     acceptedTermsAt: user.acceptedTermsAt || "",
@@ -751,6 +752,20 @@ async function saveRuntimeUser(user) {
   return user;
 }
 
+async function deleteRuntimeUserAccount(user) {
+  if (!user?.id) return;
+  const id = user.id;
+  if (typeof store.deleteUserAccount === "function") {
+    await store.deleteUserAccount(id);
+  }
+  Array.from(sessions.entries()).forEach(([token, userId]) => {
+    if (userId === id) sessions.delete(token);
+  });
+  Array.from(users.entries()).forEach(([email, cached]) => {
+    if (cached?.id === id) users.delete(email);
+  });
+}
+
 function normalizeUsername(value) {
   return String(value || "").trim().toLowerCase().replace(/[^a-z0-9_]/g, "");
 }
@@ -789,6 +804,7 @@ async function upsertSocialUser(provider) {
     personaReferenceId: "",
     identityVerificationStatus: "unverified",
     identityVerifiedAt: "",
+    featureTourCompletedAt: "",
     createdAt: new Date().toISOString(),
     lastLoginAt: null
   };
@@ -830,6 +846,7 @@ async function upsertOAuthUser(provider, profile, legalConsent = {}) {
     username: "",
     birthday: "",
     onboardingCompleted: false,
+    featureTourCompletedAt: "",
     favoriteBrands: [],
     preferredVehicleTypes: [],
     password: null,
@@ -2881,6 +2898,7 @@ const server = http.createServer((req, res) => {
             username: "",
             birthday: "",
             onboardingCompleted: false,
+            featureTourCompletedAt: "",
             favoriteBrands: [],
             preferredVehicleTypes: [],
             password: hashPassword(password),
@@ -3130,6 +3148,48 @@ const server = http.createServer((req, res) => {
         sendJson(res, 200, { message: "Account updated.", user: publicUser(next) });
       })
       .catch((error) => sendJson(res, 400, { error: error.message || "Unable to update account." }));
+    return;
+  }
+
+  if (url.pathname === "/api/me" && req.method === "DELETE") {
+    const user = getAuthUser(req);
+    if (!user) {
+      sendJson(res, 401, { error: "Sign in to delete your account." });
+      return;
+    }
+    deleteRuntimeUserAccount(user)
+      .then(async () => {
+        await auditMarketplaceAction(req, "account.deleted_immediately", "user", user.id, user, {
+          previousValue: "active",
+          newValue: "deleted",
+          notes: "Immediate self-service deletion for testing."
+        }).catch(() => {});
+        sendJson(res, 200, { message: "Account deleted." });
+      })
+      .catch((error) => sendJson(res, 500, { error: publicError(error, "Unable to delete account.") }));
+    return;
+  }
+
+  if (url.pathname === "/api/me/feature-tour" && req.method === "PATCH") {
+    const user = getAuthUser(req);
+    if (!user) {
+      sendJson(res, 401, { error: "Sign in to update your Kerodex guide status." });
+      return;
+    }
+    readJson(req)
+      .then(async (body) => {
+        if (body.completed !== true) {
+          sendJson(res, 400, { error: "Feature tour completion must be true." });
+          return;
+        }
+        const next = {
+          ...user,
+          featureTourCompletedAt: user.featureTourCompletedAt || new Date().toISOString()
+        };
+        await saveRuntimeUser(next);
+        sendJson(res, 200, { message: "Kerodex guide status updated.", user: publicUser(next) });
+      })
+      .catch((error) => sendJson(res, 400, { error: error.message || "Unable to update Kerodex guide status." }));
     return;
   }
 

@@ -1,13 +1,13 @@
 import { useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Link } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { useAuth } from '@/hooks/useAuth';
-import { createUploadUrl, listMyVehicles, savedVehicleIds, updateAccountPassword, updateAccountProfile, updateProfileAvatar } from '@/lib/api';
+import { createUploadUrl, deleteAccountImmediately, listMyVehicles, savedVehicleIds, updateAccountPassword, updateAccountProfile, updateProfileAvatar } from '@/lib/api';
 import { Button, Input, toast } from '@blinkdotnew/ui';
 import {
   User, BadgeCheck, Shield, Bell, Lock, Car, Heart, MessageSquare,
   LayoutDashboard, ChevronRight, CheckCircle2, AlertCircle, Edit3,
-  Phone, Mail, Camera,
+  Phone, Mail, Camera, Sparkles, Trash2,
 } from 'lucide-react';
 
 function StatTile({ icon, label, value, href }: {
@@ -58,8 +58,11 @@ function VerifBadge({ done, label }: { done: boolean; label: string }) {
 export function ProfilePage() {
   const { user, login, isLoading: authLoading } = useAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
 
   const [editMode, setEditMode] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteText, setDeleteText] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [username, setUsername] = useState('');
   const [birthday, setBirthday] = useState('');
@@ -132,6 +135,16 @@ export function ProfilePage() {
       setNewPassword('');
     },
     onError: (error) => toast.error(error instanceof Error ? error.message : 'Unable to update password.'),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteAccountImmediately,
+    onSuccess: () => {
+      toast.success('Account deleted.');
+      queryClient.clear();
+      navigate({ to: '/' });
+    },
+    onError: (error) => toast.error(error instanceof Error ? error.message : 'Unable to delete account.'),
   });
 
   const handleAvatarFile = (file?: File) => {
@@ -406,10 +419,11 @@ export function ProfilePage() {
         </div>
       </section>
 
-      <section>
+      <section className="mb-12">
         <SectionHeader title="Account" />
         <div className="space-y-1">
           {[
+            { to: '/feature-tour', icon: <Sparkles className="h-4 w-4" />, label: 'View Kerodex Guide', desc: 'Replay the quick feature tour' },
             { to: '/cockpit', icon: <LayoutDashboard className="h-4 w-4" />, label: 'Seller Cockpit', desc: 'Manage your listings and view performance' },
             { to: '/verify', icon: <Shield className="h-4 w-4" />, label: 'Verification Center', desc: 'Complete verification to unlock all features' },
             { to: '/saved', icon: <Heart className="h-4 w-4" />, label: 'Saved Vehicles', desc: `${savedCount?.length ?? 0} saved listings` },
@@ -426,6 +440,74 @@ export function ProfilePage() {
               </div>
             </Link>
           ))}
+        </div>
+      </section>
+
+      <section>
+        <SectionHeader
+          title="Danger Zone"
+          description="For testing, account deletion happens immediately. Later this can become a 60-day pending deletion flow."
+        />
+        <div className="border border-destructive/30 bg-destructive/5 p-4 md:p-5">
+          {!deleteOpen ? (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <Trash2 className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+                <div>
+                  <div className="text-[13px] font-bold">Delete account immediately</div>
+                  <p className="text-[12px] text-muted-foreground mt-1 max-w-xl">
+                    This removes your account, active sessions, seller profile, your listings, your buyer guides, and conversations tied to this account.
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                onClick={() => setDeleteOpen(true)}
+                className="h-9 px-4 text-[11px] font-bold uppercase tracking-wider border-destructive/40 text-destructive hover:bg-destructive/10"
+              >
+                Delete Account
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+                <div>
+                  <div className="text-[13px] font-bold">Confirm immediate deletion</div>
+                  <p className="text-[12px] text-muted-foreground mt-1">
+                    This testing version deletes the account right away. Type <span className="font-bold text-foreground">DELETE</span> to confirm.
+                  </p>
+                </div>
+              </div>
+              <Input
+                value={deleteText}
+                onChange={(event) => setDeleteText(event.target.value)}
+                placeholder="Type DELETE"
+                className="h-9 text-[13px] max-w-sm"
+              />
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  variant="outline"
+                  disabled={deleteMutation.isPending || deleteText !== 'DELETE'}
+                  onClick={() => deleteMutation.mutate()}
+                  className="h-9 px-4 text-[11px] font-bold uppercase tracking-wider border-destructive/40 text-destructive hover:bg-destructive/10"
+                >
+                  {deleteMutation.isPending ? 'Deleting...' : 'Delete Immediately'}
+                </Button>
+                <Button
+                  variant="ghost"
+                  disabled={deleteMutation.isPending}
+                  onClick={() => {
+                    setDeleteOpen(false);
+                    setDeleteText('');
+                  }}
+                  className="h-9 px-3 text-[11px]"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </section>
     </div>

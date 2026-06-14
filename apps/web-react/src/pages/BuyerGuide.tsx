@@ -13,7 +13,8 @@ function formatMoney(value?: number) {
 }
 
 export function BuyerGuidePage() {
-  const { guideId } = useParams({ from: '/buyer-guides/$guideId' });
+  const params = useParams({ strict: false }) as { guideId?: string };
+  const guideId = params.guideId || '';
   const { user, login, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -25,7 +26,7 @@ export function BuyerGuidePage() {
     enabled: !!user && !!guideId,
   });
 
-  const listing = guide?.listing ? toVehicle(guide.listing) as Vehicle : null;
+  const listing = guide?.listing && guide.listing.id ? toVehicle(guide.listing) as Vehicle : null;
   const completed = new Set(guide?.completedSteps || guide?.completed_steps || []);
   const currentStepId = guide?.currentStep || guide?.current_step || BUYER_GUIDE_STEPS[0].id;
   const currentStep = BUYER_GUIDE_STEPS.find((step) => step.id === currentStepId) || BUYER_GUIDE_STEPS[0];

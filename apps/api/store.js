@@ -499,6 +499,25 @@ class JsonStore {
     return user;
   }
 
+  async deleteUserAccount(userId) {
+    const id = String(userId || "");
+    this.listings = this.listings.filter((listing) => listing.userId !== id && listing.seller?.id !== id);
+    this.sellers = this.sellers.filter((seller) => seller.id !== id);
+    this.buyerGuides = this.buyerGuides.filter((guide) =>
+      (guide.buyer_id || guide.buyerId) !== id && (guide.seller_id || guide.sellerId) !== id
+    );
+    this.conversations = this.conversations.filter((conversation) =>
+      conversation.buyerId !== id &&
+      conversation.sellerId !== id &&
+      conversation.partnerId !== id &&
+      !(conversation.participants || []).includes(id)
+    );
+    Array.from(this.authSessions.entries()).forEach(([token, session]) => {
+      if (session.userId === id) this.authSessions.delete(token);
+    });
+    return { deleted: true };
+  }
+
   async saveAuthSession(session) {
     this.authSessions.set(session.token, session);
     return session;
@@ -923,6 +942,28 @@ class PostgresStore {
       [user.id, String(user.email || "").toLowerCase(), user]
     );
     return user;
+  }
+
+  async deleteUserAccount(userId) {
+    await this.ensureCoreTables();
+    const id = String(userId || "");
+    const client = await this.pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query("DELETE FROM auth_sessions WHERE user_id = $1", [id]);
+      await client.query("DELETE FROM buyer_purchase_guides WHERE buyer_id = $1 OR seller_id = $1", [id]);
+      await client.query("DELETE FROM conversation_records WHERE payload->>'buyerId' = $1 OR payload->>'sellerId' = $1 OR payload->>'partnerId' = $1", [id]);
+      await client.query("DELETE FROM listing_records WHERE payload->>'userId' = $1 OR payload->'seller'->>'id' = $1", [id]);
+      await client.query("DELETE FROM seller_records WHERE id = $1", [id]);
+      await client.query("DELETE FROM user_records WHERE id = $1", [id]);
+      await client.query("COMMIT");
+      return { deleted: true };
+    } catch (error) {
+      await client.query("ROLLBACK").catch(() => {});
+      throw error;
+    } finally {
+      client.release();
+    }
   }
 
   async saveAuthSession(session) {
