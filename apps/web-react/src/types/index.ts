@@ -118,12 +118,6 @@ export interface ListingDocument {
   ocrError?: string;
   ocr_status?: string;
   ocrStatus?: string;
-  textract_job_id?: string;
-  textractJobId?: string;
-  textract_job_status?: string;
-  textractJobStatus?: string;
-  textract_metadata?: Record<string, unknown> | null;
-  textractMetadata?: Record<string, unknown> | null;
   extractedVins?: string[];
   titleBrandingTerms?: string[];
 }

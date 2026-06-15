@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const { URL } = require("url");
 
 const PRESENCE_STATUSES = {
   PENDING: "pending_verification",
@@ -50,6 +51,46 @@ function parseJsonObject(text) {
   }
 }
 
+function vehiclePresenceLog(event, payload = {}) {
+  console.info(`[vehicle-presence] ${event}`, {
+    at: new Date().toISOString(),
+    ...payload
+  });
+}
+
+function vehiclePresenceError(event, payload = {}) {
+  console.error(`[vehicle-presence] ${event}`, {
+    at: new Date().toISOString(),
+    ...payload
+  });
+}
+
+function safeImageUrlSummary(imageUrl = "") {
+  if (!imageUrl) return { present: false };
+  try {
+    const parsed = new URL(imageUrl);
+    return {
+      present: true,
+      protocol: parsed.protocol,
+      host: parsed.host,
+      pathname: parsed.pathname,
+      hasQuery: Boolean(parsed.search)
+    };
+  } catch {
+    return {
+      present: true,
+      invalidUrl: true,
+      length: String(imageUrl).length
+    };
+  }
+}
+
+function openAiErrorDetail(body, status) {
+  if (body?.error?.message) return body.error.message;
+  if (typeof body === "string" && body.trim()) return body.trim().slice(0, 1000);
+  return `AI verification failed with status ${status}.`;
+}
+
 function openAiConfig() {
   const apiKey = process.env.OPENAI_API_KEY || process.env.VEHICLE_PRESENCE_OPENAI_API_KEY || "";
   if (!apiKey) return null;
@@ -59,9 +100,13 @@ function openAiConfig() {
   };
 }
 
-async function analyzeWithOpenAi({ imageUrl, code, listing, ocrText = "" }) {
+async function analyzeWithOpenAi({ imageUrl, code, listing }) {
   const config = openAiConfig();
   if (!config) {
+    vehiclePresenceLog("OpenAI client not initialized; missing API key", {
+      hasOpenAiKey: Boolean(process.env.OPENAI_API_KEY),
+      hasVehiclePresenceKey: Boolean(process.env.VEHICLE_PRESENCE_OPENAI_API_KEY)
+    });
     return {
       status: PRESENCE_STATUSES.MANUAL_REVIEW,
       confidence: 0,
@@ -78,43 +123,97 @@ async function analyzeWithOpenAi({ imageUrl, code, listing, ocrText = "" }) {
     };
   }
 
+  vehiclePresenceLog("OpenAI client initialized", {
+    model: config.model,
+    keySource: process.env.OPENAI_API_KEY ? "OPENAI_API_KEY" : "VEHICLE_PRESENCE_OPENAI_API_KEY",
+    keyPresent: true
+  });
+
   const prompt = [
     "You are reviewing a private-party car listing verification photo for Kerodex.",
     "The seller was instructed to hold or place a handwritten or printed verification code next to the windshield VIN plate visible through the windshield.",
     "Determine whether the photo likely shows a real vehicle, a visible windshield VIN plate, and a visible handwritten or printed verification code beside that windshield VIN.",
-    "The exact listing-specific code must match. The visible VIN must match the listing VIN.",
+    "Extract the visible VIN from the image. Extract the visible verification code from the image. The exact listing-specific code must match. The visible VIN must match the listing VIN.",
     "Look for screenshot-like artifacts such as app chrome, browser UI, obvious copied marketplace screenshots, or a photo of a screen.",
     "Return JSON only with keys: vehicleVisible, vinPlateVisible, textVisible, codeMatches, vinMatches, likelyNewPhoto, confidence, observedText, observedVin, reason.",
+    "Confidence must be a decimal from 0.0 to 1.0, not a percentage.",
     `Expected verification code: ${code}`,
     `Expected VIN: ${listing.vin || ""}`,
-    `OCR text from the uploaded photo: ${ocrText || "not available"}`,
     `Listing: ${listing.year || ""} ${listing.make || ""} ${listing.model || ""}`.trim()
   ].join("\n");
 
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${config.apiKey}`,
-      "content-type": "application/json"
-    },
-    body: JSON.stringify({
-      model: config.model,
-      input: [{
-        role: "user",
-        content: [
-          { type: "input_text", text: prompt },
-          { type: "input_image", image_url: imageUrl }
-        ]
-      }]
-    })
+  const requestBody = {
+    model: config.model,
+    input: [{
+      role: "user",
+      content: [
+        { type: "input_text", text: prompt },
+        { type: "input_image", image_url: imageUrl }
+      ]
+    }]
+  };
+
+  vehiclePresenceLog("OpenAI request started", {
+    model: requestBody.model,
+    listingId: listing.id || "",
+    vinPresent: Boolean(normalizeVin(listing.vin)),
+    expectedVinLength: normalizeVin(listing.vin).length,
+    expectedCodePresent: Boolean(code),
+    image: safeImageUrlSummary(imageUrl),
+    contentTypes: requestBody.input[0].content.map((part) => part.type)
   });
 
-  const body = await response.json().catch(() => ({}));
+  let response;
+  try {
+    response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${config.apiKey}`,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(requestBody)
+    });
+  } catch (error) {
+    vehiclePresenceError("OpenAI request failed", {
+      model: config.model,
+      listingId: listing.id || "",
+      error: error.message
+    });
+    throw error;
+  }
+
+  const responseText = await response.text();
+  let body = {};
+  try {
+    body = responseText ? JSON.parse(responseText) : {};
+  } catch {
+    body = responseText || {};
+  }
+
+  vehiclePresenceLog("OpenAI request succeeded", {
+    model: config.model,
+    listingId: listing.id || "",
+    status: response.status,
+    ok: response.ok,
+    responseId: typeof body === "object" ? body.id || "" : "",
+    outputTextLength: typeof body === "object" ? String(body.output_text || "").length : 0,
+    errorType: typeof body === "object" ? body.error?.type || "" : "",
+    errorCode: typeof body === "object" ? body.error?.code || "" : ""
+  });
+
   if (!response.ok) {
+    vehiclePresenceError("OpenAI request failed", {
+      model: config.model,
+      listingId: listing.id || "",
+      status: response.status,
+      message: openAiErrorDetail(body, response.status),
+      type: typeof body === "object" ? body.error?.type || "" : "",
+      code: typeof body === "object" ? body.error?.code || "" : ""
+    });
     return {
       status: PRESENCE_STATUSES.MANUAL_REVIEW,
       confidence: 0,
-      reason: body.error?.message || `AI verification failed with status ${response.status}.`,
+      reason: openAiErrorDetail(body, response.status),
       checks: {
         vehicleVisible: false,
         vinPlateVisible: false,
@@ -129,12 +228,12 @@ async function analyzeWithOpenAi({ imageUrl, code, listing, ocrText = "" }) {
   }
 
   const outputText =
-    body.output_text ||
-    body.output?.flatMap((item) => item.content || []).map((part) => part.text || "").join("\n") ||
+    (typeof body === "object" ? body.output_text : "") ||
+    (typeof body === "object" ? body.output?.flatMap((item) => item.content || []).map((part) => part.text || "").join("\n") : "") ||
     "";
   const parsed = parseJsonObject(outputText) || {};
   const confidence = Math.max(0, Math.min(1, Number(parsed.confidence || 0)));
-  const combinedText = [ocrText, parsed.observedText, parsed.observedVin].filter(Boolean).join("\n");
+  const combinedText = [parsed.observedText, parsed.observedVin].filter(Boolean).join("\n");
   const expectedVin = normalizeVin(listing.vin);
   const extractedVins = extractVins(combinedText);
   const vinMatches = Boolean(expectedVin && extractedVins.includes(expectedVin)) ||
@@ -158,6 +257,16 @@ async function analyzeWithOpenAi({ imageUrl, code, listing, ocrText = "" }) {
   else if (!checks.codeMatches) status = PRESENCE_STATUSES.CODE_MISMATCH;
   else if (!checks.likelyNewPhoto || confidence < 0.65) status = PRESENCE_STATUSES.MANUAL_REVIEW;
 
+  vehiclePresenceLog("OpenAI verification interpreted", {
+    listingId: listing.id || "",
+    status,
+    confidence,
+    checks,
+    extractedVinCount: extractedVins.length,
+    observedVinPresent: Boolean(parsed.observedVin || extractedVins[0]),
+    reason: String(parsed.reason || "").slice(0, 300)
+  });
+
   return {
     status,
     confidence,
@@ -165,14 +274,13 @@ async function analyzeWithOpenAi({ imageUrl, code, listing, ocrText = "" }) {
     observedText: String(parsed.observedText || ""),
     observedVin: String(parsed.observedVin || extractedVins[0] || ""),
     extractedVins,
-    ocrText,
     checks,
     provider: "openai",
     raw: parsed
   };
 }
 
-async function analyze({ imageUrl, code, listing, ocrText = "" }) {
+async function analyze({ imageUrl, code, listing }) {
   if (!imageUrl || !code) {
     return {
       status: PRESENCE_STATUSES.CODE_MISSING,
@@ -189,7 +297,7 @@ async function analyze({ imageUrl, code, listing, ocrText = "" }) {
       provider: "server"
     };
   }
-  return analyzeWithOpenAi({ imageUrl, code, listing, ocrText });
+  return analyzeWithOpenAi({ imageUrl, code, listing });
 }
 
 module.exports = {
@@ -198,6 +306,7 @@ module.exports = {
   expiresAt,
   extractVins,
   generateCode,
+  openAiConfig,
   normalizeVin,
   normalizeCode
 };

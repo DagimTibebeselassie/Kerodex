@@ -22,7 +22,6 @@ loadLocalEnvFile(path.resolve(__dirname, "../../.env"));
 
 const marketCheck = require("./marketcheck");
 const store = require("./store");
-const textract = require("./textract");
 const vehiclePresence = require("./vehicle-presence");
 const PORT = Number(process.env.PORT || 4100);
 const REACT_DIST_DIR = path.resolve(__dirname, "../web-react/dist");
@@ -1726,7 +1725,6 @@ function normalizeListingDocument(record = {}, documentType = "maintenance") {
       : [];
   const extractedText = String(record.extracted_text || record.extractedText || "");
   const ocrProcessedAt = String(record.ocr_processed_at || record.ocrProcessedAt || "");
-  const textractMetadata = record.textract_metadata || record.textractMetadata || null;
   return {
     id: String(record.id || `${documentType}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`),
     name: String(record.name || record.fileName || (documentType === "title" ? "Title document" : "Maintenance record")).trim(),
@@ -1752,92 +1750,9 @@ function normalizeListingDocument(record = {}, documentType = "maintenance") {
     ocrError: String(record.ocr_error || record.ocrError || ""),
     ocr_status: String(record.ocr_status || record.ocrStatus || ""),
     ocrStatus: String(record.ocr_status || record.ocrStatus || ""),
-    textract_job_id: String(record.textract_job_id || record.textractJobId || ""),
-    textractJobId: String(record.textract_job_id || record.textractJobId || ""),
-    textract_job_status: String(record.textract_job_status || record.textractJobStatus || ""),
-    textractJobStatus: String(record.textract_job_status || record.textractJobStatus || ""),
-    textract_metadata: textractMetadata,
-    textractMetadata,
     extractedVins: Array.isArray(record.extractedVins) ? record.extractedVins : [],
     titleBrandingTerms: Array.isArray(record.titleBrandingTerms) ? record.titleBrandingTerms : []
   };
-}
-
-async function processListingDocumentsNow(listingId) {
-  const config = s3Config();
-  const listing = await store.getListingById(listingId);
-  if (!listing) return null;
-  let changed = false;
-  const manualReviewForMissingS3 = (document, documentType) => {
-    if (!document || document.ocr_processed_at || document.ocrProcessedAt) return document;
-    changed = true;
-    const now = new Date().toISOString();
-    const normalized = normalizeListingDocument(document, documentType);
-    return {
-      ...normalized,
-      document_check_status: documentType === "title" ? "title_needs_review" : "needs_review",
-      documentCheckStatus: documentType === "title" ? "title_needs_review" : "needs_review",
-      ocr_provider: textract.OCR_PROVIDER,
-      ocrProvider: textract.OCR_PROVIDER,
-      ocr_status: "manual_review",
-      ocrStatus: "manual_review",
-      ocr_error: `S3 uploads are not configured. Missing: ${config?.missing?.join(", ") || "S3 configuration"}.`,
-      ocrError: `S3 uploads are not configured. Missing: ${config?.missing?.join(", ") || "S3 configuration"}.`,
-      ocr_processed_at: now,
-      ocrProcessedAt: now,
-      textract_job_status: "ocr_pending_manual_review",
-      textractJobStatus: "ocr_pending_manual_review",
-      textract_metadata: {
-        status: "ocr_pending_manual_review",
-        reason: "missing_s3_config",
-        missing: config?.missing || [],
-        processedAt: now
-      },
-      textractMetadata: {
-        status: "ocr_pending_manual_review",
-        reason: "missing_s3_config",
-        missing: config?.missing || [],
-        processedAt: now
-      }
-    };
-  };
-  const processIfNeeded = async (document, documentType) => {
-    if (!document || !document.s3Key || document.ocr_processed_at || document.ocrProcessedAt) return document;
-    if (config?.missing?.length) return manualReviewForMissingS3(document, documentType);
-    changed = true;
-    return textract.processDocument(
-      normalizeListingDocument(document, documentType),
-      listing,
-      { bucket: config.bucket }
-    );
-  };
-  const maintenanceRecords = [];
-  for (const record of Array.isArray(listing.maintenanceRecords) ? listing.maintenanceRecords : []) {
-    maintenanceRecords.push(await processIfNeeded(record, "maintenance"));
-  }
-  const titleDocument = listing.titleDocument
-    ? await processIfNeeded(listing.titleDocument, "title")
-    : listing.titleDocument;
-  if (!changed) return listing;
-  const updated = {
-    ...listing,
-    maintenanceRecords,
-    maintenanceNames: maintenanceRecords.map((record) => record.name).filter(Boolean),
-    ...(titleDocument ? { titleDocument } : {}),
-    updatedAt: new Date().toISOString()
-  };
-  return store.createListing(updated);
-}
-
-function scheduleListingDocumentOcr(listingId) {
-  setTimeout(() => {
-    processListingDocumentsNow(listingId).catch((error) => {
-      console.error("[textract] Background OCR processing failed", {
-        listingId,
-        error: error.message
-      });
-    });
-  }, 0);
 }
 
 function presenceCodePayload(user) {
@@ -1903,6 +1818,17 @@ async function createVehiclePresenceReview(listing, result) {
 async function processVehiclePresenceNow(listingId) {
   const listing = await store.getListingById(listingId);
   if (!listing || !listing.vehiclePresence) return null;
+  console.info("[vehicle-presence] Verification job started", {
+    at: new Date().toISOString(),
+    listingId,
+    status: listing.status || "",
+    verificationStatus: listing.verificationStatus || "",
+    hasVehiclePresence: Boolean(listing.vehiclePresence),
+    hasS3Key: Boolean(listing.vehiclePresence.verificationPhotoS3Key),
+    hasPhotoUrl: Boolean(listing.vehiclePresence.verification_photo_url || listing.vehiclePresence.verificationPhotoUrl),
+    vinPresent: Boolean(listing.vin),
+    vinLength: String(listing.vin || "").length
+  });
   const startedAt = new Date().toISOString();
   const inProgress = {
     ...listing,
@@ -1916,25 +1842,22 @@ async function processVehiclePresenceNow(listingId) {
   };
   await store.createListing(inProgress);
 
-  let ocrText = "";
-  let ocrError = "";
-  const presenceS3Key = listing.vehiclePresence.verificationPhotoS3Key || "";
-  const s3 = s3Config();
-  if (presenceS3Key && s3) {
-    try {
-      ocrText = await textract.extractTextFromS3({ bucket: s3.bucket, key: presenceS3Key });
-    } catch (error) {
-      ocrError = error.message || "OCR failed for vehicle presence photo.";
-    }
-  }
-
+  const signedImageUrl = createS3PresignedGet(listing.vehiclePresence.verificationPhotoS3Key, 900) ||
+    listing.vehiclePresence.verification_photo_url ||
+    listing.vehiclePresence.verificationPhotoUrl;
+  console.info("[vehicle-presence] OpenAI image verification request started", {
+    at: new Date().toISOString(),
+    listingId,
+    provider: vehiclePresence.openAiConfig() ? "openai" : "manual_review_fallback",
+    model: vehiclePresence.openAiConfig()?.model || "",
+    hasImageUrl: Boolean(signedImageUrl),
+    imageSource: listing.vehiclePresence.verificationPhotoS3Key ? "s3_signed_get" : "stored_url",
+    hasCode: Boolean(listing.vehiclePresence.verification_code || listing.vehiclePresence.verificationCode)
+  });
   const result = await vehiclePresence.analyze({
-    imageUrl: createS3PresignedGet(listing.vehiclePresence.verificationPhotoS3Key, 900) ||
-      listing.vehiclePresence.verification_photo_url ||
-      listing.vehiclePresence.verificationPhotoUrl,
+    imageUrl: signedImageUrl,
     code: listing.vehiclePresence.verification_code || listing.vehiclePresence.verificationCode,
-    listing,
-    ocrText
+    listing
   });
   const verified = result.status === vehiclePresence.PRESENCE_STATUSES.VERIFIED;
   const now = new Date().toISOString();
@@ -1961,8 +1884,8 @@ async function processVehiclePresenceNow(listingId) {
       analysisProvider: result.provider,
       analysisReason: result.reason,
       analysisChecks: result.checks,
-      ocrText,
-      ocrError,
+      ocrText: "",
+      ocrError: "",
       extractedVins: result.extractedVins || [],
       observedVin: result.observedVin || "",
       observedText: result.observedText || "",
@@ -1976,6 +1899,16 @@ async function processVehiclePresenceNow(listingId) {
   if (vehiclePresenceReviewNeeded(result.status)) {
     await createVehiclePresenceReview(next, result);
   }
+  console.info("[vehicle-presence] Verification job completed", {
+    at: new Date().toISOString(),
+    listingId,
+    resultStatus: result.status,
+    savedStatus: next.status,
+    savedVerificationStatus: next.verificationStatus,
+    confidence: result.confidence,
+    checks: result.checks,
+    provider: result.provider
+  });
   return store.createListing(next);
 }
 
@@ -3676,7 +3609,6 @@ const server = http.createServer((req, res) => {
           });
           await saveReport(report);
         }
-        scheduleListingDocumentOcr(created.id);
         scheduleVehiclePresenceVerification(created.id);
         sendJson(res, 201, { listing: listingWithReadableImages(created) });
       })
@@ -3853,7 +3785,6 @@ const server = http.createServer((req, res) => {
           }),
           metadata: { marketCheckRefreshed: Boolean(shouldRefresh), reviewFlags: saved.reviewFlags || [] }
         });
-        scheduleListingDocumentOcr(saved.id);
         if (shouldVerifyPresence) scheduleVehiclePresenceVerification(saved.id);
         sendJson(res, 200, { listing: listingWithReadableImages(saved), marketCheckRefreshed: Boolean(shouldRefresh) });
       })
@@ -3883,11 +3814,13 @@ const server = http.createServer((req, res) => {
           sendJson(res, 403, { error: "You can only process your own listing documents." });
           return;
         }
-        scheduleListingDocumentOcr(id);
-        sendJson(res, 202, { queued: true });
+        sendJson(res, 200, {
+          queued: false,
+          message: "Automated document OCR is not configured. Uploaded documents remain available for manual review."
+        });
       })
       .catch((error) => sendJson(res, error.status || 400, {
-        error: error.message || "Unable to queue document OCR."
+        error: error.message || "Unable to review listing documents."
       }));
     return;
   }

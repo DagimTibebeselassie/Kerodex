@@ -18,8 +18,7 @@ The product goal is simple: help real owners sell real cars directly to buyers w
 - Postgres-ready store adapter with local JSON seed fallback.
 - S3-ready uploads through backend-generated presigned URLs for listings, verification photos, profile images, and documents.
 - MarketCheck VIN and valuation enrichment with backend-side caching.
-- Textract OCR hooks for title and maintenance document checks.
-- Vehicle presence photo challenge workflow with manual review fallback.
+- OpenAI-backed vehicle presence photo challenge workflow with manual review fallback.
 - Optional Persona hosted identity verification hook for sellers.
 - Smoke test coverage for the local prototype.
 - GitHub Actions CI for API syntax, smoke tests, web build, repository health, dependency review, and CodeQL.
@@ -33,7 +32,6 @@ apps/
     server.js        # Dependency-free local API/static server
     store.js         # JSON fallback or Postgres-backed marketplace store
     marketcheck.js   # MarketCheck VIN/valuation service
-    textract.js      # AWS Textract OCR service
     vehicle-presence.js # Vehicle presence verification analysis
     seed/            # Demo seller, listing, and conversation JSON
   admin/
@@ -131,17 +129,6 @@ S3_PUBLIC_BASE_URL
 
 The backend generates signed S3 `PUT` URLs and the browser uploads files directly to S3. The S3 bucket should stay private and needs CORS allowing browser `PUT` requests from your local and production domains. In production, set `S3_PUBLIC_BASE_URL` to a controlled delivery base such as CloudFront rather than making the whole bucket public. Upload keys are separated under `listings/`, `verification/`, `maintenance-records/`, `title-documents/`, and `profile-pictures/`, and records store both the final URL and S3 object key.
 
-Optional document OCR checks use AWS Textract through the backend only:
-
-```text
-TEXTRACT_AWS_REGION
-TEXTRACT_AWS_ACCESS_KEY_ID
-TEXTRACT_AWS_SECRET_ACCESS_KEY
-TEXTRACT_POLL_INTERVAL_MS
-```
-
-Textract can reuse the normal AWS credentials if the Textract-specific variables are blank. Seller-uploaded maintenance records and title documents are stored in S3 first, then OCR runs in the background and saves extracted text, matched keywords, document status, Textract job metadata, provider, and processed timestamp on the listing record. If Textract is unavailable, times out, or billing/permissions fail, the document is kept and marked for manual review without blocking listing creation. The buyer UI only shows safe soft signals such as "Title document uploaded" or "VIN on uploaded title matches listing"; it does not show full extracted title text, seller addresses, or claim that ownership/title authenticity is verified.
-
 Vehicle presence verification uses a listing-specific code and an uploaded proof photo before a seller listing becomes public:
 
 ```text
@@ -150,7 +137,7 @@ VEHICLE_PRESENCE_MODEL
 VEHICLE_PRESENCE_CODE_HOURS
 ```
 
-The listing is saved immediately as `pending_verification`, then a backend background job uses OCR plus AI vision to check whether the proof photo shows the windshield VIN visible through the windshield and the exact listing-specific code held next to it. Verification only passes when the extracted VIN matches the listing VIN, the extracted code matches the generated code, and the image appears to be an original vehicle/VIN photo. If AI/OCR is not configured or confidence is low, the listing stays hidden and enters the admin verification queue. Public wording is limited to "Vehicle Presence Verified" and does not claim ownership, title validity, condition, authenticity, or legal guarantees.
+The listing is saved immediately as `pending_verification`, then a backend background job sends the uploaded proof photo to OpenAI vision to check whether the photo shows the windshield VIN visible through the windshield and the exact listing-specific code held next to it. Verification only passes when the extracted VIN matches the listing VIN, the extracted code matches the generated code, and the image appears to be an original vehicle/VIN photo. If OpenAI is not configured or confidence is low, the listing stays hidden and enters the admin verification queue. Public wording is limited to "Vehicle Presence Verified" and does not claim ownership, title validity, condition, authenticity, or legal guarantees.
 
 Run tests:
 

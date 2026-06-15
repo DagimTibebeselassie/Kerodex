@@ -4,14 +4,15 @@
   "private": true,
   "description": "Local-first private-party car marketplace prototype.",
   "scripts": {
-    "check:api": "node --check apps/api/server.js && node --check apps/api/store.js && node --check apps/api/marketcheck.js && node --check apps/api/textract.js && node --check apps/api/vehicle-presence.js",
+    "check:api": "node --check apps/api/server.js && node --check apps/api/store.js && node --check apps/api/marketcheck.js && node --check apps/api/vehicle-presence.js",
     "build:web": "npm --prefix apps/web-react run build",
     "ci": "npm run check:api && npm test && npm run build:web",
     "db:seed": "node scripts/seed-database.js",
     "dev": "node apps/api/server.js",
     "dev:admin": "node apps/admin/server.js",
     "start": "node apps/api/server.js",
-    "test": "node scripts/smoke-test.js"
+    "test": "node scripts/smoke-test.js",
+    "test:vehicle-presence": "node scripts/test-vehicle-presence.js"
   },
   "dependencies": {
     "pg": "^8.13.1"
