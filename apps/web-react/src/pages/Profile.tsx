@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useAuth } from '@/hooks/useAuth';
 import { createUploadUrl, deleteAccountImmediately, listMyVehicles, savedVehicleIds, updateAccountPassword, updateAccountProfile, updateProfileAvatar } from '@/lib/api';
+import { DEFAULT_PROFILE_ICONS, defaultProfileIconForUser } from '@/lib/profile-icons';
 import { Button, Input, toast } from '@blinkdotnew/ui';
 import {
   User, BadgeCheck, Shield, Bell, Lock, Car, Heart, MessageSquare,
@@ -69,6 +70,7 @@ export function ProfilePage() {
   const [phone, setPhone] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
 
   const { data: myVehicles } = useQuery({
@@ -122,9 +124,20 @@ export function ProfilePage() {
     },
     onSuccess: () => {
       toast.success('Profile picture updated.');
+      setAvatarMenuOpen(false);
       queryClient.invalidateQueries({ queryKey: ['auth'] });
     },
     onError: (error) => toast.error(error instanceof Error ? error.message : 'Failed to update profile picture.'),
+  });
+
+  const defaultAvatarMutation = useMutation({
+    mutationFn: async (avatarUrl: string) => updateProfileAvatar(avatarUrl, ''),
+    onSuccess: () => {
+      toast.success('Default profile icon updated.');
+      setAvatarMenuOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['auth'] });
+    },
+    onError: () => toast.error('Failed to update profile icon.'),
   });
 
   const passwordMutation = useMutation({
@@ -190,40 +203,93 @@ export function ProfilePage() {
     .join('')
     .substring(0, 2)
     .toUpperCase();
+  const defaultAvatarUrl = defaultProfileIconForUser(user);
 
   return (
     <div className="animate-fade-in px-4 md:px-6 py-10 max-w-screen-lg mx-auto">
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 mb-12 pb-12 border-b border-border">
         {/* Avatar */}
-        <div className="relative">
-          <div className="h-20 w-20 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-black text-2xl shrink-0 overflow-hidden">
-            {user.avatarUrl ? (
-              <img src={user.avatarUrl} alt="" className="h-full w-full object-cover" />
-            ) : (
-              initials
+        <div className="relative w-20">
+            <div className="h-20 w-20 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-black text-2xl shrink-0 overflow-hidden">
+              <img
+                src={user.avatarUrl || defaultAvatarUrl}
+                alt=""
+                className="h-full w-full object-cover"
+                onError={(event) => {
+                  event.currentTarget.style.display = 'none';
+                  event.currentTarget.parentElement?.append(document.createTextNode(initials));
+                }}
+              />
+            </div>
+            <input
+              ref={avatarInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="hidden"
+              onChange={(event) => handleAvatarFile(event.target.files?.[0])}
+            />
+            <button
+              type="button"
+              aria-label="Change avatar"
+              aria-expanded={avatarMenuOpen}
+              disabled={avatarMutation.isPending || defaultAvatarMutation.isPending}
+              onClick={() => setAvatarMenuOpen((open) => !open)}
+              className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-background border border-border flex items-center justify-center hover:bg-muted transition-colors"
+            >
+              {avatarMutation.isPending || defaultAvatarMutation.isPending ? (
+                <span className="h-3.5 w-3.5 rounded-full border border-muted-foreground border-t-transparent animate-spin" />
+              ) : (
+                <Camera className="h-3.5 w-3.5 text-muted-foreground" />
+              )}
+            </button>
+
+            {avatarMenuOpen && (
+              <>
+                <button
+                  type="button"
+                  aria-label="Close avatar menu"
+                  className="fixed inset-0 z-20 cursor-default"
+                  onClick={() => setAvatarMenuOpen(false)}
+                />
+                <div className="absolute left-0 top-[calc(100%+0.75rem)] z-30 w-72 border border-border bg-background p-3 shadow-xl">
+                  <button
+                    type="button"
+                    onClick={() => avatarInputRef.current?.click()}
+                    className="flex w-full items-center gap-3 border border-border px-3 py-2.5 text-left text-[12px] font-bold transition-colors hover:bg-muted"
+                  >
+                    <Camera className="h-4 w-4 text-muted-foreground" />
+                    Select from device
+                  </button>
+
+                  <div className="mt-3 border-t border-border pt-3">
+                    <div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Kerodex icons
+                    </div>
+                    <div className="grid grid-cols-5 gap-2">
+                      {DEFAULT_PROFILE_ICONS.map((icon) => {
+                        const selected = (user.avatarUrl || defaultAvatarUrl) === icon;
+                        return (
+                          <button
+                            key={icon}
+                            type="button"
+                            aria-label="Choose default profile icon"
+                            onClick={() => defaultAvatarMutation.mutate(icon)}
+                            disabled={defaultAvatarMutation.isPending}
+                            className={`h-9 w-9 rounded-full overflow-hidden border bg-muted transition-colors ${
+                              selected ? 'border-foreground ring-2 ring-foreground/10' : 'border-border hover:border-muted-foreground'
+                            }`}
+                          >
+                            <img src={icon} alt="" className="h-full w-full object-cover" />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </>
             )}
           </div>
-          <input
-            ref={avatarInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
-            className="hidden"
-            onChange={(event) => handleAvatarFile(event.target.files?.[0])}
-          />
-          <button
-            type="button"
-            aria-label="Change avatar"
-            disabled={avatarMutation.isPending}
-            onClick={() => avatarInputRef.current?.click()}
-            className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-background border border-border flex items-center justify-center hover:bg-muted transition-colors"
-          >
-            {avatarMutation.isPending ? (
-              <span className="h-3.5 w-3.5 rounded-full border border-muted-foreground border-t-transparent animate-spin" />
-            ) : (
-              <Camera className="h-3.5 w-3.5 text-muted-foreground" />
-            )}
-          </button>
-        </div>
 
         {/* Info */}
         <div className="flex-1 min-w-0">

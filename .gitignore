@@ -28,6 +28,7 @@ coverage/
 *.pid
 tmp/
 temp/
+twilio_2FA_recovery_code.txt
 
 # Local raw design uploads copied into processed web assets
 logo0.png

@@ -23,6 +23,7 @@ loadLocalEnvFile(path.resolve(__dirname, "../../.env"));
 const marketCheck = require("./marketcheck");
 const store = require("./store");
 const vehiclePresence = require("./vehicle-presence");
+const twilio = require("twilio");
 const PORT = Number(process.env.PORT || 4100);
 const REACT_DIST_DIR = path.resolve(__dirname, "../web-react/dist");
 const PUBLIC_DIR = fs.existsSync(REACT_DIST_DIR)
@@ -34,7 +35,8 @@ const adminSessions = new Map();
 const oauthStates = new Map();
 const emailVerifications = new Map();
 const passwordResets = new Map();
-const phoneVerifications = new Map();
+const phoneVerificationBuckets = new Map();
+const phoneVerificationCooldowns = new Map();
 const pendingPresenceCodes = new Map();
 const TERMS_VERSION = "v1.0";
 const PRIVACY_VERSION = "v1.0";
@@ -92,6 +94,7 @@ const BUYER_GUIDE_STEP_IDS = [
   "insurance_registration",
   "complete_purchase"
 ];
+const PHONE_VERIFICATION_TTL_MS = 183 * 24 * 60 * 60 * 1000;
 
 if (typeof store.setRuntimeUserProvider === "function") {
   store.setRuntimeUserProvider(() => Array.from(users.values()).map(adminRuntimeUser));
@@ -280,33 +283,110 @@ function normalizePhone(value) {
   const digits = String(value || "").replace(/\D/g, "");
   if (digits.length === 10) return `+1${digits}`;
   if (digits.length === 11 && digits.startsWith("1")) return `+${digits}`;
+  if (/^\+[1-9]\d{7,14}$/.test(String(value || "").trim())) return String(value || "").trim();
   return "";
 }
 
-async function sendPhoneVerificationCode(phone, code) {
-  const sid = process.env.TWILIO_ACCOUNT_SID || "";
-  const token = process.env.TWILIO_AUTH_TOKEN || "";
-  const from = process.env.TWILIO_FROM_PHONE || "";
-  if (!sid || !token || !from) {
-    console.warn(`[Kerodex] SMS provider is not configured. Phone verification code for ${phone.slice(-4)} is ${code}.`);
-    return { sent: false, devCode: code };
+function isFreshPhoneVerification(value) {
+  const timestamp = Date.parse(value || "");
+  return Boolean(timestamp && Date.now() - timestamp < PHONE_VERIFICATION_TTL_MS);
+}
+
+function phoneVerificationExpiresAt(value) {
+  const timestamp = Date.parse(value || "");
+  if (!timestamp) return "";
+  return new Date(timestamp + PHONE_VERIFICATION_TTL_MS).toISOString();
+}
+
+function stripExpiredPhoneVerification(user) {
+  if (!user) return user;
+  if (!user.phoneVerified || isFreshPhoneVerification(user.phoneVerifiedAt)) return user;
+  return {
+    ...user,
+    phone: "",
+    phoneNumber: "",
+    phoneVerified: false,
+    phoneVerifiedAt: "",
+    phoneVerificationExpiredAt: user.phoneVerificationExpiredAt || new Date().toISOString()
+  };
+}
+
+function hasTwilioVerifyConfig() {
+  return Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_VERIFY_SERVICE_SID);
+}
+
+function twilioVerifyClient() {
+  if (!hasTwilioVerifyConfig()) {
+    throw makePublicError("Phone verification is not configured yet.", 503);
   }
-  const body = new URLSearchParams({
-    To: phone,
-    From: from,
-    Body: `Your Kerodex verification code is ${code}. This code expires in 10 minutes.`
-  });
-  const response = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${sid}/Messages.json`, {
-    method: "POST",
-    headers: {
-      authorization: `Basic ${Buffer.from(`${sid}:${token}`).toString("base64")}`,
-      "content-type": "application/x-www-form-urlencoded"
-    },
-    body
-  });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(payload.message || "Unable to send SMS verification code.");
-  return { sent: true };
+  return twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+}
+
+function phoneBucketKey(kind, value) {
+  return `${kind}:${crypto.createHash("sha256").update(String(value || "")).digest("hex")}`;
+}
+
+function applyPhoneAttemptLimit({ userId, ip, phone, action }) {
+  const now = Date.now();
+  const windows = [
+    { key: phoneBucketKey(`${action}:user`, userId), limit: action === "start" ? 4 : 8, windowMs: 15 * 60 * 1000 },
+    { key: phoneBucketKey(`${action}:ip`, ip), limit: action === "start" ? 8 : 20, windowMs: 15 * 60 * 1000 },
+    { key: phoneBucketKey(`${action}:phone`, phone), limit: action === "start" ? 3 : 8, windowMs: 60 * 60 * 1000 }
+  ];
+  for (const rule of windows) {
+    const bucket = phoneVerificationBuckets.get(rule.key);
+    const next = !bucket || bucket.resetAt <= now
+      ? { count: 1, resetAt: now + rule.windowMs }
+      : { count: bucket.count + 1, resetAt: bucket.resetAt };
+    phoneVerificationBuckets.set(rule.key, next);
+    if (next.count > rule.limit) {
+      console.warn(`[Kerodex security] phone_verify_rate_limit action=${action} user=${userId} ip=${ip} phoneLast4=${String(phone).slice(-4)}`);
+      return false;
+    }
+  }
+  return true;
+}
+
+function applyPhoneResendCooldown({ userId, phone }) {
+  const key = phoneBucketKey("start:cooldown", `${userId}:${phone}`);
+  const now = Date.now();
+  const lastSentAt = phoneVerificationCooldowns.get(key) || 0;
+  if (now - lastSentAt < 60 * 1000) return false;
+  phoneVerificationCooldowns.set(key, now);
+  return true;
+}
+
+async function startPhoneVerificationWithProvider(phone) {
+  const client = twilioVerifyClient();
+  return client.verify.v2
+    .services(process.env.TWILIO_VERIFY_SERVICE_SID)
+    .verifications
+    .create({ to: phone, channel: "sms" });
+}
+
+async function checkPhoneVerificationWithProvider(phone, code) {
+  const client = twilioVerifyClient();
+  return client.verify.v2
+    .services(process.env.TWILIO_VERIFY_SERVICE_SID)
+    .verificationChecks
+    .create({ to: phone, code });
+}
+
+async function phoneBelongsToAnotherUser(phone, userId) {
+  const normalized = normalizePhone(phone);
+  if (!normalized) return false;
+  if (typeof store.getUserByPhone === "function") {
+    const owner = await store.getUserByPhone(normalized);
+    return Boolean(owner && owner.id !== userId && owner.phoneVerified);
+  }
+  const storedUsers = typeof store.getUsers === "function" ? await store.getUsers() : [];
+  const runtimeUsers = Array.from(users.values());
+  return [...runtimeUsers, ...storedUsers].some((candidate) =>
+    candidate?.id !== userId &&
+    candidate?.phoneVerified &&
+    isFreshPhoneVerification(candidate.phoneVerifiedAt) &&
+    normalizePhone(candidate.phoneNumber || candidate.phone) === normalized
+  );
 }
 
 function createReportRecord({ reporter, reportedUserId = "", listingId = "", messageId = "", conversationId = "", category = "other", description = "", source = "user_report", metadata = {} }) {
@@ -425,6 +505,15 @@ function requestIp(req) {
 
 function rateLimitCategory(pathname) {
   if (
+    pathname === "/api/auth/phone/status" ||
+    pathname === "/api/auth/phone/start" ||
+    pathname === "/api/auth/phone/check" ||
+    pathname === "/api/me/phone/start" ||
+    pathname === "/api/me/phone/verify"
+  ) {
+    return { name: "phone_verify", limit: 80, windowMs: 15 * 60 * 1000 };
+  }
+  if (
     pathname === "/api/auth/email" ||
     pathname === "/api/auth/password/forgot" ||
     pathname === "/api/auth/password/reset" ||
@@ -468,6 +557,12 @@ function pruneRateLimitBuckets() {
   }
   for (const [key, attempt] of failedLoginAttempts.entries()) {
     if (attempt.resetAt <= now) failedLoginAttempts.delete(key);
+  }
+  for (const [key, bucket] of phoneVerificationBuckets.entries()) {
+    if (bucket.resetAt <= now) phoneVerificationBuckets.delete(key);
+  }
+  for (const [key, lastSentAt] of phoneVerificationCooldowns.entries()) {
+    if (now - lastSentAt > 15 * 60 * 1000) phoneVerificationCooldowns.delete(key);
   }
 }
 
@@ -601,38 +696,41 @@ function sendAdminEvents(req, res) {
 }
 
 function publicUser(user) {
-  const avatarS3Key = user.avatarS3Key || user.profileImageS3Key || "";
+  const safeUser = stripExpiredPhoneVerification(user) || {};
+  const avatarS3Key = safeUser.avatarS3Key || safeUser.profileImageS3Key || "";
   return {
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    firstName: user.firstName || "",
-    lastName: user.lastName || "",
-    username: user.username || "",
-    birthday: user.birthday || "",
-    phone: user.phone || "",
-    provider: user.provider,
-    emailVerified: Boolean(user.emailVerified),
-    phoneVerified: Boolean(user.phoneVerified),
-    identityVerified: Boolean(user.identityVerified),
-    selfieVerified: Boolean(user.selfieVerified),
-    personaInquiryId: user.personaInquiryId || "",
-    personaReferenceId: user.personaReferenceId || "",
-    identityVerificationStatus: user.identityVerificationStatus || "unverified",
-    identityVerifiedAt: user.identityVerifiedAt || "",
-    avatarUrl: avatarS3Key ? createS3PresignedGet(avatarS3Key, 3600) || user.avatarUrl || user.profileImageUrl || "" : user.avatarUrl || user.profileImageUrl || "",
+    id: safeUser.id,
+    email: safeUser.email,
+    name: safeUser.name,
+    firstName: safeUser.firstName || "",
+    lastName: safeUser.lastName || "",
+    username: safeUser.username || "",
+    birthday: safeUser.birthday || "",
+    phone: safeUser.phoneNumber || safeUser.phone || "",
+    phoneVerifiedAt: safeUser.phoneVerifiedAt || safeUser.phone_verified_at || "",
+    phoneVerificationExpiresAt: phoneVerificationExpiresAt(safeUser.phoneVerifiedAt || safeUser.phone_verified_at),
+    provider: safeUser.provider,
+    emailVerified: Boolean(safeUser.emailVerified),
+    phoneVerified: Boolean(safeUser.phoneVerified && isFreshPhoneVerification(safeUser.phoneVerifiedAt)),
+    identityVerified: Boolean(safeUser.identityVerified),
+    selfieVerified: Boolean(safeUser.selfieVerified),
+    personaInquiryId: safeUser.personaInquiryId || "",
+    personaReferenceId: safeUser.personaReferenceId || "",
+    identityVerificationStatus: safeUser.identityVerificationStatus || "unverified",
+    identityVerifiedAt: safeUser.identityVerifiedAt || "",
+    avatarUrl: avatarS3Key ? createS3PresignedGet(avatarS3Key, 3600) || safeUser.avatarUrl || safeUser.profileImageUrl || "" : safeUser.avatarUrl || safeUser.profileImageUrl || "",
     avatarS3Key,
-    favoriteBrands: Array.isArray(user.favoriteBrands) ? user.favoriteBrands : [],
-    preferredVehicleTypes: Array.isArray(user.preferredVehicleTypes) ? user.preferredVehicleTypes : [],
-    onboardingCompleted: Boolean(user.onboardingCompleted),
-    onboardingCompletedAt: user.onboardingCompletedAt || "",
-    featureTourCompletedAt: user.featureTourCompletedAt || user.feature_tour_completed_at || "",
-    lastActiveAt: user.lastActiveAt || user.lastLoginAt || "",
-    termsVersion: user.termsVersion || "",
-    acceptedTermsAt: user.acceptedTermsAt || "",
-    privacyVersion: user.privacyVersion || "",
-    acceptedPrivacyAt: user.acceptedPrivacyAt || "",
-    safetyNoticeSeenAt: user.safetyNoticeSeenAt || ""
+    favoriteBrands: Array.isArray(safeUser.favoriteBrands) ? safeUser.favoriteBrands : [],
+    preferredVehicleTypes: Array.isArray(safeUser.preferredVehicleTypes) ? safeUser.preferredVehicleTypes : [],
+    onboardingCompleted: Boolean(safeUser.onboardingCompleted),
+    onboardingCompletedAt: safeUser.onboardingCompletedAt || "",
+    featureTourCompletedAt: safeUser.featureTourCompletedAt || safeUser.feature_tour_completed_at || "",
+    lastActiveAt: safeUser.lastActiveAt || safeUser.lastLoginAt || "",
+    termsVersion: safeUser.termsVersion || "",
+    acceptedTermsAt: safeUser.acceptedTermsAt || "",
+    privacyVersion: safeUser.privacyVersion || "",
+    acceptedPrivacyAt: safeUser.acceptedPrivacyAt || "",
+    safetyNoticeSeenAt: safeUser.safetyNoticeSeenAt || ""
   };
 }
 
@@ -643,7 +741,7 @@ function adminRuntimeUser(user) {
     id: user.id,
     fullName: user.name || user.email.split("@")[0],
     email: user.email,
-    phone: user.phone || "",
+    phone: user.phoneNumber || user.phone || "",
     role: "buyer",
     status: "active",
     accountCreatedAt: createdAt,
@@ -711,7 +809,8 @@ async function hydrateRuntimeAuthFromStore() {
   if (typeof store.getUsers === "function") {
     const storedUsers = await store.getUsers();
     storedUsers.forEach((user) => {
-      if (user?.email) users.set(normalize(user.email), user);
+      const safeUser = stripExpiredPhoneVerification(user);
+      if (safeUser?.email) users.set(normalize(safeUser.email), safeUser);
     });
   }
   if (typeof store.getActiveAuthSessions === "function") {
@@ -729,12 +828,13 @@ async function findUserByEmail(email) {
   const normalized = normalize(email);
   if (!normalized) return null;
   const cached = users.get(normalized);
-  if (cached) return cached;
+  if (cached) return stripExpiredPhoneVerification(cached);
   if (typeof store.getUserByEmail === "function") {
     const stored = await store.getUserByEmail(normalized);
     if (stored) {
-      users.set(normalized, stored);
-      return stored;
+      const safeUser = stripExpiredPhoneVerification(stored);
+      users.set(normalized, safeUser);
+      return safeUser;
     }
   }
   return null;
@@ -742,6 +842,7 @@ async function findUserByEmail(email) {
 
 async function saveRuntimeUser(user) {
   if (!user?.email) return user;
+  user = stripExpiredPhoneVerification(user);
   user.email = normalize(user.email);
   Array.from(users.entries()).forEach(([email, cached]) => {
     if (cached?.id === user.id && email !== user.email) users.delete(email);
@@ -3169,12 +3270,14 @@ const server = http.createServer((req, res) => {
       .then(async (body) => {
         const avatarUrl = String(body.avatarUrl || "").trim();
         const avatarS3Key = String(body.avatarS3Key || "").trim();
-        if (!avatarUrl || !avatarS3Key || !avatarS3Key.startsWith("profile-pictures/")) {
+        const isUploadedProfilePhoto = Boolean(avatarS3Key && avatarS3Key.startsWith("profile-pictures/"));
+        const isDefaultProfileIcon = /^\/pfpicon[0-9]\.png$/.test(avatarUrl);
+        if (!avatarUrl || (!isUploadedProfilePhoto && !isDefaultProfileIcon)) {
           sendJson(res, 400, { error: "Upload a valid profile picture before saving it." });
           return;
         }
         user.avatarUrl = avatarUrl;
-        user.avatarS3Key = avatarS3Key;
+        user.avatarS3Key = isUploadedProfilePhoto ? avatarS3Key : "";
         await saveRuntimeUser(user);
         sendJson(res, 200, { message: "Profile picture updated.", user: publicUser(user) });
       })
@@ -3257,7 +3360,27 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  if (url.pathname === "/api/me/phone/start" && req.method === "POST") {
+  if (url.pathname === "/api/auth/phone/status" && req.method === "GET") {
+    const user = getAuthUser(req);
+    if (!user) {
+      sendJson(res, 401, { error: "Sign in to check phone verification status." });
+      return;
+    }
+    sendJson(res, 200, {
+      ok: true,
+      provider: "twilio_verify",
+      configured: hasTwilioVerifyConfig(),
+      accountSidLoaded: Boolean(process.env.TWILIO_ACCOUNT_SID),
+      authTokenLoaded: Boolean(process.env.TWILIO_AUTH_TOKEN),
+      serviceSidLoaded: Boolean(process.env.TWILIO_VERIFY_SERVICE_SID),
+      serviceSidPrefix: process.env.TWILIO_VERIFY_SERVICE_SID ? String(process.env.TWILIO_VERIFY_SERVICE_SID).slice(0, 2) : "",
+      phoneVerified: Boolean(user.phoneVerified),
+      phoneLast4: String(user.phoneNumber || user.phone || "").slice(-4)
+    });
+    return;
+  }
+
+  if ((url.pathname === "/api/auth/phone/start" || url.pathname === "/api/me/phone/start") && req.method === "POST") {
     const user = getAuthUser(req);
     if (!user) {
       sendJson(res, 401, { error: "Sign in to verify your phone." });
@@ -3270,25 +3393,41 @@ const server = http.createServer((req, res) => {
           sendJson(res, 400, { error: "Enter a valid US phone number." });
           return;
         }
-        const code = makeCode(6);
-        phoneVerifications.set(user.id, {
-          phone,
-          code,
-          expiresAt: Date.now() + 10 * 60 * 1000,
-          attempts: 0
-        });
-        const result = await sendPhoneVerificationCode(phone, code);
-        sendJson(res, 200, {
-          message: result.sent ? "Verification code sent." : "SMS provider is not configured. Use the local dev code.",
+        if (!applyPhoneAttemptLimit({ userId: user.id, ip: requestIp(req), phone, action: "start" })) {
+          sendJson(res, 429, { success: false, error: "Too many requests. Please try again later." });
+          return;
+        }
+        if (!applyPhoneResendCooldown({ userId: user.id, phone })) {
+          sendJson(res, 429, { success: false, error: "Please wait before requesting another code." });
+          return;
+        }
+
+        const verification = await startPhoneVerificationWithProvider(phone);
+        console.info("[Kerodex phone verification] Twilio Verify start accepted", {
+          userId: user.id,
           phoneLast4: phone.slice(-4),
-          devCode: result.devCode
+          verificationSid: verification.sid,
+          status: verification.status,
+          channel: verification.channel
+        });
+        await trackEvent(req, "phone_verification_started", user, {
+          status: verification.status || "sent",
+          phoneConflict: await phoneBelongsToAnotherUser(phone, user.id)
+        });
+        sendJson(res, 200, {
+          ok: true,
+          message: "Verification code sent.",
+          phoneLast4: phone.slice(-4)
         });
       })
-      .catch((error) => sendJson(res, 500, { error: "Unable to start phone verification.", detail: error.message }));
+      .catch((error) => {
+        console.warn(`[Kerodex phone verification start failed] ${error.message}`);
+        sendJson(res, error.status || 500, { success: false, error: publicError(error, "Unable to send verification code.") });
+      });
     return;
   }
 
-  if (url.pathname === "/api/me/phone/verify" && req.method === "POST") {
+  if ((url.pathname === "/api/auth/phone/check" || url.pathname === "/api/me/phone/verify") && req.method === "POST") {
     const user = getAuthUser(req);
     if (!user) {
       sendJson(res, 401, { error: "Sign in to verify your phone." });
@@ -3296,27 +3435,50 @@ const server = http.createServer((req, res) => {
     }
     readJson(req)
       .then(async (body) => {
-        const record = phoneVerifications.get(user.id);
-        if (!record || Date.now() > record.expiresAt) {
-          sendJson(res, 400, { error: "Verification code expired. Request a new code." });
+        const phone = normalizePhone(body.phone || user.phoneNumber || user.phone);
+        const code = String(body.code || "").trim();
+        if (!phone || !/^\d{4,10}$/.test(code)) {
+          sendJson(res, 400, { error: "Invalid verification code." });
           return;
         }
-        record.attempts += 1;
-        if (record.attempts > 5 || String(body.code || "").trim() !== record.code) {
+        if (!applyPhoneAttemptLimit({ userId: user.id, ip: requestIp(req), phone, action: "check" })) {
+          sendJson(res, 429, { success: false, error: "Too many requests. Please try again later." });
+          return;
+        }
+
+        const result = await checkPhoneVerificationWithProvider(phone, code);
+        console.info("[Kerodex phone verification] Twilio Verify check completed", {
+          userId: user.id,
+          phoneLast4: phone.slice(-4),
+          verificationSid: result.sid,
+          status: result.status,
+          valid: result.valid === true
+        });
+        if (result.status !== "approved" || result.valid !== true) {
           await trackEvent(req, "verification_failed", user, { type: "phone" });
           sendJson(res, 400, { error: "Invalid verification code." });
           return;
         }
+
+        if (await phoneBelongsToAnotherUser(phone, user.id)) {
+          await trackEvent(req, "verification_failed", user, { type: "phone", reason: "phone_conflict" });
+          sendJson(res, 400, { error: "Invalid verification code." });
+          return;
+        }
+
         const now = new Date().toISOString();
-        user.phoneNumber = record.phone;
+        user.phoneNumber = phone;
+        user.phone = phone;
         user.phoneVerified = true;
         user.phoneVerifiedAt = now;
-        phoneVerifications.delete(user.id);
         await saveRuntimeUser(user);
         await trackEvent(req, "verification_passed", user, { type: "phone" });
-        sendJson(res, 200, { message: "Phone verified.", user: publicUser(user) });
+        sendJson(res, 200, { ok: true, message: "Phone verified.", user: publicUser(user) });
       })
-      .catch((error) => sendJson(res, 500, { error: "Unable to verify phone.", detail: error.message }));
+      .catch((error) => {
+        console.warn(`[Kerodex phone verification check failed] ${error.message}`);
+        sendJson(res, error.status || 500, { success: false, error: publicError(error, "Unable to verify phone.") });
+      });
     return;
   }
 
@@ -4140,6 +4302,7 @@ function auditEnvironment() {
   if (!process.env.ANALYTICS_IP_SALT) warnings.push("ANALYTICS_IP_SALT is not set; using local default for IP hashing.");
   if (!process.env.DATABASE_URL && process.env.REQUIRE_DATABASE === "true") warnings.push("DATABASE_URL is required because REQUIRE_DATABASE=true.");
   if (!process.env.RESEND_API_KEY || !process.env.AUTH_EMAIL_FROM) warnings.push("Resend email is not fully configured.");
+  if (!hasTwilioVerifyConfig()) warnings.push("Twilio Verify phone OTP is not fully configured.");
   if (!process.env.S3_BUCKET || !process.env.AWS_REGION || !process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) warnings.push("S3 uploads are not fully configured.");
   if (!process.env.MARKETCHECK_API_KEY) warnings.push("MarketCheck API key is not configured.");
   if (!process.env.OPENAI_API_KEY && !process.env.VEHICLE_PRESENCE_OPENAI_API_KEY) warnings.push("Vehicle presence AI verification is not configured; photo challenges will require manual review.");

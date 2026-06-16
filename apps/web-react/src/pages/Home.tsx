@@ -127,6 +127,53 @@ function VehicleRowSection({ label, heading, vehicles, viewAllHref = '/cars' }: 
   );
 }
 
+interface FeatureAdProps {
+  label: string;
+  headline: string;
+  copy: string;
+  cta: string;
+  href: string;
+  image: string;
+  imageAlt: string;
+  reverse?: boolean;
+}
+
+function FeatureAd({ label, headline, copy, cta, href, image, imageAlt, reverse = false }: FeatureAdProps) {
+  return (
+    <section className="px-4 md:px-6 py-14 md:py-20 border-t border-border">
+      <div className="max-w-screen-xl mx-auto">
+        <div className={`grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12 lg:gap-16 items-center ${reverse ? '' : ''}`}>
+          <div className={`${reverse ? 'lg:order-2' : 'lg:order-1'} overflow-hidden border border-border bg-muted/30`}>
+            <img
+              src={image}
+              alt={imageAlt}
+              className="w-full aspect-[4/3] md:aspect-[16/11] object-cover"
+              loading="lazy"
+            />
+          </div>
+          <div className={`${reverse ? 'lg:order-1' : 'lg:order-2'} max-w-xl ${reverse ? '' : 'lg:ml-auto'}`}>
+            <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground mb-4">
+              {label}
+            </p>
+            <h2 className="text-2xl md:text-4xl font-black tracking-tight leading-tight mb-5">
+              {headline}
+            </h2>
+            <p className="text-[13px] md:text-[14px] text-muted-foreground leading-relaxed mb-8">
+              {copy}
+            </p>
+            <Link to={href as any}>
+              <Button className="h-10 px-5 text-[11px] font-bold uppercase tracking-wider">
+                {cta}
+                <ArrowRight className="h-3.5 w-3.5 ml-2" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function distanceMiles(lat1: number, lng1: number, lat2?: number, lng2?: number) {
   if (!Number.isFinite(Number(lat2)) || !Number.isFinite(Number(lng2))) return Number.POSITIVE_INFINITY;
   const toRad = (degrees: number) => degrees * Math.PI / 180;
@@ -414,6 +461,48 @@ export function HomePage() {
       viewAllHref: '/cars',
     },
   ].filter((row) => row.vehicles.length).slice(0, 4);
+  const vehicleRowSections = [
+    ...personalizedRows,
+    {
+      label: 'Best Deals',
+      heading: 'Priced below market',
+      vehicles: bestDealVehicles,
+      viewAllHref: '/cars',
+    },
+    {
+      label: 'Electric & Hybrid',
+      heading: 'Go electric',
+      vehicles: evHybridVehicles,
+      viewAllHref: '/cars',
+    },
+    {
+      label: 'Low Mileage',
+      heading: 'Nearly new',
+      vehicles: lowMileageVehicles,
+      viewAllHref: '/cars',
+    },
+    {
+      label: 'Budget Picks',
+      heading: 'Under $25,000',
+      vehicles: budgetVehicles,
+      viewAllHref: '/cars',
+    },
+    {
+      label: 'Near You',
+      heading: `Cars in ${nearbyCity}`,
+      vehicles: nearbyVehicles,
+      viewAllHref: nearbySearchHref,
+    },
+    {
+      label: 'Recommended Nearby',
+      heading: 'Efficient picks close by',
+      vehicles: nearbyEfficientVehicles,
+      viewAllHref: nearbySearchHref,
+    },
+  ].filter((row) => row.vehicles.length);
+  const rowsBeforeBuyerGuide = vehicleRowSections.slice(0, 1);
+  const rowsBeforeVerification = vehicleRowSections.slice(1, 3);
+  const remainingRows = vehicleRowSections.slice(3);
 
   return (
     <div>
@@ -547,7 +636,7 @@ export function HomePage() {
         </div>
       </section>
 
-      {personalizedRows.map((row) => (
+      {rowsBeforeBuyerGuide.map((row) => (
         <VehicleRowSection
           key={`${row.label}-${row.heading}`}
           label={row.label}
@@ -557,43 +646,46 @@ export function HomePage() {
         />
       ))}
 
-      <VehicleRowSection
-        label="Best Deals"
-        heading="Priced below market"
-        vehicles={bestDealVehicles}
+      <FeatureAd
+        label="Buyer Guide"
+        headline="Buy with confidence"
+        copy="Use Kerodex's buyer guide to understand what to inspect, what documents to collect, and how to complete a safer private-party purchase."
+        cta="View Buyer Guide"
+        href="/feature-tour"
+        image="/assets/buyerflow.png"
+        imageAlt="Illustration of the Kerodex buyer guide flow"
       />
 
-      <VehicleRowSection
-        label="Electric & Hybrid"
-        heading="Go electric"
-        vehicles={evHybridVehicles}
+      {rowsBeforeVerification.map((row) => (
+        <VehicleRowSection
+          key={`${row.label}-${row.heading}`}
+          label={row.label}
+          heading={row.heading}
+          vehicles={row.vehicles}
+          viewAllHref={row.viewAllHref}
+        />
+      ))}
+
+      <FeatureAd
+        label="Vehicle Presence Verification"
+        headline="Know the vehicle is really there"
+        copy="Kerodex helps sellers prove vehicle presence before buyers waste time on questionable listings."
+        cta="See how verification works"
+        href="/verify"
+        image="/assets/verifiedseller.png"
+        imageAlt="Illustration of Kerodex vehicle presence verification"
+        reverse
       />
 
-      <VehicleRowSection
-        label="Low Mileage"
-        heading="Nearly new"
-        vehicles={lowMileageVehicles}
-      />
-
-      <VehicleRowSection
-        label="Budget Picks"
-        heading="Under $25,000"
-        vehicles={budgetVehicles}
-      />
-
-      <VehicleRowSection
-        label="Near You"
-        heading={`Cars in ${nearbyCity}`}
-        vehicles={nearbyVehicles}
-        viewAllHref={nearbySearchHref}
-      />
-
-      <VehicleRowSection
-        label="Recommended Nearby"
-        heading="Efficient picks close by"
-        vehicles={nearbyEfficientVehicles}
-        viewAllHref={nearbySearchHref}
-      />
+      {remainingRows.map((row) => (
+        <VehicleRowSection
+          key={`${row.label}-${row.heading}`}
+          label={row.label}
+          heading={row.heading}
+          vehicles={row.vehicles}
+          viewAllHref={row.viewAllHref}
+        />
+      ))}
 
       <section
         id="location-section"

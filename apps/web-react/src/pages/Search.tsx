@@ -365,7 +365,7 @@ function FilterSidebarContent({
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex h-full min-h-0 flex-col">
       {/* Header */}
       <div className="flex items-center justify-between mb-5 shrink-0">
         <h2 className="text-[11px] font-bold uppercase tracking-[0.18em] flex items-center gap-1.5 text-foreground">
@@ -376,7 +376,7 @@ function FilterSidebarContent({
         </button>
       </div>
 
-      <div className="kerodex-scrollbar-hidden flex-1 min-h-0 overflow-y-auto space-y-5 pr-0.5">
+      <div className="kerodex-scrollbar-hidden min-h-0 flex-1 touch-pan-y overflow-y-auto overscroll-contain space-y-5 pr-0.5 pb-3 [-webkit-overflow-scrolling:touch]">
 
         {/* 1. Price Range */}
         <div>
@@ -853,10 +853,10 @@ export function SearchPage() {
           />
         )}
         <div
-          className={`fixed inset-x-0 bottom-0 z-50 lg:hidden bg-background flex flex-col transition-transform duration-300 ease-out rounded-t-2xl ${
+          className={`fixed inset-x-0 bottom-0 z-50 lg:hidden bg-background flex min-h-0 flex-col overflow-hidden transition-transform duration-300 ease-out rounded-t-2xl ${
             mobileFiltersOpen ? 'translate-y-0' : 'translate-y-full'
           }`}
-          style={{ maxHeight: '92dvh' }}
+          style={{ height: '92dvh', maxHeight: '92dvh' }}
         >
           {/* Handle + header */}
           <div className="shrink-0 flex flex-col">
@@ -871,7 +871,7 @@ export function SearchPage() {
             </div>
           </div>
           {/* Scrollable content */}
-          <div className="flex-1 overflow-hidden px-5 py-5">
+          <div className="min-h-0 flex-1 overflow-hidden px-5 py-5">
             <FilterSidebarContent filters={filters} setFilters={setFilters} onClear={clearFilters} />
           </div>
           {/* Apply button */}

@@ -4,6 +4,25 @@ const path = require("path");
 const SEED_DIR = path.resolve(__dirname, "seed");
 const USE_DATABASE = Boolean(process.env.DATABASE_URL);
 const REQUIRE_DATABASE = process.env.REQUIRE_DATABASE === "true";
+const PHONE_VERIFICATION_TTL_MS = 183 * 24 * 60 * 60 * 1000;
+
+function isFreshPhoneVerification(value) {
+  const timestamp = Date.parse(value || "");
+  return Boolean(timestamp && Date.now() - timestamp < PHONE_VERIFICATION_TTL_MS);
+}
+
+function stripExpiredPhoneVerification(user) {
+  if (!user) return user;
+  if (!user.phoneVerifiedAt || isFreshPhoneVerification(user.phoneVerifiedAt)) return user;
+  return {
+    ...user,
+    phone: "",
+    phoneNumber: "",
+    phoneVerified: false,
+    phoneVerifiedAt: "",
+    phoneVerificationExpiredAt: user.phoneVerificationExpiredAt || new Date().toISOString()
+  };
+}
 
 function postgresConnectionString() {
   const raw = process.env.DATABASE_URL || "";
@@ -623,10 +642,14 @@ class PostgresStore {
       CREATE TABLE IF NOT EXISTS user_records (
         id TEXT PRIMARY KEY,
         email TEXT NOT NULL UNIQUE,
+        phone_number TEXT,
+        phone_verified_at TIMESTAMPTZ,
         payload JSONB NOT NULL,
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
     `);
+    await this.pool.query(`ALTER TABLE user_records ADD COLUMN IF NOT EXISTS phone_number TEXT`);
+    await this.pool.query(`ALTER TABLE user_records ADD COLUMN IF NOT EXISTS phone_verified_at TIMESTAMPTZ`);
     await this.pool.query(`
       CREATE TABLE IF NOT EXISTS report_records (
         id TEXT PRIMARY KEY,
@@ -693,7 +716,13 @@ class PostgresStore {
     await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_auth_sessions_user ON auth_sessions (user_id, last_seen_at DESC)`);
     await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_buyer_guides_buyer_updated ON buyer_purchase_guides (buyer_id, updated_at DESC)`);
     await this.pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_buyer_guides_active_unique ON buyer_purchase_guides (buyer_id, listing_id) WHERE status = 'active'`);
+    try {
+      await this.pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_user_records_verified_phone_unique ON user_records (phone_number) WHERE phone_number IS NOT NULL AND phone_verified_at IS NOT NULL`);
+    } catch (error) {
+      console.warn(`[Kerodex] Unable to create verified phone uniqueness index: ${error.message}`);
+    }
     this.coreTablesReady = true;
+    await this.clearExpiredPhoneVerifications();
   }
 
   async ensureMarketCheckCacheTable() {
@@ -923,25 +952,92 @@ class PostgresStore {
 
   async getUserByEmail(email) {
     await this.ensureCoreTables();
-    const result = await this.pool.query("SELECT payload FROM user_records WHERE email = $1 LIMIT 1", [String(email || "").toLowerCase()]);
-    return result.rows[0]?.payload || null;
+    const result = await this.pool.query("SELECT payload, phone_number, phone_verified_at FROM user_records WHERE email = $1 LIMIT 1", [String(email || "").toLowerCase()]);
+    return this.userFromRow(result.rows[0]);
   }
 
   async getUserById(id) {
     await this.ensureCoreTables();
-    const result = await this.pool.query("SELECT payload FROM user_records WHERE id = $1 LIMIT 1", [String(id || "")]);
-    return result.rows[0]?.payload || null;
+    const result = await this.pool.query("SELECT payload, phone_number, phone_verified_at FROM user_records WHERE id = $1 LIMIT 1", [String(id || "")]);
+    return this.userFromRow(result.rows[0]);
+  }
+
+  userFromRow(row) {
+    if (!row?.payload) return null;
+    const user = { ...row.payload };
+    const phoneVerifiedAt = row.phone_verified_at ? row.phone_verified_at.toISOString() : "";
+    const phoneIsFresh = isFreshPhoneVerification(phoneVerifiedAt);
+    if (row.phone_number && phoneIsFresh) {
+      user.phoneNumber = row.phone_number;
+      user.phone = user.phone || row.phone_number;
+      user.phoneVerified = true;
+      user.phoneVerifiedAt = phoneVerifiedAt;
+    } else if (row.phone_number || row.phone_verified_at || user.phoneVerified) {
+      user.phone = "";
+      user.phoneNumber = "";
+      user.phoneVerified = false;
+      user.phoneVerifiedAt = "";
+    }
+    return user;
+  }
+
+  async getUserByPhone(phone) {
+    await this.ensureCoreTables();
+    await this.clearExpiredPhoneVerifications();
+    const result = await this.pool.query(
+      "SELECT payload, phone_number, phone_verified_at FROM user_records WHERE phone_number = $1 AND phone_verified_at IS NOT NULL AND phone_verified_at > NOW() - INTERVAL '183 days' LIMIT 1",
+      [String(phone || "")]
+    );
+    return this.userFromRow(result.rows[0]);
   }
 
   async saveUser(user) {
     await this.ensureCoreTables();
+    await this.clearExpiredPhoneVerifications();
+    const normalizedUser = stripExpiredPhoneVerification(user);
+    const phoneNumber = normalizedUser.phoneVerified ? (normalizedUser.phoneNumber || normalizedUser.phone || null) : null;
+    const phoneVerifiedAt = normalizedUser.phoneVerified && normalizedUser.phoneVerifiedAt ? normalizedUser.phoneVerifiedAt : null;
     await this.pool.query(
-      `INSERT INTO user_records (id, email, payload, updated_at)
-       VALUES ($1, $2, $3, NOW())
-       ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email, payload = EXCLUDED.payload, updated_at = NOW()`,
-      [user.id, String(user.email || "").toLowerCase(), user]
+      `INSERT INTO user_records (id, email, phone_number, phone_verified_at, payload, updated_at)
+       VALUES ($1, $2, $3, $4, $5, NOW())
+       ON CONFLICT (id) DO UPDATE SET
+        email = EXCLUDED.email,
+        phone_number = EXCLUDED.phone_number,
+        phone_verified_at = EXCLUDED.phone_verified_at,
+        payload = EXCLUDED.payload,
+        updated_at = NOW()`,
+      [normalizedUser.id, String(normalizedUser.email || "").toLowerCase(), phoneNumber, phoneVerifiedAt, normalizedUser]
     );
-    return user;
+    return normalizedUser;
+  }
+
+  async clearExpiredPhoneVerifications() {
+    if (!this.coreTablesReady) return;
+    await this.pool.query(`
+      UPDATE user_records
+      SET
+        phone_number = NULL,
+        phone_verified_at = NULL,
+        payload = jsonb_set(
+          jsonb_set(
+            jsonb_set(
+              jsonb_set(payload, '{phoneVerified}', 'false'::jsonb, true),
+              '{phoneVerifiedAt}',
+              '""'::jsonb,
+              true
+            ),
+            '{phoneNumber}',
+            '""'::jsonb,
+            true
+          ),
+          '{phone}',
+          '""'::jsonb,
+          true
+        ),
+        updated_at = NOW()
+      WHERE phone_verified_at IS NOT NULL
+        AND phone_verified_at <= NOW() - INTERVAL '183 days'
+    `);
   }
 
   async deleteUserAccount(userId) {
@@ -995,8 +1091,8 @@ class PostgresStore {
 
   async getUsers() {
     await this.ensureCoreTables();
-    const result = await this.pool.query("SELECT payload FROM user_records ORDER BY updated_at DESC");
-    return result.rows.map((row) => row.payload);
+    const result = await this.pool.query("SELECT payload, phone_number, phone_verified_at FROM user_records ORDER BY updated_at DESC");
+    return result.rows.map((row) => this.userFromRow(row)).filter(Boolean);
   }
 
   async getSellerById(id) {

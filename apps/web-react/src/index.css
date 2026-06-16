@@ -202,6 +202,16 @@
   color: hsl(var(--foreground)) !important;
 }
 
+.kerodex-map-root .leaflet-control-attribution,
+.kerodex-map-root .leaflet-control-attribution a,
+.kerodex-map-root .leaflet-control-attribution span {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.kerodex-map-root .leaflet-control-attribution a:hover {
+  color: hsl(var(--foreground)) !important;
+}
+
 .kerodex-vehicle-rail {
   scrollbar-width: none;
   scroll-padding-inline: 0.25rem;

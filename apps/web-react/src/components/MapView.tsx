@@ -54,7 +54,7 @@ function tileOptions() {
     subdomains: 'abcd',
     maxZoom: 19,
     minZoom: 3,
-    attribution: '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OSM</a> · <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>',
+    attribution: '<a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OSM</a> / <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>',
   };
 }
 
@@ -74,15 +74,15 @@ function PopupCard({
   return (
     <div
       className={[
-        'kerodex-map-card absolute z-[1200] overflow-hidden',
+        'kerodex-map-card absolute z-[1200] flex flex-col overflow-hidden',
         'border border-border bg-background text-foreground shadow-2xl',
-        'bottom-4 left-4 right-4 max-h-[72%] w-auto',
+        'bottom-2 left-2 right-2 max-h-[calc(100%-1rem)] w-auto',
         'md:bottom-auto md:top-3 md:right-3 md:left-auto md:w-72 md:max-h-none',
       ].join(' ')}
       style={{ maxWidth: '100%' }}
     >
       {/* Image */}
-      <div className="relative w-full h-32 md:h-40">
+      <div className="relative h-20 w-full shrink-0 sm:h-28 md:h-40">
         {img ? (
           <img
             src={img}
@@ -118,41 +118,43 @@ function PopupCard({
       </div>
 
       {/* Body */}
-      <div className="p-4 space-y-3">
-        {/* Price */}
-        <p className="text-xl font-black tracking-tight leading-none">
-          ${fmt(vehicle.price)}
-        </p>
+      <div className="flex min-h-0 flex-1 flex-col p-3 sm:p-4">
+        <div className="min-h-0 space-y-2 overflow-y-auto pr-1 md:space-y-3 md:overflow-visible md:pr-0">
+          {/* Price */}
+          <p className="text-lg font-black tracking-tight leading-none sm:text-xl">
+            ${fmt(vehicle.price)}
+          </p>
 
-        {/* Year Make Model */}
-        <p className="text-[13px] font-bold">
-          {vehicle.year} {vehicle.make} {vehicle.model}
-        </p>
+          {/* Year Make Model */}
+          <p className="text-[13px] font-bold leading-tight">
+            {vehicle.year} {vehicle.make} {vehicle.model}
+          </p>
 
-        {/* Mileage + Location */}
-        <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <Gauge className="h-3 w-3 shrink-0" />
-            {fmt(vehicle.mileage)} mi
-          </span>
-          <span className="flex items-center gap-1 truncate">
-            <MapPin className="h-3 w-3 shrink-0" />
-            <span className="truncate">{vehicle.location}</span>
-          </span>
-        </div>
+          {/* Mileage + Location */}
+          <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <Gauge className="h-3 w-3 shrink-0" />
+              {fmt(vehicle.mileage)} mi
+            </span>
+            <span className="flex items-center gap-1 truncate">
+              <MapPin className="h-3 w-3 shrink-0" />
+              <span className="truncate">{vehicle.location}</span>
+            </span>
+          </div>
 
-        {/* Badges */}
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className={[
-            'inline-flex items-center gap-1 border border-border px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground',
-          ].join(' ')}>
-            <BadgeCheck className="h-3 w-3" /> Verified
-          </span>
-          <span className={[
-            'inline-flex items-center gap-1 border border-border px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground',
-          ].join(' ')}>
-            <CheckCircle2 className="h-3 w-3" /> Clean Title
-          </span>
+          {/* Badges */}
+          <div className="hidden items-center gap-1.5 flex-wrap sm:flex">
+            <span className={[
+              'inline-flex items-center gap-1 border border-border px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground',
+            ].join(' ')}>
+              <BadgeCheck className="h-3 w-3" /> Verified
+            </span>
+            <span className={[
+              'inline-flex items-center gap-1 border border-border px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground',
+            ].join(' ')}>
+              <CheckCircle2 className="h-3 w-3" /> Clean Title
+            </span>
+          </div>
         </div>
 
         {/* CTA */}
@@ -160,7 +162,7 @@ function PopupCard({
           to="/vehicle/$id"
           params={{ id: vehicle.id }}
           className={[
-            'block w-full border border-foreground bg-foreground px-3 py-2 text-center text-[11px] font-bold uppercase tracking-widest text-background transition-opacity hover:opacity-90',
+            'mt-2 block w-full shrink-0 border border-foreground bg-foreground px-3 py-2 text-center text-[10px] font-bold uppercase tracking-widest text-background transition-opacity hover:opacity-90 sm:text-[11px]',
           ].join(' ')}
         >
           View Listing
@@ -377,11 +379,10 @@ export function MapView({
   return (
     <div
       ref={containerRef}
-      className={`w-full h-full relative z-0 isolate overflow-hidden ${className}`}
+      className={`kerodex-map-root w-full h-full relative z-0 isolate overflow-hidden ${className}`}
       aria-label="Vehicle listings map"
       role="region"
       style={{
-        minHeight: 300,
         backgroundColor: isDark ? '#101317' : '#eef1ed',
         backgroundImage: isDark
           ? 'linear-gradient(30deg, rgba(255,255,255,.05) 1px, transparent 1px), linear-gradient(120deg, rgba(255,255,255,.035) 1px, transparent 1px)'

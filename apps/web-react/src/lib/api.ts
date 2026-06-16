@@ -305,19 +305,22 @@ export async function submitVerificationRequest(type: 'identity' | 'selfie' | 'o
 }
 
 export async function startPhoneVerification(phone: string) {
-  return request<{ message: string; phoneLast4: string; devCode?: string }>('/api/me/phone/start', {
+  const body = await request<{ ok: boolean; message: string; phoneLast4?: string }>('/api/auth/phone/start', {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify({ phone }),
   });
+  if (!body.ok) throw new Error(body.message || 'Unable to send verification code.');
+  return body;
 }
 
-export async function verifyPhoneCode(code: string) {
-  const body = await request<{ message: string; user: KerodexUser }>('/api/me/phone/verify', {
+export async function verifyPhoneCode(phone: string, code: string) {
+  const body = await request<{ ok: boolean; message: string; user: KerodexUser }>('/api/auth/phone/check', {
     method: 'POST',
     headers: authHeaders(),
-    body: JSON.stringify({ code }),
+    body: JSON.stringify({ phone, code }),
   });
+  if (!body.ok || !body.user?.id) throw new Error(body.message || 'Invalid verification code.');
   const token = localStorage.getItem(TOKEN_KEY);
   if (token) saveSession({ token, user: body.user });
   return body;

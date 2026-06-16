@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { currentUser, emailAuth, requestPasswordReset, resetPassword, socialAuth, verifyEmail } from '@/lib/api';
+import { currentUser, emailAuth, requestPasswordReset, resetPassword, socialAuth, startPhoneVerification, verifyEmail, verifyPhoneCode } from '@/lib/api';
 import { Button, Input } from '@blinkdotnew/ui';
-import { X, Loader2, Mail, Lock, User } from 'lucide-react';
+import { X, Loader2, Mail, Lock, User, Phone } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -48,6 +48,10 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
   const [resetMessage, setResetMessage] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const [signupPhoneStep, setSignupPhoneStep] = useState<'none' | 'phone' | 'code'>('none');
+  const [signupPhone, setSignupPhone] = useState('');
+  const [signupPhoneCode, setSignupPhoneCode] = useState('');
+  const [signupPhoneMessage, setSignupPhoneMessage] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -64,6 +68,10 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
       setResetMessage('');
       setTermsAccepted(false);
       setPrivacyAccepted(false);
+      setSignupPhoneStep('none');
+      setSignupPhone('');
+      setSignupPhoneCode('');
+      setSignupPhoneMessage('');
     }
   }, [defaultTab, isOpen]);
 
@@ -88,6 +96,37 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
     try {
       if (pendingEmail) {
         await verifyEmail(pendingEmail, verificationCode);
+        if (tab === 'signup') {
+          setPendingEmail('');
+          setVerificationCode('');
+          setVerificationMessage('');
+          setDevCode('');
+          setSignupPhoneStep('phone');
+          setSignupPhoneMessage('Add a phone number so Kerodex can send a one-time verification code.');
+          return;
+        }
+        closeAfterAuth();
+        return;
+      }
+
+      if (signupPhoneStep === 'phone') {
+        const clean = signupPhone.replace(/\D/g, '');
+        if (clean.length < 10) {
+          setError('Enter a valid phone number.');
+          return;
+        }
+        const result = await startPhoneVerification(signupPhone);
+        setSignupPhoneMessage(result.message || 'Verification code sent.');
+        setSignupPhoneStep('code');
+        return;
+      }
+
+      if (signupPhoneStep === 'code') {
+        if (signupPhoneCode.length < 4) {
+          setError('Enter the verification code we sent to your phone.');
+          return;
+        }
+        await verifyPhoneCode(signupPhone, signupPhoneCode);
         closeAfterAuth();
         return;
       }
@@ -157,11 +196,21 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
 
         <div className="mb-8">
           <h2 className="text-xl font-bold tracking-tight mb-1">
-            {pendingEmail ? 'Verify email' : resetMode ? (resetEmail ? 'Enter reset code' : 'Reset password') : tab === 'login' ? 'Welcome back' : 'Create account'}
+            {pendingEmail
+              ? 'Verify email'
+              : signupPhoneStep !== 'none'
+              ? 'Verify phone'
+              : resetMode
+              ? (resetEmail ? 'Enter reset code' : 'Reset password')
+              : tab === 'login'
+              ? 'Welcome back'
+              : 'Create account'}
           </h2>
           <p className="text-[13px] text-muted-foreground">
             {pendingEmail
               ? verificationMessage
+              : signupPhoneStep !== 'none'
+              ? signupPhoneMessage || 'Verify your phone number to finish setting up your Kerodex account.'
               : resetMode
               ? resetEmail
                 ? resetMessage
@@ -173,7 +222,7 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
         </div>
 
         {/* Tab Toggle */}
-        {!pendingEmail && !resetMode && <div className="flex border border-border mb-8" role="tablist">
+        {!pendingEmail && signupPhoneStep === 'none' && !resetMode && <div className="flex border border-border mb-8" role="tablist">
           <button
             role="tab"
             aria-selected={tab === 'login'}
@@ -219,6 +268,56 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
                 <p className="text-[12px] text-muted-foreground">
                   Local dev code: <span className="font-mono text-foreground">{devCode}</span>
                 </p>
+              )}
+            </>
+          ) : signupPhoneStep !== 'none' ? (
+            <>
+              {signupPhoneStep === 'phone' ? (
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="auth-phone"
+                    name="phone"
+                    type="tel"
+                    placeholder="+1 (555) 000-0000"
+                    value={signupPhone}
+                    onChange={(e) => setSignupPhone(e.target.value)}
+                    className="pl-10 h-11 text-[13px]"
+                    required
+                    autoComplete="tel"
+                  />
+                </div>
+              ) : (
+                <div className="relative">
+                  <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="auth-phone-code"
+                    name="phoneCode"
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="Verification code"
+                    value={signupPhoneCode}
+                    onChange={(e) => setSignupPhoneCode(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    className="pl-10 h-11 text-[13px]"
+                    required
+                  />
+                </div>
+              )}
+              <p className="text-[12px] text-muted-foreground">
+                Kerodex uses this to reduce fake accounts and suspicious marketplace activity. Do not share your code with anyone.
+              </p>
+              {signupPhoneStep === 'code' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSignupPhoneStep('phone');
+                    setSignupPhoneCode('');
+                    setError('');
+                  }}
+                  className="text-[12px] text-muted-foreground hover:text-foreground underline underline-offset-2"
+                >
+                  Use a different phone number
+                </button>
               )}
             </>
           ) : resetMode ? (
@@ -381,6 +480,10 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
               <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Please wait...</>
             ) : pendingEmail ? (
               'Verify Email'
+            ) : signupPhoneStep === 'phone' ? (
+              'Send Phone Code'
+            ) : signupPhoneStep === 'code' ? (
+              'Verify Phone'
             ) : resetMode ? (
               resetEmail ? 'Reset Password' : 'Send Reset Code'
             ) : tab === 'login' ? (
@@ -408,7 +511,7 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
           </button>
         )}
 
-        {!pendingEmail && !resetMode && <div className="mt-4 grid grid-cols-2 gap-2">
+        {!pendingEmail && signupPhoneStep === 'none' && !resetMode && <div className="mt-4 grid grid-cols-2 gap-2">
           <Button
             type="button"
             variant="outline"

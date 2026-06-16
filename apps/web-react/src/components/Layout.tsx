@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { Button, Input } from '@blinkdotnew/ui';
 import { listConversations } from '@/lib/api';
+import { defaultProfileIconForUser } from '@/lib/profile-icons';
 import { KERODEX_VERSION } from '@/version';
 import {
   Search,
@@ -63,6 +64,7 @@ export function Layout() {
   const { isDark, toggle: toggleDark } = useDarkMode();
   const firstName = (user?.name || user?.email || '').trim().split(/\s|@/)[0] || 'there';
   const userInitial = firstName.charAt(0).toUpperCase() || 'U';
+  const defaultAvatarUrl = defaultProfileIconForUser(user);
   const { data: conversations = [] } = useQuery({
     queryKey: ['nav-unread-conversations', user?.id],
     queryFn: async () => user ? listConversations() : [],
@@ -200,7 +202,15 @@ export function Layout() {
                       className="flex items-center gap-1.5 h-9 px-2 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors text-[12px] font-medium"
                     >
                       <span className="h-5 w-5 rounded-full bg-foreground text-background inline-flex items-center justify-center overflow-hidden text-[10px] font-bold">
-                        {user.avatarUrl ? <img src={user.avatarUrl} alt="" className="h-full w-full object-cover" /> : userInitial}
+                        <img
+                          src={user.avatarUrl || defaultAvatarUrl}
+                          alt=""
+                          className="h-full w-full object-cover"
+                          onError={(event) => {
+                            event.currentTarget.style.display = 'none';
+                            event.currentTarget.parentElement?.append(document.createTextNode(userInitial));
+                          }}
+                        />
                       </span>
                       <span className="hidden lg:block max-w-[100px] truncate">
                         Hi, {firstName}

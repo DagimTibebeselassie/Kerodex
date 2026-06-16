@@ -37,8 +37,7 @@ function PhoneModal({
       const result = await startPhoneVerification(phone);
       setLoading(false);
       setStep('code');
-      if (result.devCode) setCode(result.devCode);
-      toast.success(result.devCode ? 'Code generated for local development.' : 'Verification code sent.');
+      toast.success(result.message || 'Verification code sent.');
     } catch (error: any) {
       setLoading(false);
       setErr(error?.message || 'Unable to send code.');
@@ -49,7 +48,7 @@ function PhoneModal({
     if (code.length !== 6) { setErr('Enter the 6-digit code'); return; }
     setErr(''); setLoading(true);
     try {
-      await verifyPhoneCode(code);
+      await verifyPhoneCode(phone, code);
       setLoading(false);
       onDone();
       toast.success('Phone verified.');
@@ -70,7 +69,7 @@ function PhoneModal({
 
         {step === 'phone' ? (
           <>
-            <p className="text-[13px] text-muted-foreground">Enter your US mobile number to receive a verification code.</p>
+            <p className="text-[13px] text-muted-foreground">Enter your US mobile number to receive a verification code. Phone verification expires after six months and can be renewed here.</p>
             <Input
               type="tel"
               placeholder="+1 (555) 000-0000"
@@ -330,7 +329,7 @@ export function VerificationPage() {
     },
     {
       id: 'phone', title: 'Phone Verification',
-      description: 'Verify your mobile number via SMS to unlock messaging.',
+      description: 'Verify your mobile number via SMS. Verification expires every six months.',
       icon: <Phone className="h-5 w-5" />,
       status: 'not_started', points: 20, required: true,
     },

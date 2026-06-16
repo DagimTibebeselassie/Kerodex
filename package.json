@@ -15,7 +15,8 @@
     "test:vehicle-presence": "node scripts/test-vehicle-presence.js"
   },
   "dependencies": {
-    "pg": "^8.13.1"
+    "pg": "^8.13.1",
+    "twilio": "^6.0.2"
   },
   "engines": {
     "node": ">=20"
