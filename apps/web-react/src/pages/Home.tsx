@@ -503,6 +503,8 @@ export function HomePage() {
   const rowsBeforeBuyerGuide = vehicleRowSections.slice(0, 1);
   const rowsBeforeVerification = vehicleRowSections.slice(1, 3);
   const remainingRows = vehicleRowSections.slice(3);
+  const rowsBetweenVerificationFeatures = remainingRows.slice(0, 2);
+  const rowsAfterIdentityVerification = remainingRows.slice(2);
 
   return (
     <div>
@@ -677,7 +679,27 @@ export function HomePage() {
         reverse
       />
 
-      {remainingRows.map((row) => (
+      {rowsBetweenVerificationFeatures.map((row) => (
+        <VehicleRowSection
+          key={`${row.label}-${row.heading}`}
+          label={row.label}
+          heading={row.heading}
+          vehicles={row.vehicles}
+          viewAllHref={row.viewAllHref}
+        />
+      ))}
+
+      <FeatureAd
+        label="Identity Verification"
+        headline="Verify who you're dealing with"
+        copy="Optional identity verification helps buyers and sellers build trust before meeting, messaging, or completing a transaction."
+        cta="Learn about verification"
+        href="/verify"
+        image="/Dagim_editorial_vector_illustration_vehicle_verification_conc_466c222c-fe96-4e55-80ec-9d17c19483a1_1.png"
+        imageAlt="Illustration of optional Kerodex identity verification for marketplace trust and safety"
+      />
+
+      {rowsAfterIdentityVerification.map((row) => (
         <VehicleRowSection
           key={`${row.label}-${row.heading}`}
           label={row.label}
@@ -762,7 +784,7 @@ export function HomePage() {
             <TrustPillar
               icon={<BadgeCheck className="h-4 w-4" />}
               title="Verified Sellers"
-              description="Every seller goes through our ID and phone verification process. You always know who you're dealing with before you show up."
+              description="Sellers can complete optional identity and phone verification to add stronger trust signals before buyers message or meet them."
             />
             <TrustPillar
               icon={<FileText className="h-4 w-4" />}

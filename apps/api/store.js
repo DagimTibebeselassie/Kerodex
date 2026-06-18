@@ -253,9 +253,16 @@ function buildAdminState(listings, conversations) {
 function toAdminListingRecord(listing, index = 0) {
   return {
     id: listing.id,
+    userId: listing.userId || listing.seller?.id || "",
+    sellerId: listing.seller?.id || listing.userId || "",
     seller: listing.seller?.name || "Kerodex Seller",
+    sellerRecord: listing.seller || {},
     vin: listing.vin || `DEMO${String(index + 1).padStart(13, "0")}`,
     title: listing.title,
+    make: listing.make || "",
+    model: listing.model || "",
+    trim: listing.trim || "",
+    year: Number(listing.year || 0),
     price: listing.price,
     mileage: Number(listing.mileage || 0),
     location: listing.location,
@@ -266,6 +273,8 @@ function toAdminListingRecord(listing, index = 0) {
     inquiries: Number(listing.inquiries || 0),
     riskLevel: listingRiskLevel(listing),
     riskScore: Math.max(0, 100 - Number(listing.trustScore || 75)),
+    photosCount: Array.isArray(listing.images) ? listing.images.filter(Boolean).length : 0,
+    createdAt: listing.createdAt || listing.updatedAt || new Date().toISOString(),
     updatedAt: listing.updatedAt || new Date().toISOString(),
     history: [
       { at: listing.updatedAt || new Date().toISOString(), action: "Listing synced", actor: "system" }
@@ -304,6 +313,49 @@ function toAdminUserRecord(user) {
   };
 }
 
+function realAdminUsersForStore(store, persistedUsers = []) {
+  const runtimeUsers = store.kind === "postgres" ? [] : store.getRuntimeAdminUsers();
+  const seedUsers = store.kind === "postgres" ? [] : (store.adminState?.users || []);
+  const userMap = new Map([...seedUsers, ...persistedUsers, ...runtimeUsers].map((user) => [user.email || user.id, user]));
+  return Array.from(userMap.values());
+}
+
+function listingVerificationQueueRecord(listing) {
+  const presence = listing.vehiclePresence || {};
+  const status = presence.verification_status || presence.verificationStatus || listing.verificationStatus || "";
+  const pendingStatuses = new Set([
+    "pending_verification",
+    "verification_in_progress",
+    "manual_review_required",
+    "rejected_vin_mismatch",
+    "rejected_code_mismatch",
+    "rejected_vin_not_detected"
+  ]);
+  if (!pendingStatuses.has(String(status)) && !String(listing.status || "").includes("pending_verification")) return null;
+  return {
+    id: `vehicle_presence_${listing.id}`,
+    userId: listing.userId || listing.seller?.id || "",
+    userName: listing.seller?.name || listing.sellerName || "Seller",
+    email: listing.seller?.email || "",
+    type: "vehicle_presence",
+    listingId: listing.id,
+    listingTitle: listing.title,
+    vehicleVin: listing.vin || presence.vin || "",
+    challengeCode: listing.vehiclePresenceCode || presence.verification_code || presence.code || "",
+    verificationPhotoUrl: listing.vehiclePresencePhotoUrl || presence.verification_photo_url || presence.photoUrl || "",
+    verificationPhotoS3Key: listing.vehiclePresenceS3Key || presence.verification_photo_s3_key || presence.s3Key || "",
+    status: String(status || listing.status || "pending"),
+    confidence: presence.confidence ?? listing.vehiclePresenceConfidence ?? null,
+    submittedAt: presence.submitted_at || presence.submittedAt || listing.updatedAt || listing.createdAt || "",
+    notes: presence.manualReviewNotes || listing.adminNotes || "",
+    history: presence.history || listing.history || []
+  };
+}
+
+function adminVerificationRecordsFromListings(listings) {
+  return listings.map(listingVerificationQueueRecord).filter(Boolean);
+}
+
 function dateKey(iso) {
   return new Date(iso || Date.now()).toISOString().slice(0, 10);
 }
@@ -313,6 +365,107 @@ function countEvents(events, type, sinceMs = 0) {
     (!type || event.eventType === type) &&
     (!sinceMs || Date.parse(event.createdAt) >= sinceMs)
   ).length;
+}
+
+function occurredSince(value, sinceMs) {
+  const timestamp = Date.parse(value || "");
+  return Number.isFinite(timestamp) && timestamp >= sinceMs;
+}
+
+function eventTarget(event) {
+  const metadata = event.metadata || {};
+  return {
+    targetUserId: metadata.targetUserId || metadata.reportedUserId || "",
+    conversationId: metadata.conversationId || "",
+    messageId: metadata.messageId || "",
+    adminId: metadata.adminId || ""
+  };
+}
+
+function platformActivityRecords(events, auditLogs) {
+  const analytics = events.map((event) => ({
+    id: event.id,
+    source: "platform",
+    eventType: event.eventType,
+    actorUserId: event.userId || "",
+    listingId: event.listingId || "",
+    ...eventTarget(event),
+    route: event.route || "",
+    metadata: event.metadata || {},
+    ipHash: event.ipHash || "",
+    userAgent: event.userAgent || "",
+    createdAt: event.createdAt
+  }));
+  const adminEventNames = {
+    "users.ban": "admin_banned_user",
+    "users.unban": "admin_unbanned_user",
+    "users.suspend": "admin_suspended_user",
+    "users.unsuspend": "admin_unsuspended_user",
+    "listings.approve": "admin_approved_listing",
+    "listings.reject": "admin_rejected_listing",
+    "listings.remove": "admin_removed_listing",
+    "listings.restore": "admin_restored_listing",
+    "verifications.approve": "vehicle_verification_approved",
+    "verifications.reject": "vehicle_verification_rejected",
+    "reports.review": "report_reviewed",
+    "reports.resolve": "report_resolved",
+    "reports.dismiss": "report_dismissed",
+    "admin.login": "admin_login"
+  };
+  const admin = auditLogs.map((log) => ({
+    id: log.id,
+    source: log.adminAccount === "system" ? "system" : "admin",
+    eventType: adminEventNames[log.actionType] || log.actionType,
+    actorUserId: "",
+    targetUserId: log.targetType === "users" || log.targetType === "user" ? log.targetId : "",
+    listingId: log.targetType === "listings" || log.targetType === "listing" ? log.targetId : "",
+    conversationId: log.targetType === "conversation" ? log.targetId : "",
+    messageId: "",
+    adminId: log.adminAccount || "",
+    route: "",
+    metadata: {
+      targetType: log.targetType,
+      targetId: log.targetId,
+      previousValue: log.previousValue,
+      newValue: log.newValue,
+      notes: log.notes || ""
+    },
+    ipHash: "",
+    userAgent: "",
+    createdAt: log.timestamp
+  }));
+  return [...analytics, ...admin].sort((a, b) => Date.parse(b.createdAt || "") - Date.parse(a.createdAt || ""));
+}
+
+function enrichAdminUsers(users, listings, conversations, reports, events) {
+  return users.map((user) => {
+    const userListings = listings.filter((listing) => listing.userId === user.id || listing.seller?.id === user.id);
+    const userConversations = conversations.filter((conversation) =>
+      conversation.buyerId === user.id || conversation.sellerId === user.id
+    );
+    const userReports = reports.filter((report) =>
+      report.reporterId === user.id || report.reportedUserId === user.id
+    );
+    const userEvents = events.filter((event) =>
+      event.userId === user.id || eventTarget(event).targetUserId === user.id
+    );
+    const savedListingsCount = userEvents.filter((event) => event.eventType === "save_listing").length
+      - userEvents.filter((event) => event.eventType === "unsave_listing").length;
+    return {
+      ...user,
+      listingCount: userListings.length,
+      activeListingCount: userListings.filter((listing) => listing.status === "active").length,
+      conversationsCount: userConversations.length,
+      messagesSent: userConversations.reduce(
+        (total, conversation) => total + (conversation.messages || []).filter((message) => message.senderId === user.id).length,
+        0
+      ),
+      savedListingsCount: Math.max(0, savedListingsCount),
+      reportsReceived: userReports.filter((report) => report.reportedUserId === user.id).length,
+      reportsSubmitted: userReports.filter((report) => report.reporterId === user.id).length,
+      lastActivityAt: userEvents[0]?.createdAt || user.lastLoginAt || user.accountCreatedAt
+    };
+  });
 }
 
 function buildTrafficFromEvents(events, days = 30) {
@@ -682,6 +835,18 @@ class PostgresStore {
       )
     `);
     await this.pool.query(`
+      CREATE TABLE IF NOT EXISTS verification_records (
+        id TEXT PRIMARY KEY,
+        user_id TEXT,
+        listing_id TEXT,
+        type TEXT NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending',
+        payload JSONB NOT NULL,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await this.pool.query(`
       CREATE TABLE IF NOT EXISTS auth_sessions (
         token TEXT PRIMARY KEY,
         user_id TEXT NOT NULL,
@@ -712,7 +877,11 @@ class PostgresStore {
     await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_listing_records_vin ON listing_records ((payload->>'vin'))`);
     await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_report_records_status_created ON report_records (status, created_at DESC)`);
     await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_analytics_events_type_created ON analytics_events (event_type, created_at DESC)`);
+    await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_analytics_events_user_created ON analytics_events (user_id, created_at DESC)`);
+    await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_analytics_events_listing_created ON analytics_events (listing_id, created_at DESC)`);
     await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_audit_records_created ON audit_records (created_at DESC)`);
+    await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_verification_records_status_updated ON verification_records (status, updated_at DESC)`);
+    await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_verification_records_listing ON verification_records (listing_id)`);
     await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_auth_sessions_user ON auth_sessions (user_id, last_seen_at DESC)`);
     await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_buyer_guides_buyer_updated ON buyer_purchase_guides (buyer_id, updated_at DESC)`);
     await this.pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_buyer_guides_active_unique ON buyer_purchase_guides (buyer_id, listing_id) WHERE status = 'active'`);
@@ -941,6 +1110,37 @@ class PostgresStore {
   async getAuditLogs() {
     await this.ensureCoreTables();
     const result = await this.pool.query("SELECT payload FROM audit_records ORDER BY created_at DESC LIMIT 5000");
+    return result.rows.map((row) => row.payload);
+  }
+
+  async saveVerificationRequest(verification) {
+    await this.ensureCoreTables();
+    await this.pool.query(
+      `INSERT INTO verification_records (id, user_id, listing_id, type, status, payload, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+       ON CONFLICT (id) DO UPDATE SET
+        user_id = EXCLUDED.user_id,
+        listing_id = EXCLUDED.listing_id,
+        type = EXCLUDED.type,
+        status = EXCLUDED.status,
+        payload = EXCLUDED.payload,
+        updated_at = NOW()`,
+      [
+        verification.id,
+        verification.userId || "",
+        verification.listingId || "",
+        verification.type || "identity",
+        verification.status || "pending",
+        verification,
+        verification.submittedAt || verification.createdAt || new Date().toISOString()
+      ]
+    );
+    return verification;
+  }
+
+  async getVerificationRequests() {
+    await this.ensureCoreTables();
+    const result = await this.pool.query("SELECT payload FROM verification_records ORDER BY updated_at DESC LIMIT 5000");
     return result.rows.map((row) => row.payload);
   }
 
@@ -1173,6 +1373,9 @@ function addAdminMethods(StoreClass) {
       history: [{ at: now, action: "Submitted", actor: user.name || user.email }]
     };
     state.verifications.unshift(verification);
+    if (typeof this.saveVerificationRequest === "function") {
+      await this.saveVerificationRequest(verification);
+    }
     state.notifications.unshift({
       id: `note_${Date.now()}`,
       type: "New Verification Submission",
@@ -1195,36 +1398,63 @@ function addAdminMethods(StoreClass) {
   StoreClass.prototype.getAdminDashboard = async function getAdminDashboard() {
     const state = await ensureAdminState(this);
     const persistedUsers = typeof this.getUsers === "function" ? (await this.getUsers()).map(toAdminUserRecord) : [];
-    const listings = (await this.getListings()).map(toAdminListingRecord);
+    const rawListings = await this.getListings();
+    const listings = rawListings.map(toAdminListingRecord);
     const conversations = await this.getConversations();
+    const persistedVerifications = typeof this.getVerificationRequests === "function" ? await this.getVerificationRequests() : [];
+    state.verifications = [
+      ...adminVerificationRecordsFromListings(rawListings),
+      ...persistedVerifications,
+      ...(this.kind === "postgres" ? [] : state.verifications)
+    ].filter((item, index, arr) => arr.findIndex((candidate) => candidate.id === item.id) === index);
     const events = typeof this.getAnalyticsEvents === "function" ? await this.getAnalyticsEvents({ limit: 20000 }) : [];
+    const auditLogs = typeof this.getAuditLogs === "function" ? await this.getAuditLogs() : state.auditLogs;
     const traffic = buildTrafficFromEvents(events);
     state.traffic = traffic;
     state.listings = listings;
-    const runtimeUsers = this.getRuntimeAdminUsers();
-    const userMap = new Map([...state.users, ...persistedUsers, ...runtimeUsers].map((user) => [user.email || user.id, user]));
-    const users = Array.from(userMap.values());
+    const runtimeUsers = this.kind === "postgres" ? [] : this.getRuntimeAdminUsers();
+    const users = enrichAdminUsers(
+      realAdminUsersForStore(this, persistedUsers),
+      rawListings,
+      conversations,
+      state.reports,
+      events
+    );
     const today = traffic[traffic.length - 1] || { visitors: 0, pageViews: 0, sessions: 0, contacts: 0 };
+    const now = Date.now();
+    const startOfToday = new Date(new Date().toISOString().slice(0, 10)).getTime();
+    const startOfWeek = now - 7 * 24 * 60 * 60 * 1000;
+    const startOfMonth = now - 30 * 24 * 60 * 60 * 1000;
     const previousWeek = traffic.slice(-14, -7).reduce((total, day) => total + day.visitors, 0);
     const currentWeek = traffic.slice(-7).reduce((total, day) => total + day.visitors, 0);
     const previousMonth = traffic.slice(0, 15).reduce((total, day) => total + day.visitors, 0);
     const currentMonth = traffic.slice(15).reduce((total, day) => total + day.visitors, 0);
     const activeUsers24h = users.filter((user) => Date.parse(user.lastLoginAt) >= Date.now() - 24 * 60 * 60 * 1000).length;
     const activeUsers7d = users.filter((user) => Date.parse(user.lastLoginAt) >= Date.now() - 7 * 24 * 60 * 60 * 1000).length;
-    const pendingVerifications = state.verifications.filter((item) => item.status === "pending").length;
+    const pendingVerifications = state.verifications.filter((item) => ["pending", "pending_verification", "verification_in_progress"].includes(item.status)).length;
     const reportsOpen = state.reports.filter((item) => item.status === "open").length;
     const reportsResolved = state.reports.filter((item) => ["resolved", "dismissed", "warning_sent"].includes(item.status)).length;
     const verifiedListings = listings.filter((item) => ["verified", "vehicle_presence_verified"].includes(item.verificationStatus)).length;
     const soldListings = listings.filter((item) => item.status === "sold").length;
     const averagePrice = listings.reduce((total, listing) => total + Number(listing.price || 0), 0) / Math.max(1, listings.length);
-    const todayStamp = new Date().toISOString().slice(0, 10);
-    const newListingsToday = listings.filter((listing) => String(listing.updatedAt || "").startsWith(todayStamp)).length;
-    const runtimeNewUsersToday = runtimeUsers.filter((user) => String(user.accountCreatedAt || "").startsWith(todayStamp)).length;
-    const runtimeNewUsersThisWeek = runtimeUsers.filter((user) => Date.parse(user.accountCreatedAt) >= Date.now() - 7 * 24 * 60 * 60 * 1000).length;
-    const newUsersToday = users.filter((user) => String(user.accountCreatedAt || "").startsWith(todayStamp)).length;
-    const signupsThisWeek = traffic.slice(-7).reduce((total, day) => total + day.signups, 0) + runtimeNewUsersThisWeek;
-    const signupsThisMonth = traffic.reduce((total, day) => total + day.signups, 0) + persistedUsers.length + runtimeUsers.length;
+    const newListingsToday = listings.filter((listing) => occurredSince(listing.createdAt, startOfToday)).length;
+    const newListingsThisWeek = listings.filter((listing) => occurredSince(listing.createdAt, startOfWeek)).length;
+    const newListingsThisMonth = listings.filter((listing) => occurredSince(listing.createdAt, startOfMonth)).length;
+    const newUsersToday = users.filter((user) => occurredSince(user.accountCreatedAt, startOfToday)).length;
+    const signupsThisWeek = users.filter((user) => occurredSince(user.accountCreatedAt, startOfWeek)).length;
+    const signupsThisMonth = users.filter((user) => occurredSince(user.accountCreatedAt, startOfMonth)).length;
     const totalMessages = conversations.reduce((total, conversation) => total + Number(conversation.messages?.length || 0), 0);
+    const conversationsToday = conversations.filter((conversation) => occurredSince(conversation.createdAt || conversation.updatedAt, startOfToday)).length;
+    const conversationsThisWeek = conversations.filter((conversation) => occurredSince(conversation.createdAt || conversation.updatedAt, startOfWeek)).length;
+    const conversationsThisMonth = conversations.filter((conversation) => occurredSince(conversation.createdAt || conversation.updatedAt, startOfMonth)).length;
+    const flaggedConversations = conversations.filter((conversation) =>
+      ["needs_review", "high_risk"].includes(conversation.moderationStatus) ||
+      Number(conversation.scamRiskScore || 0) >= 35
+    ).length;
+    const suspiciousUserIds = new Set(users.filter((user) => ["banned", "suspended"].includes(user.status)).map((user) => user.id));
+    const suspiciousConversations = conversations.filter((conversation) =>
+      suspiciousUserIds.has(conversation.buyerId) || suspiciousUserIds.has(conversation.sellerId)
+    ).length;
     const savedVehicles = countEvents(events, "save_listing");
     const listingViews = countEvents(events, "listing_view");
     const searchActivity = countEvents(events, "search_performed");
@@ -1243,23 +1473,49 @@ function addAdminMethods(StoreClass) {
         activeUsers24h,
         activeUsers7d,
         bannedUsers: users.filter((user) => user.status === "banned").length,
+        suspendedUsers: users.filter((user) => user.status === "suspended").length,
         verifiedUsers: users.filter((user) => ["approved", "email_verified"].includes(user.verificationStatus)).length,
+        unverifiedUsers: users.filter((user) => !["approved", "email_verified"].includes(user.verificationStatus)).length,
+        usersWithListings: users.filter((user) => user.listingCount > 0).length,
+        usersWithConversations: users.filter((user) => user.conversationsCount > 0).length,
         totalListings: listings.length,
         activeListings: listings.filter((listing) => listing.status === "active").length,
+        approvedListings: listings.filter((listing) => listing.status === "active").length,
         pendingListings: listings.filter((listing) => String(listing.status || "").includes("pending")).length,
         rejectedListings: listings.filter((listing) => String(listing.status || "").includes("rejected")).length,
         deletedListings: listings.filter((listing) => ["deleted", "removed"].includes(listing.status)).length,
+        removedListings: listings.filter((listing) => listing.status === "removed").length,
+        draftListings: listings.filter((listing) => listing.status === "draft").length,
         newListingsToday,
+        newListingsThisWeek,
+        newListingsThisMonth,
+        listingsMissingPhotos: listings.filter((listing) => listing.photosCount === 0).length,
+        listingsMissingVin: listings.filter((listing) => !listing.vin || String(listing.vin).startsWith("DEMO")).length,
+        listingsMissingPrice: listings.filter((listing) => !Number(listing.price)).length,
+        listingsMissingLocation: listings.filter((listing) => !listing.location).length,
         verifiedListings,
         pendingVerificationRequests: pendingVerifications,
         vehiclesSold: soldListings,
         totalMessages,
         messagesSentToday: today.contacts,
         totalConversations: conversations.length,
+        conversationsToday,
+        conversationsThisWeek,
+        conversationsThisMonth,
+        flaggedConversations,
+        suspiciousConversations,
         reportsSubmitted: reportsOpen,
         reportsResolved,
+        reportsReviewing: state.reports.filter((item) => item.status === "reviewing").length,
+        reportsDismissed: state.reports.filter((item) => item.status === "dismissed").length,
         verificationAttempts: state.verifications.length,
+        approvedVerifications: state.verifications.filter((item) => ["approved", "verified"].includes(item.status)).length,
+        manualReviewVerifications: state.verifications.filter((item) => item.status === "manual_review_required").length,
         failedVerificationAttempts: state.verifications.filter((item) => ["rejected", "failed", "expired"].includes(item.status)).length,
+        averageVerificationConfidence: (() => {
+          const values = state.verifications.map((item) => Number(item.confidence)).filter(Number.isFinite);
+          return values.length ? Number((values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(2)) : null;
+        })(),
         fraudFlagsTriggered: state.fraudFlags.filter((flag) => flag.status !== "dismissed").length,
         savedVehicles,
         listingViews,
@@ -1268,6 +1524,49 @@ function addAdminMethods(StoreClass) {
         inspectionsRequested: state.verifications.filter((item) => item.type === "inspection").length,
         revenue: 0,
         averageTimeToSellVehicle: "Not enough data"
+      },
+      breakdowns: {
+        listingsByStatus: Object.entries(listings.reduce((acc, listing) => {
+          acc[listing.status || "unknown"] = (acc[listing.status || "unknown"] || 0) + 1;
+          return acc;
+        }, {})).map(([label, value]) => ({ label, value })),
+        listingsByVerification: Object.entries(listings.reduce((acc, listing) => {
+          const key = listing.verificationStatus || "unverified";
+          acc[key] = (acc[key] || 0) + 1;
+          return acc;
+        }, {})).map(([label, value]) => ({ label, value })),
+        reportsByCategory: Object.entries(state.reports.reduce((acc, report) => {
+          const key = report.category || report.type || "other";
+          acc[key] = (acc[key] || 0) + 1;
+          return acc;
+        }, {})).map(([label, value]) => ({ label, value })),
+        adminActions: Object.entries(auditLogs.reduce((acc, log) => {
+          if (log.adminAccount && log.adminAccount !== "system") {
+            acc[log.actionType || "unknown"] = (acc[log.actionType || "unknown"] || 0) + 1;
+          }
+          return acc;
+        }, {})).map(([label, value]) => ({ label, value })),
+        actionsByAdmin: Object.entries(auditLogs.reduce((acc, log) => {
+          const key = log.adminAccount || "system";
+          acc[key] = (acc[key] || 0) + 1;
+          return acc;
+        }, {})).map(([label, value]) => ({ label, value })),
+        mostReportedUsers: Object.entries(state.reports.reduce((acc, report) => {
+          if (report.reportedUserId) acc[report.reportedUserId] = (acc[report.reportedUserId] || 0) + 1;
+          return acc;
+        }, {})).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value).slice(0, 10),
+        mostReportedListings: Object.entries(state.reports.reduce((acc, report) => {
+          if (report.listingId) acc[report.listingId] = (acc[report.listingId] || 0) + 1;
+          return acc;
+        }, {})).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value).slice(0, 10)
+      },
+      recent: {
+        users: users.slice().sort((a, b) => Date.parse(b.accountCreatedAt) - Date.parse(a.accountCreatedAt)).slice(0, 8),
+        listings: listings.slice().sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)).slice(0, 8),
+        verifications: state.verifications.slice().sort((a, b) => Date.parse(b.submittedAt || b.updatedAt || "") - Date.parse(a.submittedAt || a.updatedAt || "")).slice(0, 8),
+        conversations: conversations.slice().sort((a, b) => Date.parse(b.updatedAt || "") - Date.parse(a.updatedAt || "")).slice(0, 8),
+        reports: state.reports.slice().sort((a, b) => Date.parse(b.createdAt || b.submittedAt || "") - Date.parse(a.createdAt || a.submittedAt || "")).slice(0, 8),
+        adminActions: auditLogs.slice(0, 10)
       },
       website: {
         totalVisitors: traffic.reduce((total, day) => total + day.visitors, 0),
@@ -1338,31 +1637,80 @@ function addAdminMethods(StoreClass) {
   StoreClass.prototype.searchAdmin = async function searchAdmin(query) {
     const state = await ensureAdminState(this);
     const persistedUsers = typeof this.getUsers === "function" ? (await this.getUsers()).map(toAdminUserRecord) : [];
-    const users = [...state.users, ...persistedUsers, ...this.getRuntimeAdminUsers()];
-    const listings = (await this.getListings()).map(toAdminListingRecord);
+    const users = realAdminUsersForStore(this, persistedUsers);
+    const rawListings = await this.getListings();
+    const listings = rawListings.map(toAdminListingRecord);
+    const persistedVerifications = typeof this.getVerificationRequests === "function" ? await this.getVerificationRequests() : [];
+    const verifications = [
+      ...adminVerificationRecordsFromListings(rawListings),
+      ...persistedVerifications,
+      ...(this.kind === "postgres" ? [] : state.verifications)
+    ].filter((item, index, arr) => arr.findIndex((candidate) => candidate.id === item.id) === index);
     const q = String(query || "").trim().toLowerCase();
     if (!q) return { users: [], listings: [], verifications: [], reports: [] };
     return {
       users: filterByQuery(users, q, ["fullName", "email", "phone", "id"]).slice(0, 8),
       listings: filterByQuery(listings, q, ["title", "vin", "id", "seller"]).slice(0, 8),
-      verifications: filterByQuery(state.verifications, q, ["id", "userName", "email", "vehicleVin"]).slice(0, 8),
+      verifications: filterByQuery(verifications, q, ["id", "userName", "email", "vehicleVin", "listingTitle"]).slice(0, 8),
       reports: filterByQuery(state.reports, q, ["id", "type", "reporter", "reportedUser", "listingId"]).slice(0, 8)
+    };
+  };
+
+  StoreClass.prototype.getAdminActivity = async function getAdminActivity(params = new URLSearchParams()) {
+    const events = typeof this.getAnalyticsEvents === "function" ? await this.getAnalyticsEvents({ limit: 20000 }) : [];
+    const auditLogs = typeof this.getAuditLogs === "function" ? await this.getAuditLogs() : [];
+    let items = platformActivityRecords(events, auditLogs);
+    const q = String(params.get("q") || "").trim().toLowerCase();
+    const eventType = String(params.get("eventType") || "").trim();
+    const userId = String(params.get("userId") || "").trim();
+    const listingId = String(params.get("listingId") || "").trim();
+    const source = String(params.get("source") || "").trim();
+    const dateFrom = Date.parse(params.get("dateFrom") || "");
+    const dateTo = Date.parse(params.get("dateTo") || "");
+    if (q) {
+      items = items.filter((item) => JSON.stringify(item).toLowerCase().includes(q));
+    }
+    if (eventType) items = items.filter((item) => item.eventType === eventType);
+    if (userId) items = items.filter((item) => item.actorUserId === userId || item.targetUserId === userId);
+    if (listingId) items = items.filter((item) => item.listingId === listingId);
+    if (source) items = items.filter((item) => item.source === source);
+    if (Number.isFinite(dateFrom)) items = items.filter((item) => Date.parse(item.createdAt) >= dateFrom);
+    if (Number.isFinite(dateTo)) items = items.filter((item) => Date.parse(item.createdAt) <= dateTo + 24 * 60 * 60 * 1000 - 1);
+    const page = Math.max(1, Number(params.get("page") || 1));
+    const pageSize = Math.min(100, Math.max(10, Number(params.get("pageSize") || 50)));
+    const start = (page - 1) * pageSize;
+    return {
+      items: items.slice(start, start + pageSize),
+      total: items.length,
+      page,
+      pageSize,
+      eventTypes: Array.from(new Set(platformActivityRecords(events, auditLogs).map((item) => item.eventType))).sort()
     };
   };
 
   StoreClass.prototype.getAdminCollection = async function getAdminCollection(name, params = new URLSearchParams()) {
     const state = await ensureAdminState(this);
     const persistedUsers = typeof this.getUsers === "function" ? (await this.getUsers()).map(toAdminUserRecord) : [];
-    const users = [...state.users, ...persistedUsers, ...this.getRuntimeAdminUsers()];
-    const listings = (await this.getListings()).map(toAdminListingRecord);
+    const rawListings = await this.getListings();
+    const conversations = await this.getConversations();
+    const events = typeof this.getAnalyticsEvents === "function" ? await this.getAnalyticsEvents({ limit: 20000 }) : [];
+    const users = enrichAdminUsers(realAdminUsersForStore(this, persistedUsers), rawListings, conversations, state.reports, events);
+    const listings = rawListings.map(toAdminListingRecord);
+    const persistedVerifications = typeof this.getVerificationRequests === "function" ? await this.getVerificationRequests() : [];
+    const verifications = [
+      ...adminVerificationRecordsFromListings(rawListings),
+      ...persistedVerifications,
+      ...(this.kind === "postgres" ? [] : state.verifications)
+    ].filter((item, index, arr) => arr.findIndex((candidate) => candidate.id === item.id) === index);
     state.listings = listings;
+    state.verifications = verifications;
     if (typeof this.getAuditLogs === "function") state.auditLogs = await this.getAuditLogs();
     const q = params.get("q") || "";
     const status = params.get("status") || "";
     const collections = {
       users: filterByQuery(users, q, ["fullName", "email", "phone", "id"]),
-      listings: filterByQuery(listings, q, ["title", "vin", "id", "seller"]),
-      verifications: filterByQuery(state.verifications, q, ["id", "userName", "email", "vehicleVin"]),
+      listings: filterByQuery(listings, q, ["title", "vin", "id", "seller", "location"]),
+      verifications: filterByQuery(verifications, q, ["id", "userName", "email", "vehicleVin", "listingTitle"]),
       reports: filterByQuery(state.reports, q, ["id", "type", "reporter", "reportedUser", "listingId"]),
       fraudFlags: filterByQuery(state.fraudFlags, q, ["id", "reason", "listingId", "userId"]),
       auditLogs: state.auditLogs,
@@ -1383,16 +1731,57 @@ function addAdminMethods(StoreClass) {
   StoreClass.prototype.getAdminItem = async function getAdminItem(collection, id) {
     const state = await ensureAdminState(this);
     const persistedUsers = typeof this.getUsers === "function" ? (await this.getUsers()).map(toAdminUserRecord) : [];
-    const users = [...state.users, ...persistedUsers, ...this.getRuntimeAdminUsers()];
-    const listings = (await this.getListings()).map(toAdminListingRecord);
+    const rawListings = await this.getListings();
+    const conversations = await this.getConversations();
+    const events = typeof this.getAnalyticsEvents === "function" ? await this.getAnalyticsEvents({ limit: 20000 }) : [];
+    const auditLogs = typeof this.getAuditLogs === "function" ? await this.getAuditLogs() : state.auditLogs;
+    const users = enrichAdminUsers(realAdminUsersForStore(this, persistedUsers), rawListings, conversations, state.reports, events);
+    const listings = rawListings.map(toAdminListingRecord);
+    const persistedVerifications = typeof this.getVerificationRequests === "function" ? await this.getVerificationRequests() : [];
+    const verifications = [
+      ...adminVerificationRecordsFromListings(rawListings),
+      ...persistedVerifications,
+      ...(this.kind === "postgres" ? [] : state.verifications)
+    ].filter((item, index, arr) => arr.findIndex((candidate) => candidate.id === item.id) === index);
     const map = {
       users,
       listings,
-      verifications: state.verifications,
+      verifications,
       reports: state.reports,
       fraudFlags: state.fraudFlags
     };
-    return (map[collection] || []).find((item) => item.id === id);
+    const item = (map[collection] || []).find((candidate) => candidate.id === id);
+    if (!item) return null;
+    if (collection === "users") {
+      return {
+        ...item,
+        listings: rawListings.filter((listing) => listing.userId === id || listing.seller?.id === id).map(toAdminListingRecord),
+        conversations: conversations.filter((conversation) => conversation.buyerId === id || conversation.sellerId === id),
+        reports: state.reports.filter((report) => report.reporterId === id || report.reportedUserId === id),
+        activity: platformActivityRecords(events, auditLogs).filter((event) => event.actorUserId === id || event.targetUserId === id).slice(0, 100),
+        adminActions: auditLogs.filter((log) => log.targetId === id).slice(0, 100)
+      };
+    }
+    if (collection === "listings") {
+      return {
+        ...item,
+        rawListing: rawListings.find((listing) => listing.id === id),
+        sellerRecord: users.find((user) => user.id === item.userId) || item.sellerRecord,
+        conversations: conversations.filter((conversation) => conversation.listingId === id),
+        reports: state.reports.filter((report) => report.listingId === id),
+        activity: platformActivityRecords(events, auditLogs).filter((event) => event.listingId === id).slice(0, 100),
+        adminActions: auditLogs.filter((log) => log.targetId === id).slice(0, 100)
+      };
+    }
+    if (collection === "reports") {
+      return {
+        ...item,
+        relatedUser: users.find((user) => user.id === item.reportedUserId) || null,
+        relatedListing: listings.find((listing) => listing.id === item.listingId) || null,
+        adminActions: auditLogs.filter((log) => log.targetId === id).slice(0, 100)
+      };
+    }
+    return item;
   };
 
   StoreClass.prototype.recordAdminAction = async function recordAdminAction({ adminAccount, actionType, targetType, targetId, previousValue, newValue, notes }) {
@@ -1472,6 +1861,8 @@ function addAdminMethods(StoreClass) {
     if (collection === "listings") {
       if (action === "remove") item.status = "removed";
       if (action === "restore") item.status = "active";
+      if (action === "approve") item.status = "active";
+      if (action === "reject") item.status = "rejected";
       if (action === "feature") item.featured = true;
       if (action === "unfeature") item.featured = false;
       if (action === "flag") item.status = "flagged";
@@ -1498,6 +1889,8 @@ function addAdminMethods(StoreClass) {
       if (action === "reject") item.status = "rejected";
       if (action === "request_resubmission") item.status = "pending";
       if (notes) item.notes = [item.notes, notes].filter(Boolean).join("\n");
+      item.reviewedAt = new Date().toISOString();
+      item.reviewedBy = adminAccount;
       if (item.type === "vehicle_presence" && item.listingId) {
         const listing = await this.getListingById(item.listingId);
         if (listing) {
@@ -1548,9 +1941,14 @@ function addAdminMethods(StoreClass) {
           await this.createListing(next);
         }
       }
+      if (typeof this.saveVerificationRequest === "function") {
+        await this.saveVerificationRequest(item);
+      }
     }
     if (collection === "reports") {
+      if (action === "review") item.status = "reviewing";
       if (action === "resolve") item.status = "resolved";
+      if (action === "dismiss") item.status = "dismissed";
       if (action === "warn_user") item.status = "warning_sent";
       if (action === "escalate") item.status = "escalated";
       item.reviewedAt = new Date().toISOString();
@@ -1616,13 +2014,20 @@ function addAdminMethods(StoreClass) {
   StoreClass.prototype.exportAdminCollection = async function exportAdminCollection(name) {
     const state = await ensureAdminState(this);
     const persistedUsers = typeof this.getUsers === "function" ? (await this.getUsers()).map(toAdminUserRecord) : [];
-    const users = [...state.users, ...persistedUsers, ...this.getRuntimeAdminUsers()];
-    const listings = (await this.getListings()).map(toAdminListingRecord);
+    const users = realAdminUsersForStore(this, persistedUsers);
+    const rawListings = await this.getListings();
+    const listings = rawListings.map(toAdminListingRecord);
+    const persistedVerifications = typeof this.getVerificationRequests === "function" ? await this.getVerificationRequests() : [];
+    const verifications = [
+      ...adminVerificationRecordsFromListings(rawListings),
+      ...persistedVerifications,
+      ...(this.kind === "postgres" ? [] : state.verifications)
+    ].filter((item, index, arr) => arr.findIndex((candidate) => candidate.id === item.id) === index);
     if (typeof this.getAuditLogs === "function") state.auditLogs = await this.getAuditLogs();
     const map = {
       users,
       listings,
-      verifications: state.verifications,
+      verifications,
       reports: state.reports,
       fraudFlags: state.fraudFlags,
       auditLogs: state.auditLogs

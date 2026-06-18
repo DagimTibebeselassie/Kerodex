@@ -111,83 +111,6 @@ function PhoneModal({
   );
 }
 
-function IdUploadModal({
-  onClose,
-  onDone,
-}: { onClose: () => void; onDone: () => void }) {
-  const [dragging, setDragging] = useState(false);
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState('');
-  const [loading, setLoading] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const handleFile = (f: File) => {
-    if (!f.type.startsWith('image/')) { toast.error('Please upload an image file'); return; }
-    setFile(f);
-    const reader = new FileReader();
-    reader.onload = (e) => setPreview(e.target?.result as string);
-    reader.readAsDataURL(f);
-  };
-
-  const submit = async () => {
-    if (!file) return;
-    setLoading(true);
-    // Simulate upload & review submission
-    await new Promise((r) => setTimeout(r, 1500));
-    setLoading(false);
-    onDone();
-    toast.success('ID submitted for review (usually 24-48h)');
-  };
-
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="bg-background border border-border w-full max-w-sm p-6 space-y-5 rounded-lg shadow-xl">
-        <div className="flex items-center justify-between">
-          <h2 className="text-[15px] font-bold">Upload Government ID</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
-        </div>
-        <p className="text-[13px] text-muted-foreground">Upload a photo of your driver's license, passport, or state ID.</p>
-
-        {preview ? (
-          <div className="relative">
-            <img src={preview} alt="ID preview" className="w-full h-40 object-cover rounded-md border border-border" />
-            <button onClick={() => { setFile(null); setPreview(''); }}
-              className="absolute top-2 right-2 h-6 w-6 rounded-full bg-background/90 border border-border flex items-center justify-center hover:bg-destructive hover:text-white">
-              <X className="h-3 w-3" />
-            </button>
-          </div>
-        ) : (
-          <div
-            onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={(e) => { e.preventDefault(); setDragging(false); const f = e.dataTransfer.files[0]; if (f) handleFile(f); }}
-            onClick={() => inputRef.current?.click()}
-            className={`h-32 border-2 border-dashed rounded-md flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors ${
-              dragging ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50 hover:bg-muted/30'
-            }`}
-          >
-            <FileText className="h-8 w-8 text-muted-foreground" />
-            <p className="text-[12px] text-muted-foreground font-medium">Click or drag & drop your ID</p>
-            <p className="text-[11px] text-muted-foreground">JPG, PNG, or PDF</p>
-            <input ref={inputRef} type="file" className="hidden" accept="image/*,.pdf"
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
-          </div>
-        )}
-
-        <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-md">
-          <Lock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-          <p className="text-[11px] text-muted-foreground">Encrypted upload. Document deleted after verification.</p>
-        </div>
-
-        <Button onClick={submit} disabled={!file || loading} className="w-full h-11 text-[12px] font-bold uppercase tracking-widest">
-          {loading ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Uploading...</> : 'Submit for Review'}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
 function SelfieModal({
   onClose,
   onDone,
@@ -271,7 +194,7 @@ function StepCard({ step, onStart }: { step: Step; onStart: (id: string) => void
     <div className={`p-5 border rounded-lg transition-colors ${
       step.status === 'verified' ? 'border-green-500/20 bg-card' : 'border-border bg-card hover:border-primary/30'
     }`}>
-      <div className="flex items-start gap-4">
+      <div className="flex flex-wrap items-start gap-4 sm:flex-nowrap">
         <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${
           step.status === 'verified' ? 'bg-green-500/10 text-green-500' : 'bg-muted text-muted-foreground'
         }`}>
@@ -298,10 +221,17 @@ function StepCard({ step, onStart }: { step: Step; onStart: (id: string) => void
         </div>
 
         {s.canStart && (
-          <Button onClick={() => onStart(step.id)} variant="outline"
-            className="h-9 px-4 text-[11px] font-bold uppercase tracking-wider shrink-0">
-            Start <ChevronRight className="h-3.5 w-3.5 ml-1" />
-          </Button>
+          <div className="w-full sm:w-auto sm:max-w-[220px] shrink-0">
+            <Button onClick={() => onStart(step.id)} variant="outline"
+              className="w-full h-9 px-4 text-[11px] font-bold uppercase tracking-wider">
+              {step.id === 'id' ? 'Verify Identity' : 'Start'} <ChevronRight className="h-3.5 w-3.5 ml-1" />
+            </Button>
+            {step.id === 'id' && (
+              <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
+                🔒 Powered by Persona. Kerodex does not manually inspect ID documents during the normal verification process.
+              </p>
+            )}
+          </div>
         )}
         {step.status === 'pending' && (
           <div className="flex items-center gap-1.5 text-[11px] text-amber-500 shrink-0">
@@ -335,7 +265,7 @@ export function VerificationPage() {
     },
     {
       id: 'id', title: 'Government ID',
-      description: 'Upload a driver\'s license, passport, or state ID.',
+      description: 'Complete a secure identity check through Persona.',
       icon: <FileText className="h-5 w-5" />,
       status: 'not_started', points: 35, required: false,
     },
@@ -513,7 +443,34 @@ export function VerificationPage() {
       <div className="space-y-3 mb-8">
         <h2 className="text-[12px] font-black uppercase tracking-[0.18em] mb-4">Verification Steps</h2>
         {steps.map((step) => (
-          <StepCard key={step.id} step={step} onStart={handleStart} />
+          <div key={step.id} className="space-y-3">
+            <StepCard step={step} onStart={handleStart} />
+            {step.id === 'id' && (
+              <section className="rounded-lg border border-primary/20 bg-primary/[0.035] p-5 sm:p-6">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-background">
+                    <Lock className="h-4 w-4 text-primary" />
+                  </div>
+                  <div className="space-y-3">
+                    <div>
+                      <h3 className="text-[15px] font-black tracking-tight">Identity Verification</h3>
+                      <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.16em] text-primary">Powered by Persona</p>
+                    </div>
+                    <div className="space-y-3 text-[12px] leading-relaxed text-muted-foreground">
+                      <p>Identity verification helps reduce fraud, impersonation, fake accounts, and scams on Kerodex.</p>
+                      <p>Persona performs the identity verification process. Kerodex does not manually review identification documents as part of the normal verification process.</p>
+                      <p>After verification, Kerodex receives and stores the Persona inquiry and reference identifiers plus the verification status needed to determine whether verification was successful and whether a user qualifies for Verified Seller status. Kerodex does not receive or store the ID images submitted through Persona in the current normal verification flow.</p>
+                      <p>Your identity documents are processed through Persona's secure verification platform and are subject to Persona's privacy and security practices.</p>
+                    </div>
+                    <div className="flex gap-2 border-t border-primary/15 pt-3 text-[11px] leading-relaxed text-muted-foreground">
+                      <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
+                      <p><strong className="text-foreground">Important:</strong> Identity verification confirms that a person completed verification. It does not guarantee the condition of a vehicle, the accuracy of a listing, or the outcome of a transaction.</p>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
+          </div>
         ))}
       </div>
 
@@ -524,7 +481,7 @@ export function VerificationPage() {
             <Lock className="h-4 w-4 text-primary" />
             <h3 className="text-[12px] font-bold uppercase tracking-[0.12em]">Privacy First</h3>
           </div>
-          <p className="text-[12px] text-muted-foreground">Documents are encrypted and deleted once verification completes.</p>
+          <p className="text-[12px] text-muted-foreground">Identity documents stay within Persona's hosted verification flow during normal verification. Kerodex receives the resulting status and identifiers, not the ID images.</p>
         </div>
         <div className="p-4 border border-border bg-card rounded-lg space-y-1.5">
           <div className="flex items-center gap-2">
@@ -535,17 +492,33 @@ export function VerificationPage() {
         </div>
       </div>
 
+      <section className="mt-8 border-t border-border pt-8">
+        <div className="mb-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-primary">Identity Verification FAQ</p>
+          <h2 className="mt-2 text-xl font-black tracking-tight">Privacy, security, and what the badge means</h2>
+        </div>
+        <div className="divide-y divide-border border-y border-border">
+          {[
+            ['Who sees my ID?', 'Identity verification is processed through Persona. Kerodex does not manually inspect identification documents during the normal verification process.'],
+            ['What does Verified Seller mean?', "Verified Seller means the seller completed Kerodex's identity verification process. It is not a guarantee of the vehicle, listing accuracy, or transaction outcome."],
+            ['Is my information secure?', "Identity verification is handled through Persona using industry-standard security practices. Information submitted to Persona is also subject to Persona's privacy and security practices."],
+          ].map(([question, answer]) => (
+            <details key={question} className="group py-4">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[13px] font-bold">
+                {question}
+                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-90" />
+              </summary>
+              <p className="max-w-2xl pt-3 text-[12px] leading-relaxed text-muted-foreground">{answer}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+
       {/* Modals */}
       {modal === 'phone' && (
         <PhoneModal
           onClose={() => handleModalClose('phone')}
           onDone={() => handleDone('phone', 'verified')}
-        />
-      )}
-      {modal === 'id' && (
-        <IdUploadModal
-          onClose={() => handleModalClose('id')}
-          onDone={() => handleDone('id', 'pending')}
         />
       )}
       {modal === 'selfie' && (

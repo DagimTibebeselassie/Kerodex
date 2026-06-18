@@ -87,6 +87,8 @@ export interface Vehicle {
     id?: string;
     name?: string;
     initials?: string;
+    avatarUrl?: string;
+    avatarS3Key?: string;
     verified?: boolean;
     responseTime?: string;
     responseRate?: number;

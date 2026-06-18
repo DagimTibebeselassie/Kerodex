@@ -4,6 +4,7 @@ import { createReport, createUploadUrl, getVehicle, listVehicles, saveVehicleLoc
 import { useAuth } from '@/hooks/useAuth';
 import { Vehicle } from '@/types';
 import { VehicleCard } from '@/components/VehicleCard';
+import { defaultProfileIconForUser } from '@/lib/profile-icons';
 import {
   Button,
   Input,
@@ -20,6 +21,7 @@ import {
   Separator,
   toast,
 } from '@blinkdotnew/ui';
+import { VERIFIED_SELLER_EXPLANATION } from '@/components/VerifiedSellerTrust';
 import {
   MapPin, Gauge, Calendar, Shield, MessageSquare, Heart, Share2, ArrowLeft,
   CheckCircle2, ChevronDown, ChevronUp, ZoomIn, Car, User, AlertTriangle, X,
@@ -290,6 +292,9 @@ function SellerCard({ vehicle }: { vehicle: any }) {
   const seller = vehicle.seller || {};
   const sellerName = seller.name || 'Private seller';
   const initials = seller.initials || sellerName.split(' ').map((part: string) => part[0]).join('').slice(0, 2).toUpperCase();
+  const fallbackAvatar = defaultProfileIconForUser({ id: seller.id || vehicle.userId || sellerName, email: '', username: '' });
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  const avatarUrl = avatarFailed ? fallbackAvatar : (seller.avatarUrl || fallbackAvatar);
   const memberSince = seller.memberSince
     ? new Date(seller.memberSince).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
     : 'Recently joined';
@@ -303,8 +308,16 @@ function SellerCard({ vehicle }: { vehicle: any }) {
     <div className="border border-border p-6 space-y-5 bg-background">
       <h3 className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">About the Seller</h3>
       <div className="flex items-start gap-5">
-        <div className="h-14 w-14 bg-foreground text-background flex items-center justify-center font-bold text-[16px] shrink-0 rounded-full">
-          {initials}
+        <div className="h-14 w-14 overflow-hidden bg-foreground text-background flex items-center justify-center font-bold text-[16px] shrink-0 rounded-full">
+          <img
+            src={avatarUrl}
+            alt={`${sellerName} profile`}
+            className="h-full w-full object-cover"
+            onError={() => {
+              if (avatarUrl !== fallbackAvatar) setAvatarFailed(true);
+            }}
+          />
+          {!avatarUrl && initials}
         </div>
         <div className="space-y-2 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
@@ -726,7 +739,15 @@ function TrustSection({ vehicle }: { vehicle: Vehicle }) {
         {badges.map((b) => (
           <div
             key={b}
-            title={safeDocumentBadges.includes(b) ? DOCUMENT_CHECK_TOOLTIP : b === 'Vehicle Presence Verified' ? VEHICLE_PRESENCE_TOOLTIP : undefined}
+            title={
+              safeDocumentBadges.includes(b)
+                ? DOCUMENT_CHECK_TOOLTIP
+                : b === 'Vehicle Presence Verified'
+                  ? VEHICLE_PRESENCE_TOOLTIP
+                  : b === 'Identity Verified'
+                    ? VERIFIED_SELLER_EXPLANATION
+                    : undefined
+            }
             className="flex items-center gap-1.5 px-2.5 py-1.5 border border-border text-[11px] font-bold uppercase tracking-wider bg-background"
           >
             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" /> {b}

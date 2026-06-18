@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from '@tanstack/react-router';
 import { Button } from '@blinkdotnew/ui';
-import { ArrowLeft, BadgeCheck, Calendar, CheckCircle2, Clock, MapPin, MessageSquare, Shield, Star, X } from 'lucide-react';
+import { ArrowLeft, Calendar, CheckCircle2, Clock, MapPin, MessageSquare, Shield, Star, X } from 'lucide-react';
+import { VerifiedSellerBadge } from '@/components/VerifiedSellerTrust';
 import { getSellerProfile, leaveSellerReview, SellerProfileRecord } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { Vehicle } from '@/types';
 import { VehicleCard } from '@/components/VehicleCard';
+import { defaultProfileIconForUser } from '@/lib/profile-icons';
 
 type SellerWithListings = Omit<SellerProfileRecord, 'listings'> & { listings: Vehicle[] };
 
@@ -31,6 +33,7 @@ export function SellerProfilePage() {
   const [reviewComment, setReviewComment] = useState('');
   const [reviewError, setReviewError] = useState('');
   const [reviewSaving, setReviewSaving] = useState(false);
+  const [avatarFailed, setAvatarFailed] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -70,6 +73,8 @@ export function SellerProfilePage() {
   const sellerReviewRating = reviewCount
     ? reviews.reduce((sum, review) => sum + Number(review.rating || 0), 0) / reviewCount
     : null;
+  const fallbackAvatar = defaultProfileIconForUser({ id: seller.id, email: '', username: '' });
+  const avatarUrl = avatarFailed ? fallbackAvatar : (seller.avatarUrl || fallbackAvatar);
 
   const openReview = () => {
     if (!user) {
@@ -106,16 +111,21 @@ export function SellerProfilePage() {
       <section className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8">
         <div className="space-y-8">
           <div className="flex items-start gap-5">
-            <div className="h-20 w-20 rounded-full bg-foreground text-background flex items-center justify-center text-xl font-black shrink-0">
-              {seller.initials || seller.name.slice(0, 2).toUpperCase()}
+            <div className="h-20 w-20 rounded-full overflow-hidden bg-foreground text-background flex items-center justify-center text-xl font-black shrink-0">
+              <img
+                src={avatarUrl}
+                alt={`${seller.name} profile`}
+                className="h-full w-full object-cover"
+                onError={() => {
+                  if (avatarUrl !== fallbackAvatar) setAvatarFailed(true);
+                }}
+              />
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-2">
                 <h1 className="text-3xl md:text-4xl font-black tracking-tight">{seller.name}</h1>
                 {verification.identity && verification.phone && (
-                  <span className="inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider border border-border px-2 py-1">
-                    <BadgeCheck className="h-3.5 w-3.5" /> Identity checked
-                  </span>
+                  <VerifiedSellerBadge />
                 )}
               </div>
               <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-muted-foreground">

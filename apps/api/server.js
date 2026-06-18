@@ -38,6 +38,7 @@ const passwordResets = new Map();
 const phoneVerificationBuckets = new Map();
 const phoneVerificationCooldowns = new Map();
 const pendingPresenceCodes = new Map();
+const vehiclePresenceJobs = new Set();
 const TERMS_VERSION = "v1.0";
 const PRIVACY_VERSION = "v1.0";
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
@@ -108,12 +109,13 @@ const adminRoles = {
   super_admin: ["*"]
 };
 
-const adminAccounts = [
-  { id: "adm_001", email: "admin@kerodex.local", name: "Kerodex Admin", role: "super_admin" },
-  { id: "adm_002", email: "moderator@kerodex.local", name: "Marketplace Moderator", role: "moderator" },
-  { id: "adm_003", email: "verify@kerodex.local", name: "Verification Specialist", role: "verification_specialist" },
-  { id: "adm_004", email: "support@kerodex.local", name: "Support Agent", role: "support_agent" }
-];
+const adminAccount = {
+  id: "adm_001",
+  email: normalize(process.env.ADMIN_EMAIL || "founder@kerodexofficial.com"),
+  name: "Kerodex Admin",
+  role: "super_admin"
+};
+const ADMIN_SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 
 const mimeTypes = {
   ".html": "text/html; charset=utf-8",
@@ -503,7 +505,8 @@ function requestIp(req) {
   return forwarded || req.socket.remoteAddress || "local";
 }
 
-function rateLimitCategory(pathname) {
+function rateLimitCategory(pathname, method = "GET") {
+  if (pathname === "/api/health") return null;
   if (
     pathname === "/api/auth/phone/status" ||
     pathname === "/api/auth/phone/start" ||
@@ -513,26 +516,38 @@ function rateLimitCategory(pathname) {
   ) {
     return { name: "phone_verify", limit: 80, windowMs: 15 * 60 * 1000 };
   }
+  if (pathname === "/api/auth/google" || pathname === "/api/auth/microsoft") {
+    return { name: `oauth_start:${pathname.split("/").pop()}`, limit: 30, windowMs: 15 * 60 * 1000 };
+  }
+  if (pathname.startsWith("/api/auth/callback/")) {
+    return { name: `oauth_callback:${pathname.split("/").pop()}`, limit: 20, windowMs: 15 * 60 * 1000 };
+  }
+  if (pathname === "/api/admin/auth/login") {
+    return { name: "admin_auth", limit: 10, windowMs: 15 * 60 * 1000 };
+  }
+  if (pathname.startsWith("/api/admin/")) {
+    return { name: "admin_api", limit: 600, windowMs: 15 * 60 * 1000 };
+  }
   if (
     pathname === "/api/auth/email" ||
     pathname === "/api/auth/password/forgot" ||
-    pathname === "/api/auth/password/reset" ||
-    pathname.startsWith("/api/auth/callback/") ||
-    pathname === "/api/auth/google" ||
-    pathname === "/api/auth/microsoft" ||
-    pathname === "/api/admin/auth/login"
+    pathname === "/api/auth/password/reset"
   ) {
-    return { name: "auth", limit: 10, windowMs: 15 * 60 * 1000 };
+    return { name: `auth:${pathname}`, limit: 10, windowMs: 15 * 60 * 1000 };
   }
   if (/^\/api\/uploads\b/.test(pathname) || /verification|vehicle-presence|documents\/ocr|persona|phone/i.test(pathname)) {
     return { name: "verification_upload", limit: 20, windowMs: 60 * 60 * 1000 };
   }
-  return { name: "general", limit: 600, windowMs: 15 * 60 * 1000 };
+  if (method === "GET" || method === "HEAD") {
+    return { name: "public_read", limit: 1200, windowMs: 15 * 60 * 1000 };
+  }
+  return { name: "general_write", limit: 200, windowMs: 15 * 60 * 1000 };
 }
 
 function applyRateLimit(req, res, pathname) {
   if (!pathname.startsWith("/api/")) return true;
-  const category = rateLimitCategory(pathname);
+  const category = rateLimitCategory(pathname, req.method);
+  if (!category) return true;
   const ip = requestIp(req);
   const key = `${category.name}:${ip}`;
   const now = Date.now();
@@ -545,7 +560,8 @@ function applyRateLimit(req, res, pathname) {
   console.warn(`[Kerodex security] rate_limit category=${category.name} ip=${ip} path=${pathname}`);
   sendJson(res, 429, {
     success: false,
-    error: "Too many requests. Please try again later."
+    error: "Too many requests. Please try again later.",
+    retryAfterSeconds: Math.max(1, Math.ceil((nextBucket.resetAt - now) / 1000))
   });
   return false;
 }
@@ -650,8 +666,13 @@ function getAdminFromRequest(req) {
   const auth = req.headers.authorization || "";
   const requestUrl = new URL(req.url, `http://${req.headers.host}`);
   const token = auth.startsWith("Bearer ") ? auth.slice(7) : requestUrl.searchParams.get("token") || "";
-  const adminId = adminSessions.get(token);
-  return adminAccounts.find((account) => account.id === adminId);
+  const session = adminSessions.get(token);
+  if (!session) return null;
+  if (session.expiresAt <= Date.now()) {
+    adminSessions.delete(token);
+    return null;
+  }
+  return session.adminId === adminAccount.id ? adminAccount : null;
 }
 
 function requireAdmin(req, res, permission) {
@@ -668,14 +689,18 @@ function requireAdmin(req, res, permission) {
 }
 
 function adminLogin(body) {
-  const email = normalize(body.email);
   const code = String(body.accessCode || "");
-  const expectedCode = process.env.ADMIN_ACCESS_CODE || (!IS_PRODUCTION ? "kerodex-admin-local" : "");
-  const admin = adminAccounts.find((account) => account.email === email);
-  if (!admin || code !== expectedCode) return null;
+  const expectedCode = String(process.env.ADMIN_ACCESS_CODE || "");
+  if (!expectedCode || !code) return null;
+  const actualBuffer = Buffer.from(code);
+  const expectedBuffer = Buffer.from(expectedCode);
+  if (actualBuffer.length !== expectedBuffer.length || !crypto.timingSafeEqual(actualBuffer, expectedBuffer)) return null;
   const token = makeToken();
-  adminSessions.set(token, admin.id);
-  return { token, admin: publicAdmin(admin) };
+  adminSessions.set(token, {
+    adminId: adminAccount.id,
+    expiresAt: Date.now() + ADMIN_SESSION_TTL_MS
+  });
+  return { token, admin: publicAdmin(adminAccount) };
 }
 
 function sendAdminEvents(req, res) {
@@ -771,6 +796,7 @@ function getAuthUser(req) {
   const userId = sessions.get(token);
   if (!userId) return null;
   const user = Array.from(users.values()).find((item) => item.id === userId) || null;
+  if (["banned", "suspended", "deleted"].includes(String(user?.status || "").toLowerCase())) return null;
   if (user) user.lastActiveAt = new Date().toISOString();
   return user;
 }
@@ -786,6 +812,23 @@ async function invalidateSession(token) {
   if (typeof store.deleteAuthSession === "function") {
     await store.deleteAuthSession(token);
   }
+}
+
+function defaultProfileIconUrl(seed) {
+  const value = String(seed || "kerodex-user");
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = ((hash << 5) - hash) + value.charCodeAt(index);
+    hash |= 0;
+  }
+  return `/pfpicon${Math.abs(hash) % 10}.png`;
+}
+
+async function invalidateUserSessions(userId) {
+  const tokens = Array.from(sessions.entries())
+    .filter(([, sessionUserId]) => sessionUserId === userId)
+    .map(([token]) => token);
+  await Promise.all(tokens.map((token) => invalidateSession(token)));
 }
 
 function createSession(user) {
@@ -1223,14 +1266,42 @@ function listingWithReadableImages(listing) {
   };
 }
 
+async function listingWithReadableSeller(listing) {
+  if (!listing || typeof listing !== "object") return listing;
+  const readableListing = listingWithReadableImages(listing);
+  const sellerId = readableListing.userId || readableListing.seller?.id || "";
+  if (!sellerId || typeof store.getUserById !== "function") return readableListing;
+  const owner = await store.getUserById(sellerId);
+  if (!owner) return readableListing;
+  const safeOwner = publicUser(owner);
+  return {
+    ...readableListing,
+    seller: {
+      ...(readableListing.seller || {}),
+      id: sellerId,
+      name: readableListing.seller?.name || safeOwner.name || safeOwner.email?.split("@")[0] || "Kerodex seller",
+      avatarUrl: safeOwner.avatarUrl || readableListing.seller?.avatarUrl || defaultProfileIconUrl(sellerId),
+      avatarS3Key: safeOwner.avatarS3Key || readableListing.seller?.avatarS3Key || "",
+      phoneVerified: Boolean(safeOwner.phoneVerified),
+      verified: Boolean(safeOwner.identityVerified),
+      memberSince: readableListing.seller?.memberSince || owner.createdAt || owner.acceptedTermsAt || ""
+    }
+  };
+}
+
 function listingsWithReadableImages(listings) {
   return Array.isArray(listings) ? listings.map(listingWithReadableImages) : [];
 }
 
 function sellerWithReadableImages(seller) {
   if (!seller || typeof seller !== "object") return seller;
+  const avatarS3Key = seller.avatarS3Key || seller.profileImageS3Key || "";
   return {
     ...seller,
+    avatarUrl: avatarS3Key
+      ? createS3PresignedGet(avatarS3Key, 3600) || seller.avatarUrl || seller.profileImageUrl || ""
+      : seller.avatarUrl || seller.profileImageUrl || "",
+    avatarS3Key,
     listings: listingsWithReadableImages(seller.listings)
   };
 }
@@ -1856,6 +1927,27 @@ function normalizeListingDocument(record = {}, documentType = "maintenance") {
   };
 }
 
+async function sellerWithReadableProfile(seller, sellerId = "") {
+  if (!seller || typeof seller !== "object") return seller;
+  const id = seller.id || sellerId;
+  const owner = id && typeof store.getUserById === "function" ? await store.getUserById(id) : null;
+  const safeOwner = owner ? publicUser(owner) : null;
+  return sellerWithReadableImages({
+    ...seller,
+    id,
+    name: seller.name || safeOwner?.name || safeOwner?.email?.split("@")[0] || "Kerodex seller",
+    avatarUrl: safeOwner?.avatarUrl || seller.avatarUrl || seller.profileImageUrl || defaultProfileIconUrl(id || seller.name),
+    avatarS3Key: safeOwner?.avatarS3Key || seller.avatarS3Key || seller.profileImageS3Key || "",
+    verification: {
+      ...(seller.verification || {}),
+      email: Boolean(seller.verification?.email || safeOwner?.emailVerified),
+      phone: Boolean(seller.verification?.phone || safeOwner?.phoneVerified),
+      identity: Boolean(seller.verification?.identity || safeOwner?.identityVerified),
+      selfie: Boolean(seller.verification?.selfie || safeOwner?.selfieVerified)
+    }
+  });
+}
+
 function presenceCodePayload(user) {
   const token = crypto.randomBytes(18).toString("hex");
   const code = vehiclePresence.generateCode();
@@ -1919,6 +2011,22 @@ async function createVehiclePresenceReview(listing, result) {
 async function processVehiclePresenceNow(listingId) {
   const listing = await store.getListingById(listingId);
   if (!listing || !listing.vehiclePresence) return null;
+  const uploadIdentity = listing.vehiclePresence.verificationPhotoS3Key ||
+    listing.vehiclePresence.verification_photo_url ||
+    listing.vehiclePresence.verificationPhotoUrl ||
+    "";
+  if (
+    uploadIdentity &&
+    listing.vehiclePresence.analyzedUploadIdentity === uploadIdentity &&
+    listing.vehiclePresence.analyzedAt
+  ) {
+    console.info("[vehicle-presence] Verification skipped; upload already analyzed", {
+      at: new Date().toISOString(),
+      listingId,
+      verificationStatus: listing.vehiclePresence.verification_status || listing.vehiclePresence.verificationStatus || ""
+    });
+    return listing;
+  }
   console.info("[vehicle-presence] Verification job started", {
     at: new Date().toISOString(),
     listingId,
@@ -1990,6 +2098,7 @@ async function processVehiclePresenceNow(listingId) {
       extractedVins: result.extractedVins || [],
       observedVin: result.observedVin || "",
       observedText: result.observedText || "",
+      analyzedUploadIdentity: uploadIdentity,
       analyzedAt: now
     },
     sellerNotification: verified
@@ -2014,6 +2123,14 @@ async function processVehiclePresenceNow(listingId) {
 }
 
 function scheduleVehiclePresenceVerification(listingId) {
+  if (vehiclePresenceJobs.has(listingId)) {
+    console.info("[vehicle-presence] Verification already scheduled", {
+      at: new Date().toISOString(),
+      listingId
+    });
+    return false;
+  }
+  vehiclePresenceJobs.add(listingId);
   setTimeout(() => {
     processVehiclePresenceNow(listingId).catch(async (error) => {
       console.error("[vehicle-presence] Background verification failed", {
@@ -2040,8 +2157,9 @@ function scheduleVehiclePresenceVerification(listingId) {
           analyzedAt: new Date().toISOString()
         }
       }).catch(() => {});
-    });
+    }).finally(() => vehiclePresenceJobs.delete(listingId));
   }, 0);
+  return true;
 }
 
 function createSellerListing(body = {}, user = null) {
@@ -2212,8 +2330,11 @@ function createSellerListing(body = {}, user = null) {
     listing.seller = {
       id: user.id,
       name: user.name || user.email.split("@")[0] || "Kerodex seller",
+      avatarUrl: publicUser(user).avatarUrl || "",
+      avatarS3Key: user.avatarS3Key || user.profileImageS3Key || "",
       responseTime: "New listing",
       completedSales: 0,
+      phoneVerified: Boolean(user.phoneVerified && isFreshPhoneVerification(user.phoneVerifiedAt)),
       verified: Boolean(user.identityVerified),
       memberSince: user.createdAt || new Date().toISOString()
     };
@@ -2545,7 +2666,7 @@ const server = http.createServer((req, res) => {
       .then(async (body) => {
         const session = adminLogin(body);
         if (!session) {
-          sendJson(res, 401, { error: "Invalid admin email or access code." });
+          sendJson(res, 401, { error: "Invalid admin password." });
           return;
         }
         store.recordAdminAction({
@@ -2584,6 +2705,15 @@ const server = http.createServer((req, res) => {
     store.getAdminDashboard()
       .then((dashboard) => sendJson(res, 200, { website: dashboard.website, charts: dashboard.charts, funnel: dashboard.funnel }))
       .catch((error) => sendJson(res, 500, { error: "Unable to load analytics.", detail: error.message }));
+    return;
+  }
+
+  if (url.pathname === "/api/admin/activity" && req.method === "GET") {
+    const admin = requireAdmin(req, res, "audit:read");
+    if (!admin) return;
+    store.getAdminActivity(url.searchParams)
+      .then((activity) => sendJson(res, 200, activity))
+      .catch((error) => sendJson(res, 500, { error: "Unable to load platform activity.", detail: error.message }));
     return;
   }
 
@@ -2699,12 +2829,21 @@ const server = http.createServer((req, res) => {
       .then(async (body) => {
         const action = String(body.action || "");
         const notes = String(body.notes || "").trim();
-        const sensitive = new Set(["ban", "unban", "suspend", "unsuspend", "delete", "remove", "restore", "approve", "reject", "request_resubmission", "shadow_ban", "disable_messaging", "disable_listing_creation", "resolve", "warn_user", "escalate", "mark_fraud_confirmed"]);
+        const sensitive = new Set(["ban", "unban", "suspend", "unsuspend", "delete", "remove", "restore", "approve", "reject", "request_resubmission", "shadow_ban", "disable_messaging", "disable_listing_creation", "review", "resolve", "dismiss", "warn_user", "escalate", "mark_fraud_confirmed"]);
         if (sensitive.has(action) && notes.length < 5) {
           throw new Error("Admin action reason is required.");
         }
         const id = decodeURIComponent(adminActionMatch[2]);
         const result = await store.applyAdminAction(collection, id, action, admin.email, notes);
+        if (result && collection === "users" && typeof store.getUserById === "function") {
+          const updatedUser = await store.getUserById(id);
+          if (updatedUser?.email) {
+            users.set(normalize(updatedUser.email), updatedUser);
+            if (["banned", "suspended", "deleted"].includes(String(updatedUser.status || "").toLowerCase())) {
+              await invalidateUserSessions(updatedUser.id);
+            }
+          }
+        }
         if (result && collection === "listings" && ["remove", "restore", "flag", "mark_sold"].includes(action)) {
           const listing = await store.getListingById(id);
           const owner = listing?.userId && typeof store.getUserById === "function" ? await store.getUserById(listing.userId) : null;
@@ -3179,9 +3318,30 @@ const server = http.createServer((req, res) => {
           next.onboardingCompletedAt = new Date().toISOString();
         }
         await saveRuntimeUser(next);
+        await trackEvent(req, "profile_updated", next, {
+          fields: Object.keys(body).filter((key) => !["password", "code"].includes(key)).slice(0, 20)
+        });
         sendJson(res, 200, { message: "Account updated.", user: publicUser(next) });
       })
       .catch((error) => sendJson(res, 400, { error: error.message || "Unable to update account." }));
+    return;
+  }
+
+  if (url.pathname === "/api/admin/auth/logout" && req.method === "POST") {
+    const auth = req.headers.authorization || "";
+    const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+    const admin = requireAdmin(req, res, "dashboard:read");
+    if (!admin) return;
+    adminSessions.delete(token);
+    store.recordAdminAction({
+      adminAccount: admin.email,
+      actionType: "admin.logout",
+      targetType: "admin_account",
+      targetId: admin.id,
+      previousValue: "session_active",
+      newValue: "session_invalidated"
+    }).catch(() => {});
+    sendJson(res, 200, { ok: true });
     return;
   }
 
@@ -3279,6 +3439,7 @@ const server = http.createServer((req, res) => {
         user.avatarUrl = avatarUrl;
         user.avatarS3Key = isUploadedProfilePhoto ? avatarS3Key : "";
         await saveRuntimeUser(user);
+        await trackEvent(req, "profile_updated", user, { fields: ["avatar"] });
         sendJson(res, 200, { message: "Profile picture updated.", user: publicUser(user) });
       })
       .catch((error) => sendJson(res, 400, { error: error.message || "Unable to update profile picture." }));
@@ -3473,6 +3634,7 @@ const server = http.createServer((req, res) => {
         user.phoneVerifiedAt = now;
         await saveRuntimeUser(user);
         await trackEvent(req, "verification_passed", user, { type: "phone" });
+        await trackEvent(req, "phone_verified", user, {});
         sendJson(res, 200, { ok: true, message: "Phone verified.", user: publicUser(user) });
       })
       .catch((error) => {
@@ -3709,6 +3871,10 @@ const server = http.createServer((req, res) => {
       sendJson(res, 401, { error: "Sign in to publish a listing." });
       return;
     }
+    if (user.listingCreationDisabled) {
+      sendJson(res, 403, { error: "Listing creation is disabled for this account. Contact Kerodex support if this looks wrong." });
+      return;
+    }
     readJson(req)
       .then(async (body) => {
         const validation = validateSellerListingInput(body, { requirePresence: true });
@@ -3839,7 +4005,15 @@ const server = http.createServer((req, res) => {
           ...body,
           id: existing.id,
           userId: existing.userId,
-          seller: existing.seller,
+          seller: {
+            ...(existing.seller || {}),
+            id: user.id,
+            name: existing.seller?.name || user.name || user.email.split("@")[0] || "Kerodex seller",
+            avatarUrl: publicUser(user).avatarUrl || existing.seller?.avatarUrl || "",
+            avatarS3Key: user.avatarS3Key || user.profileImageS3Key || existing.seller?.avatarS3Key || "",
+            phoneVerified: Boolean(user.phoneVerified && isFreshPhoneVerification(user.phoneVerifiedAt)),
+            verified: Boolean(user.identityVerified)
+          },
           vin: body.vin !== undefined ? marketCheck.normalizeVin(body.vin) : existing.vin,
           updatedAt: new Date().toISOString()
         };
@@ -4073,7 +4247,7 @@ const server = http.createServer((req, res) => {
   if (url.pathname.startsWith("/api/listings/")) {
     const id = url.pathname.split("/").pop();
     store.getListingById(id)
-      .then((listing) => {
+      .then(async (listing) => {
         if (!listing) {
           sendJson(res, 404, { error: "Listing not found" });
           return;
@@ -4085,7 +4259,7 @@ const server = http.createServer((req, res) => {
           return;
         }
         trackEvent(req, "listing_view", user, { listingId: listing.id, route: url.pathname }).catch(() => {});
-        sendJson(res, 200, listingWithReadableImages(listing));
+        sendJson(res, 200, await listingWithReadableSeller(listing));
       })
       .catch((error) => sendJson(res, 500, { error: "Unable to load listing.", detail: error.message }));
     return;
@@ -4115,7 +4289,7 @@ const server = http.createServer((req, res) => {
           sellerId,
           rating: review.rating
         }).catch(() => {});
-        sendJson(res, 201, { seller: sellerWithReadableImages(seller), review });
+        sendJson(res, 201, { seller: await sellerWithReadableProfile(seller, sellerId), review });
       })
       .catch((error) => sendJson(res, error.status || 400, { error: publicError(error, "Unable to save review.") }));
     return;
@@ -4124,7 +4298,7 @@ const server = http.createServer((req, res) => {
   if (url.pathname.startsWith("/api/sellers/")) {
     const id = decodeURIComponent(url.pathname.split("/").pop() || "");
     store.getSellerById(id)
-      .then((seller) => sendJson(res, seller ? 200 : 404, sellerWithReadableImages(seller) || { error: "Seller not found" }))
+      .then(async (seller) => sendJson(res, seller ? 200 : 404, seller ? await sellerWithReadableProfile(seller, id) : { error: "Seller not found" }))
       .catch((error) => sendJson(res, 500, { error: "Unable to load seller.", detail: error.message }));
     return;
   }
@@ -4149,6 +4323,10 @@ const server = http.createServer((req, res) => {
     const user = getAuthUser(req);
     if (!user) {
       sendJson(res, 401, { error: "Sign in to message a seller." });
+      return;
+    }
+    if (user.messagingDisabled) {
+      sendJson(res, 403, { error: "Messaging is disabled for this account. Contact Kerodex support if this looks wrong." });
       return;
     }
     readJson(req)
@@ -4248,6 +4426,10 @@ const server = http.createServer((req, res) => {
     const user = getAuthUser(req);
     if (!user) {
       sendJson(res, 401, { error: "Sign in to send messages." });
+      return;
+    }
+    if (user.messagingDisabled) {
+      sendJson(res, 403, { error: "Messaging is disabled for this account. Contact Kerodex support if this looks wrong." });
       return;
     }
     const conversationId = decodeURIComponent(messageCreateMatch[1]);

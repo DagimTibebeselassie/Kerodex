@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from '@tanstack/react-router';
-import { Heart, X, MapPin, Gauge, BadgeCheck, CheckCircle2 } from 'lucide-react';
+import { Heart, X, MapPin, Gauge, CheckCircle2 } from 'lucide-react';
 import { Vehicle } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
 import { saveVehicleLocal, savedVehicleIds } from '@/lib/api';
 import { toast } from '@blinkdotnew/ui';
+import { VerifiedSellerBadge } from './VerifiedSellerTrust';
 
 interface MapViewProps {
   vehicles?: Vehicle[];
@@ -144,11 +145,7 @@ function PopupCard({
 
           {/* Badges */}
           <div className="hidden items-center gap-1.5 flex-wrap sm:flex">
-            <span className={[
-              'inline-flex items-center gap-1 border border-border px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground',
-            ].join(' ')}>
-              <BadgeCheck className="h-3 w-3" /> Verified
-            </span>
+            {vehicle.seller?.verified && <VerifiedSellerBadge />}
             <span className={[
               'inline-flex items-center gap-1 border border-border px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground',
             ].join(' ')}>

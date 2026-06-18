@@ -34,6 +34,7 @@ POST /api/admin/auth/login
 GET /api/admin/session
 GET /api/admin/dashboard
 GET /api/admin/analytics
+GET /api/admin/activity
 GET /api/admin/search?q=
 GET /api/admin/users
 GET /api/admin/users/:id
@@ -54,6 +55,13 @@ GET /api/admin/tickets
 GET /api/admin/export/:collection
 GET /api/admin/events
 ```
+
+`GET /api/admin/activity` combines stored `analytics_events` with immutable
+`audit_records`. It supports `q`, `eventType`, `userId`, `listingId`, `source`,
+`dateFrom`, `dateTo`, `page`, and `pageSize`.
+
+Admin item responses for users, listings, and reports include related database
+records such as listings, conversations, reports, activity, and admin actions.
 
 Admin roles are scaffolded as `support_agent`, `verification_specialist`, `moderator`, `administrator`, and `super_admin`. Every admin mutation records an immutable audit entry with timestamp, admin account, action type, previous value, and new value.
 

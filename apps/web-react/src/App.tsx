@@ -1,4 +1,4 @@
-import { createRouter, createRoute, createRootRoute, RouterProvider, useRouterState } from '@tanstack/react-router';
+import { createRouter, createRoute, createRootRoute, Outlet, RouterProvider, useRouterState } from '@tanstack/react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster, BlinkUIProvider, toast } from '@blinkdotnew/ui';
 import { useEffect } from 'react';
@@ -21,6 +21,8 @@ import { AboutPage } from './pages/About';
 import { ContactPage, DealerPolicyPage, HowItWorksPage, ProhibitedListingsPage, SignInPage, SupportPage } from './pages/MarketingPages';
 import { OnboardingPage } from './pages/Onboarding';
 import { FeatureTourPage } from './pages/FeatureTour';
+import { AdminPage } from './pages/Admin';
+import { NotFoundPage } from './pages/NotFound';
 import { RouteSeo } from './components/Seo';
 import { consumeAuthRedirect, currentUser, trackAnalyticsEvent } from './lib/api';
 
@@ -39,12 +41,19 @@ function RouteAnalytics() {
   return null;
 }
 
+function AppShell() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  return pathname === '/admin' || pathname.startsWith('/admin/')
+    ? <Outlet />
+    : <Layout />;
+}
+
 const rootRoute = createRootRoute({
   component: () => (
     <>
       <RouteSeo />
       <RouteAnalytics />
-      <Layout />
+      <AppShell />
       <Toaster
         position="top-right"
         duration={2600}
@@ -67,6 +76,7 @@ const rootRoute = createRootRoute({
       />
     </>
   ),
+  notFoundComponent: NotFoundPage,
 });
 
 const indexRoute = createRoute({
@@ -241,6 +251,12 @@ const dealerPolicyRoute = createRoute({
   component: DealerPolicyPage,
 });
 
+const adminRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin',
+  component: AdminPage,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   searchRoute,
@@ -270,6 +286,7 @@ const routeTree = rootRoute.addChildren([
   supportRoute,
   prohibitedListingsRoute,
   dealerPolicyRoute,
+  adminRoute,
 ]);
 
 const router = createRouter({ routeTree });

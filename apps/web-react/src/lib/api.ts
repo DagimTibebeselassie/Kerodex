@@ -2,6 +2,8 @@ import { Vehicle } from '@/types';
 
 const TOKEN_KEY = 'kerodex-token';
 const USER_KEY = 'kerodex-user';
+const ADMIN_TOKEN_KEY = 'kerodex-admin-token';
+const ADMIN_USER_KEY = 'kerodex-admin-user';
 
 export interface KerodexUser {
   id: string;
@@ -94,6 +96,8 @@ export interface SellerProfileRecord {
   id: string;
   name: string;
   initials?: string;
+  avatarUrl?: string;
+  avatarS3Key?: string;
   city?: string;
   state?: string;
   memberSince?: string;
@@ -146,6 +150,18 @@ export interface BuyerPurchaseGuideRecord {
 
 type ListingPayload = Record<string, any>;
 
+export class ApiRequestError extends Error {
+  status: number;
+  retryAfterSeconds?: number;
+
+  constructor(message: string, status: number, retryAfterSeconds?: number) {
+    super(message);
+    this.name = 'ApiRequestError';
+    this.status = status;
+    this.retryAfterSeconds = retryAfterSeconds;
+  }
+}
+
 function apiUrl(path: string) {
   const base = import.meta.env.VITE_API_BASE_URL || '';
   return `${base}${path}`;
@@ -161,13 +177,22 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
   const body = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(body.error || body.detail || 'Kerodex request failed.');
+    throw new ApiRequestError(
+      body.error || body.detail || 'Kerodex request failed.',
+      response.status,
+      Number(body.retryAfterSeconds || 0) || undefined
+    );
   }
   return body as T;
 }
 
 function authHeaders(): Record<string, string> {
   const token = localStorage.getItem(TOKEN_KEY);
+  return token ? { authorization: `Bearer ${token}` } : {};
+}
+
+function adminHeaders(): Record<string, string> {
+  const token = sessionStorage.getItem(ADMIN_TOKEN_KEY);
   return token ? { authorization: `Bearer ${token}` } : {};
 }
 
@@ -668,4 +693,109 @@ export function savedVehicleIds() {
   const user = currentUser();
   const key = user ? `kerodex-saved-vehicles:${user.id}` : 'kerodex-saved-vehicles:guest';
   return new Set(JSON.parse(localStorage.getItem(key) || '[]') as string[]);
+}
+
+export interface AdminAccount {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  permissions?: string[];
+}
+
+export function currentAdmin(): AdminAccount | null {
+  const raw = sessionStorage.getItem(ADMIN_USER_KEY);
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as AdminAccount;
+  } catch {
+    return null;
+  }
+}
+
+export function clearAdminSession() {
+  sessionStorage.removeItem(ADMIN_TOKEN_KEY);
+  sessionStorage.removeItem(ADMIN_USER_KEY);
+  localStorage.removeItem(ADMIN_TOKEN_KEY);
+  localStorage.removeItem(ADMIN_USER_KEY);
+}
+
+export async function adminLogin(accessCode: string) {
+  const session = await request<{ token: string; admin: AdminAccount }>('/api/admin/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ accessCode }),
+  });
+  sessionStorage.setItem(ADMIN_TOKEN_KEY, session.token);
+  sessionStorage.setItem(ADMIN_USER_KEY, JSON.stringify(session.admin));
+  return session.admin;
+}
+
+export async function adminSession() {
+  const body = await request<{ admin: AdminAccount }>('/api/admin/session', {
+    headers: adminHeaders(),
+  });
+  sessionStorage.setItem(ADMIN_USER_KEY, JSON.stringify(body.admin));
+  return body.admin;
+}
+
+export async function adminLogout() {
+  try {
+    await request<{ ok: true }>('/api/admin/auth/logout', {
+      method: 'POST',
+      headers: adminHeaders(),
+    });
+  } finally {
+    clearAdminSession();
+  }
+}
+
+export async function adminDashboard() {
+  return request<Record<string, any>>('/api/admin/dashboard', { headers: adminHeaders() });
+}
+
+export async function adminAnalytics() {
+  return request<Record<string, any>>('/api/admin/analytics', { headers: adminHeaders() });
+}
+
+export async function adminActivity(params: Record<string, string | number> = {}) {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== '' && value !== undefined && value !== null) query.set(key, String(value));
+  });
+  return request<{ items: any[]; total: number; page: number; pageSize: number; eventTypes: string[] }>(
+    `/api/admin/activity${query.toString() ? `?${query.toString()}` : ''}`,
+    { headers: adminHeaders() }
+  );
+}
+
+export async function adminItem(collection: string, id: string) {
+  return request<Record<string, any>>(`/api/admin/${collection}/${encodeURIComponent(id)}`, {
+    headers: adminHeaders(),
+  });
+}
+
+export async function adminCollection(name: string, params: Record<string, string | number> = {}) {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== '' && value !== undefined && value !== null) query.set(key, String(value));
+  });
+  return request<{ items: any[]; total: number; page: number; pageSize: number }>(
+    `/api/admin/${name}${query.toString() ? `?${query.toString()}` : ''}`,
+    { headers: adminHeaders() }
+  );
+}
+
+export async function adminApplyAction(collection: string, id: string, action: string, notes: string) {
+  return request<Record<string, any>>(`/api/admin/${collection}/${encodeURIComponent(id)}/actions`, {
+    method: 'PATCH',
+    headers: adminHeaders(),
+    body: JSON.stringify({ action, notes }),
+  });
+}
+
+export async function adminMessageReview(conversationId: string, reason: string) {
+  const query = new URLSearchParams({ conversationId, reason });
+  return request<{ conversation: ConversationRecord }>(`/api/admin/messages/review?${query.toString()}`, {
+    headers: adminHeaders(),
+  });
 }

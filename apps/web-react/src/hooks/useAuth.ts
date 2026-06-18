@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { clearSession, currentUser, KerodexUser, refreshCurrentUser } from '@/lib/api';
+import { ApiRequestError, clearSession, currentUser, KerodexUser, refreshCurrentUser } from '@/lib/api';
 
 export function useAuth() {
   const [user, setUser] = useState<KerodexUser | null>(() => currentUser());
@@ -17,7 +17,14 @@ export function useAuth() {
       setIsLoading(true);
       refreshCurrentUser()
         .then(setUser)
-        .catch(() => setUser(currentUser()))
+        .catch(async (error) => {
+          if (error instanceof ApiRequestError && error.status === 401) {
+            await clearSession();
+            setUser(null);
+            return;
+          }
+          setUser(currentUser());
+        })
         .finally(() => setIsLoading(false));
     }
 

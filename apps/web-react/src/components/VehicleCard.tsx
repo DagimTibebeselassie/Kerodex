@@ -5,6 +5,7 @@ import { savedVehicleIds, saveVehicleLocal } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { Heart, MapPin, Gauge, BadgeCheck, Star } from 'lucide-react';
 import { toast } from '@blinkdotnew/ui';
+import { VERIFIED_SELLER_EXPLANATION, VerifiedSellerBadge } from './VerifiedSellerTrust';
 
 interface VehicleCardProps {
   vehicle: Vehicle;
@@ -110,7 +111,11 @@ export function VehicleCard({
             {vehicle.year} {vehicle.make} {vehicle.model}
           </h3>
           {verified && (
-            <BadgeCheck className="h-4 w-4 text-foreground shrink-0 mt-0.5" aria-label="Verified seller" />
+            <BadgeCheck
+              className="h-4 w-4 text-foreground shrink-0 mt-0.5"
+              title={VERIFIED_SELLER_EXPLANATION}
+              aria-label={`Verified Seller. ${VERIFIED_SELLER_EXPLANATION}`}
+            />
           )}
         </div>
 
@@ -128,9 +133,7 @@ export function VehicleCard({
         {/* Badges row */}
         <div className="mt-auto flex min-h-[3.35rem] content-start flex-wrap gap-1.5 overflow-hidden pt-3">
           {verified && (
-            <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 border border-border text-muted-foreground">
-              <BadgeCheck className="h-2.5 w-2.5" /> Seller checked
-            </span>
+            <VerifiedSellerBadge compact />
           )}
           {visibleBadges.map((badge) => (
             <span key={badge} className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 border border-border text-muted-foreground">

@@ -69,9 +69,28 @@ requiredFiles.forEach((file) => {
   assert(adminHtml.includes("Audit Logs"), "Admin app must include audit logs section.");
 
   const appSource = fs.readFileSync(path.join(root, "apps/web-react/src/App.tsx"), "utf8");
-  ["/support", "/prohibited-listings", "/dealer-policy"].forEach((route) => {
+  ["/support", "/prohibited-listings", "/dealer-policy", "/admin"].forEach((route) => {
     assert(appSource.includes(route), `React app must expose crawlable ${route} route.`);
   });
+  assert(appSource.includes("notFoundComponent"), "React app must render the styled not-found page for unknown routes.");
+  assert(fs.existsSync(path.join(root, "apps/web-react/src/pages/Admin.tsx")), "React admin page must exist.");
+  assert(fs.existsSync(path.join(root, "apps/web-react/src/pages/NotFound.tsx")), "Styled not-found page must exist.");
+
+  const homeSource = fs.readFileSync(path.join(root, "apps/web-react/src/pages/Home.tsx"), "utf8");
+  assert(homeSource.includes("Verify who you're dealing with"), "Homepage must include the identity verification feature section.");
+  assert(homeSource.includes("Optional identity verification"), "Homepage identity feature must describe verification as optional.");
+  assert(fs.existsSync(path.join(root, "apps/web-react/public/Dagim_editorial_vector_illustration_vehicle_verification_conc_466c222c-fe96-4e55-80ec-9d17c19483a1_1.png")), "Homepage identity verification image must exist.");
+
+  const verificationSource = fs.readFileSync(path.join(root, "apps/web-react/src/pages/Verification.tsx"), "utf8");
+  assert(verificationSource.includes("Powered by Persona"), "Verification page must identify Persona as the identity provider.");
+  assert(verificationSource.includes("Who sees my ID?"), "Verification page must answer who sees identity documents.");
+  assert(verificationSource.includes("does not receive or store the ID images"), "Verification page must accurately describe Kerodex identity-image handling.");
+
+  const verifiedSellerTrustSource = fs.readFileSync(path.join(root, "apps/web-react/src/components/VerifiedSellerTrust.tsx"), "utf8");
+  assert(verifiedSellerTrustSource.includes("It does not guarantee the vehicle"), "Verified Seller badges must include the trust limitation.");
+
+  const legalSource = fs.readFileSync(path.join(root, "apps/web-react/src/pages/LegalPage.tsx"), "utf8");
+  assert(legalSource.includes("Kerodex uses Persona to provide identity verification services."), "Privacy policy must specifically identify Persona.");
 
   const seoSource = fs.readFileSync(path.join(root, "apps/web-react/src/components/Seo.tsx"), "utf8");
   assert(seoSource.includes("Prohibited Listings"), "SEO metadata must include prohibited listings page.");
@@ -137,6 +156,15 @@ requiredFiles.forEach((file) => {
     const auditLogs = await store.getAuditLogs();
     assert(auditLogs.some((item) => item.id === audit.id), "Admin audit logs must read persisted audit records.");
   }
+
+  const verification = await store.createVerificationRequest(
+    { id: "smoke_user", name: "Smoke User", email: "smoke@example.com" },
+    "vehicle_presence",
+    { listingId: listings[0].id, vehicleVin: listings[0].vin || "SMOKEVIN", status: "pending" }
+  );
+  assert(verification.id, "Admin verification queue must accept verification records.");
+  const verifications = await store.getAdminCollection("verifications");
+  assert(verifications.items.some((item) => item.id === verification.id || item.listingId === listings[0].id), "Admin verifications collection must include review records.");
 
   console.log(`Smoke test passed with ${listings.length} listings using ${store.kind} storage and admin dashboard coverage.`);
 })().catch((error) => {

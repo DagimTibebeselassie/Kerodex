@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 
-const updated = 'June 8, 2026';
+const updated = 'June 18, 2026';
 const contactEmail = 'founder@kerodexofficial.com';
 
 const termsSections = [
@@ -123,7 +123,8 @@ const privacySections = [
   {
     title: '3. Verification Providers',
     body: [
-      'Kerodex may use third-party verification providers for optional identity, vehicle, VIN, ownership, or fraud checks. These providers may process information according to their own policies.',
+      "Kerodex uses Persona to provide identity verification services. Information submitted for identity verification may be processed by Persona in accordance with Persona's privacy policy, security practices, and applicable legal requirements.",
+      'Kerodex may also use third-party providers for vehicle, VIN, ownership, fraud, and other trust-and-safety checks. Those providers may process information according to their own policies and applicable legal requirements.',
     ],
   },
   {
