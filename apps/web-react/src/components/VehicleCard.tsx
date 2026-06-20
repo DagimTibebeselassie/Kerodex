@@ -3,9 +3,9 @@ import { Link } from '@tanstack/react-router';
 import { Vehicle } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
 import { useSavedVehicles } from '@/hooks/useSavedVehicles';
-import { Heart, MapPin, Gauge, BadgeCheck, Star } from 'lucide-react';
+import { Heart, MapPin, Gauge, Star } from 'lucide-react';
 import { toast } from '@blinkdotnew/ui';
-import { VERIFIED_SELLER_EXPLANATION, VerifiedSellerBadge } from './VerifiedSellerTrust';
+import { VerifiedSellerBadge, VERIFIED_SELLER_ENABLED } from './VerifiedSellerTrust';
 
 interface VehicleCardProps {
   vehicle: Vehicle;
@@ -28,7 +28,7 @@ export function VehicleCard({
   const savedVehicles = useSavedVehicles(user?.id);
   const serverSaved = savedIds?.has(vehicle.id) ?? savedVehicles.savedIds.has(vehicle.id);
   const [saved, setSaved] = useState(serverSaved);
-  const verified = isVerified || Boolean(vehicle.seller?.verified);
+  const verified = VERIFIED_SELLER_ENABLED && (isVerified || Boolean(vehicle.seller?.verified));
   const visibleBadges = (vehicle.badges || []).slice(0, 2);
 
   useEffect(() => setSaved(serverSaved), [serverSaved]);
@@ -129,15 +129,6 @@ export function VehicleCard({
           <h3 className="line-clamp-2 text-[14px] font-bold tracking-tight leading-tight">
             {vehicle.year} {vehicle.make} {vehicle.model}
           </h3>
-          {verified && (
-            <span
-              title={VERIFIED_SELLER_EXPLANATION}
-              aria-label={`Verified Seller. ${VERIFIED_SELLER_EXPLANATION}`}
-              className="shrink-0 mt-0.5"
-            >
-              <BadgeCheck className="h-4 w-4 text-foreground" />
-            </span>
-          )}
         </div>
 
         <div className="mt-2 flex min-h-8 items-center gap-3 text-[12px] text-muted-foreground">

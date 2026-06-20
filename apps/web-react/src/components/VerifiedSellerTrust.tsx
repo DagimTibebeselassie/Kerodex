@@ -3,6 +3,8 @@ import { BadgeCheck } from 'lucide-react';
 export const VERIFIED_SELLER_EXPLANATION =
   "Verified Seller means the seller completed Kerodex's identity verification process through Persona. It does not guarantee the vehicle, listing, seller behavior, transaction outcome, or listing accuracy.";
 
+export const VERIFIED_SELLER_ENABLED = false;
+
 export function VerifiedSellerBadge({
   compact = false,
   className = '',
@@ -10,6 +12,7 @@ export function VerifiedSellerBadge({
   compact?: boolean;
   className?: string;
 }) {
+  if (!VERIFIED_SELLER_ENABLED) return null;
   return (
     <span
       title={VERIFIED_SELLER_EXPLANATION}

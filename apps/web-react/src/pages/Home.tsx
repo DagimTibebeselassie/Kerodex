@@ -697,7 +697,7 @@ export function HomePage() {
       <FeatureAd
         label="Identity Verification"
         headline="Verify who you're dealing with"
-        copy="Optional identity verification helps buyers and sellers build trust before meeting, messaging, or completing a transaction."
+        copy="Persona identity verification is coming soon. During beta, buyers and sellers can use phone verification, vehicle-presence checks, messaging, and marketplace safety tools."
         cta="Learn about verification"
         href="/verify"
         image="/Dagim_editorial_vector_illustration_vehicle_verification_conc_466c222c-fe96-4e55-80ec-9d17c19483a1_1.png"
@@ -788,18 +788,18 @@ export function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 md:gap-12">
             <TrustPillar
               icon={<BadgeCheck className="h-4 w-4" />}
-              title="Verified Sellers"
-              description="Sellers can complete optional identity and phone verification to add stronger trust signals before buyers message or meet them."
+              title="Seller Verification"
+              description="Phone verification is available during beta. Persona identity verification and Verified Seller badges are coming soon."
             />
             <TrustPillar
               icon={<FileText className="h-4 w-4" />}
               title="Title Confidence"
-              description="We check for salvage titles, open liens, and branded titles automatically. Every listing discloses title history upfront."
+              description="Listings include seller-provided title disclosures and can include uploaded documents for buyers to review."
             />
             <TrustPillar
               icon={<ShieldCheck className="h-4 w-4" />}
               title="Scam Screening"
-              description="Our automated systems detect and remove suspicious listings before they ever reach you. Real cars, real owners only."
+              description="Automated screening can flag suspicious activity for review, while reporting tools help testers surface anything we miss."
             />
             <TrustPillar
               icon={<Lock className="h-4 w-4" />}

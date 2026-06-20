@@ -169,7 +169,7 @@ function MessagingVisual() {
 function BadgesVisual() {
   const badges = [
     ['Phone Verified', 'Seller added and verified a phone number.'],
-    ['Identity Verified', 'Seller completed optional identity verification.'],
+    ['Identity Verification', 'Coming soon through Persona; no identity badges are issued during beta.'],
     ['Vehicle Presence Verified', 'Seller completed the VIN and code photo challenge.'],
   ];
   return (

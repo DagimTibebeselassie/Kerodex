@@ -47,6 +47,9 @@ const guestBuyerGuideSessions = new Map();
 const TERMS_VERSION = "v1.0";
 const PRIVACY_VERSION = "v1.0";
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
+// Beta safety gate: keep identity verification unavailable until Kerodex has a
+// signed Persona webhook and server-authoritative inquiry decision handling.
+const PERSONA_IDENTITY_VERIFICATION_ENABLED = false;
 const JSON_BODY_LIMIT_BYTES = Number(process.env.JSON_BODY_LIMIT_BYTES || 512 * 1024);
 const ALLOWED_CORS_ORIGINS = new Set([
   "https://kerodexofficial.com",
@@ -853,11 +856,13 @@ function publicUser(user) {
     provider: safeUser.provider,
     emailVerified: Boolean(safeUser.emailVerified),
     phoneVerified: Boolean(safeUser.phoneVerified && isFreshPhoneVerification(safeUser.phoneVerifiedAt)),
-    identityVerified: Boolean(safeUser.identityVerified),
-    selfieVerified: Boolean(safeUser.selfieVerified),
+    identityVerified: PERSONA_IDENTITY_VERIFICATION_ENABLED && Boolean(safeUser.identityVerified),
+    selfieVerified: PERSONA_IDENTITY_VERIFICATION_ENABLED && Boolean(safeUser.selfieVerified),
     personaInquiryId: safeUser.personaInquiryId || "",
     personaReferenceId: safeUser.personaReferenceId || "",
-    identityVerificationStatus: safeUser.identityVerificationStatus || "unverified",
+    identityVerificationStatus: PERSONA_IDENTITY_VERIFICATION_ENABLED
+      ? safeUser.identityVerificationStatus || "unverified"
+      : "unverified",
     identityVerifiedAt: safeUser.identityVerifiedAt || "",
     avatarUrl: avatarS3Key ? createS3PresignedGet(avatarS3Key, 3600) || safeUser.avatarUrl || safeUser.profileImageUrl || "" : safeUser.avatarUrl || safeUser.profileImageUrl || "",
     avatarS3Key,
@@ -1431,19 +1436,25 @@ function createS3PresignedGet(key, expires = 900) {
 
 function listingWithReadableImages(listing) {
   if (!listing || typeof listing !== "object") return listing;
+  const publicListing = {
+    ...listing,
+    seller: listing.seller
+      ? { ...listing.seller, verified: false }
+      : listing.seller
+  };
   const uploads = Array.isArray(listing.imageUploads) ? listing.imageUploads : [];
   const keys = Array.isArray(listing.imageS3Keys)
     ? listing.imageS3Keys
     : uploads.map((item) => item?.s3Key || item?.key).filter(Boolean);
-  if (!keys.length) return listing;
+  if (!keys.length) return publicListing;
 
   const signedImages = keys
     .map((key) => createS3PresignedGet(key, 3600))
     .filter(Boolean);
-  if (!signedImages.length) return listing;
+  if (!signedImages.length) return publicListing;
 
   return {
-    ...listing,
+    ...publicListing,
     images: signedImages,
     imageUploads: uploads.map((item, index) => ({
       ...item,
@@ -1469,7 +1480,7 @@ async function listingWithReadableSeller(listing) {
       avatarUrl: safeOwner.avatarUrl || readableListing.seller?.avatarUrl || defaultProfileIconUrl(sellerId),
       avatarS3Key: safeOwner.avatarS3Key || readableListing.seller?.avatarS3Key || "",
       phoneVerified: Boolean(safeOwner.phoneVerified),
-      verified: Boolean(safeOwner.identityVerified),
+      verified: PERSONA_IDENTITY_VERIFICATION_ENABLED && Boolean(safeOwner.identityVerified),
       memberSince: readableListing.seller?.memberSince || owner.createdAt || owner.acceptedTermsAt || ""
     }
   };
@@ -2160,8 +2171,10 @@ async function sellerWithReadableProfile(seller, sellerId = "") {
       ...(seller.verification || {}),
       email: Boolean(seller.verification?.email || safeOwner?.emailVerified),
       phone: Boolean(seller.verification?.phone || safeOwner?.phoneVerified),
-      identity: Boolean(seller.verification?.identity || safeOwner?.identityVerified),
-      selfie: Boolean(seller.verification?.selfie || safeOwner?.selfieVerified)
+      identity: PERSONA_IDENTITY_VERIFICATION_ENABLED &&
+        Boolean(seller.verification?.identity || safeOwner?.identityVerified),
+      selfie: PERSONA_IDENTITY_VERIFICATION_ENABLED &&
+        Boolean(seller.verification?.selfie || safeOwner?.selfieVerified)
     }
   });
 }
@@ -2608,7 +2621,7 @@ function createSellerListing(body = {}, user = null) {
       responseTime: "New listing",
       completedSales: 0,
       phoneVerified: Boolean(user.phoneVerified && isFreshPhoneVerification(user.phoneVerifiedAt)),
-      verified: Boolean(user.identityVerified),
+      verified: PERSONA_IDENTITY_VERIFICATION_ENABLED && Boolean(user.identityVerified),
       memberSince: user.createdAt || new Date().toISOString()
     };
   }
@@ -3975,20 +3988,10 @@ const server = http.createServer((req, res) => {
       sendJson(res, 401, { error: "Sign in to verify identity." });
       return;
     }
-    try {
-      user.personaReferenceId = user.id;
-      user.identityVerificationStatus = user.identityVerificationStatus === "approved" ? "approved" : "pending";
-      const hostedUrl = buildPersonaHostedUrl(req, user);
-      trackEvent(req, "persona_verification_started", user, {}).catch(() => {});
-      recordCost("persona", "identity_verification_attempt", { userId: user.id, status: "success" }).catch(() => {});
-      sendJson(res, 200, {
-        url: hostedUrl,
-        status: user.identityVerificationStatus,
-        referenceId: user.personaReferenceId
-      });
-    } catch (error) {
-      sendJson(res, error.status || 500, { error: error.message || "Unable to start Persona verification." });
-    }
+    sendJson(res, 503, {
+      error: "Identity verification is coming soon and is unavailable during the current beta.",
+      code: "identity_verification_beta_disabled"
+    });
     return;
   }
 
@@ -3998,34 +4001,10 @@ const server = http.createServer((req, res) => {
       sendJson(res, 401, { error: "Sign in to finish identity verification." });
       return;
     }
-    readJson(req)
-      .then(async (body) => {
-        const inquiryId = String(body.inquiryId || body.inquiry_id || "").trim();
-        const returnedReferenceId = String(body.referenceId || body.reference_id || "").trim();
-        const returnedStatus = String(body.status || "").trim().toLowerCase();
-        if (inquiryId) user.personaInquiryId = inquiryId;
-        user.personaReferenceId = returnedReferenceId || user.id;
-        if (!user.identityVerificationStatus || user.identityVerificationStatus === "unverified") {
-          user.identityVerificationStatus = "pending";
-        }
-        if (["approved", "declined", "failed", "pending"].includes(returnedStatus)) {
-          user.identityVerificationStatus = returnedStatus;
-        }
-        if (user.identityVerificationStatus === "approved") {
-          user.identityVerified = true;
-          user.identityVerifiedAt = user.identityVerifiedAt || new Date().toISOString();
-        }
-        await saveRuntimeUser(user);
-        await trackEvent(req,
-          user.identityVerificationStatus === "approved" ? "persona_verification_passed" :
-            ["declined", "failed"].includes(user.identityVerificationStatus) ? "persona_verification_failed" :
-              "persona_verification_started",
-          user,
-          { inquiryId, status: user.identityVerificationStatus }
-        );
-        sendJson(res, 200, createSession(user));
-      })
-      .catch((error) => sendJson(res, 400, { error: "Unable to save Persona return.", detail: error.message }));
+    sendJson(res, 503, {
+      error: "Identity verification is coming soon and is unavailable during the current beta.",
+      code: "identity_verification_beta_disabled"
+    });
     return;
   }
 
@@ -4764,7 +4743,7 @@ const server = http.createServer((req, res) => {
             avatarUrl: publicUser(user).avatarUrl || existing.seller?.avatarUrl || "",
             avatarS3Key: user.avatarS3Key || user.profileImageS3Key || existing.seller?.avatarS3Key || "",
             phoneVerified: Boolean(user.phoneVerified && isFreshPhoneVerification(user.phoneVerifiedAt)),
-            verified: Boolean(user.identityVerified)
+            verified: PERSONA_IDENTITY_VERIFICATION_ENABLED && Boolean(user.identityVerified)
           },
           vin: body.vin !== undefined ? marketCheck.normalizeVin(body.vin) : existing.vin,
           updatedAt: new Date().toISOString()

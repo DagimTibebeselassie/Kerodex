@@ -123,7 +123,7 @@ const privacySections = [
   {
     title: '3. Verification Providers',
     body: [
-      "Kerodex uses Persona to provide identity verification services. Information submitted for identity verification may be processed by Persona in accordance with Persona's privacy policy, security practices, and applicable legal requirements.",
+      "Kerodex plans to use Persona to provide identity verification services. Identity-document submission is disabled during the current beta. When enabled, information submitted for identity verification may be processed by Persona in accordance with Persona's privacy policy, security practices, and applicable legal requirements.",
       'Kerodex may also use third-party providers for vehicle, VIN, ownership, fraud, and other trust-and-safety checks. Those providers may process information according to their own policies and applicable legal requirements.',
     ],
   },

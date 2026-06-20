@@ -631,7 +631,7 @@ export function SellerCockpitPage() {
             className="h-10 px-5 text-[11px] font-bold uppercase tracking-wider shrink-0"
           >
             <ShieldCheck className="h-4 w-4 mr-2" />
-            {user.identityVerified ? 'Verified' : 'Verify Identity'}
+            Identity Coming Soon
           </Button>
           <Button
             onClick={() => navigate({ to: '/sell' })}

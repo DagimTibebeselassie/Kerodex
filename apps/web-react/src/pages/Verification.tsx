@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { savePersonaReturn, startPersonaVerification, startPhoneVerification, submitVerificationRequest, verifyPhoneCode } from '@/lib/api';
+import { startPhoneVerification, verifyPhoneCode } from '@/lib/api';
 import { Button, Input, toast } from '@blinkdotnew/ui';
 import {
   Shield, BadgeCheck, Phone, Mail, FileText, Camera,
@@ -17,6 +17,7 @@ interface Step {
   status: VerifStatus;
   points: number;
   required: boolean;
+  disabled?: boolean;
 }
 
 function PhoneModal({
@@ -188,7 +189,9 @@ function StepCard({ step, onStart }: { step: Step; onStart: (id: string) => void
     pending:     { label: 'In Review',   cls: 'border-amber-400/30 bg-amber-400/5 text-amber-500', canStart: false },
     verified:    { label: 'Verified',    cls: 'border-green-500/30 bg-green-500/5 text-green-500', canStart: false },
   };
-  const s = statusMap[step.status];
+  const s = step.disabled
+    ? { label: 'Coming Soon', cls: 'border-border text-muted-foreground bg-muted/40', canStart: false }
+    : statusMap[step.status];
 
   return (
     <div className={`p-5 border rounded-lg transition-colors ${
@@ -214,10 +217,12 @@ function StepCard({ step, onStart }: { step: Step; onStart: (id: string) => void
             </span>
           </div>
           <p className="text-[12px] text-muted-foreground mb-2">{step.description}</p>
-          <div className="flex items-center gap-1">
-            <Shield className="h-3 w-3 text-primary" />
-            <span className="text-[11px] text-primary font-bold">+{step.points} trust points</span>
-          </div>
+          {!step.disabled && (
+            <div className="flex items-center gap-1">
+              <Shield className="h-3 w-3 text-primary" />
+              <span className="text-[11px] text-primary font-bold">+{step.points} trust points</span>
+            </div>
+          )}
         </div>
 
         {s.canStart && (
@@ -228,7 +233,7 @@ function StepCard({ step, onStart }: { step: Step; onStart: (id: string) => void
             </Button>
             {step.id === 'id' && (
               <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
-                🔒 Powered by Persona. Kerodex does not manually inspect ID documents during the normal verification process.
+                Coming soon through Persona. Identity-document submission is disabled during beta.
               </p>
             )}
           </div>
@@ -248,7 +253,6 @@ function StepCard({ step, onStart }: { step: Step; onStart: (id: string) => void
 
 export function VerificationPage() {
   const { user, login, isLoading: authLoading } = useAuth();
-  const [personaLoading, setPersonaLoading] = useState(false);
 
   const [steps, setSteps] = useState<Step[]>([
     {
@@ -265,15 +269,15 @@ export function VerificationPage() {
     },
     {
       id: 'id', title: 'Government ID',
-      description: 'Complete a secure identity check through Persona.',
+      description: 'Persona identity verification is being finalized and is unavailable during this beta.',
       icon: <FileText className="h-5 w-5" />,
-      status: 'not_started', points: 35, required: false,
+      status: 'not_started', points: 0, required: false, disabled: true,
     },
     {
       id: 'selfie', title: 'Selfie Match',
-      description: 'Take a selfie to match against your government ID.',
+      description: 'Selfie matching will become available with Persona identity verification.',
       icon: <Camera className="h-5 w-5" />,
-      status: 'not_started', points: 25, required: false,
+      status: 'not_started', points: 0, required: false, disabled: true,
     },
   ]);
 
@@ -283,37 +287,10 @@ export function VerificationPage() {
     setSteps((prev) => prev.map((step) => {
       if (step.id === 'email') return { ...step, status: user?.emailVerified ? 'verified' : 'not_started' };
       if (step.id === 'phone') return { ...step, status: user?.phoneVerified ? 'verified' : step.status };
-      if (step.id === 'id') {
-        const status = user?.identityVerificationStatus;
-        return {
-          ...step,
-          status: user?.identityVerified || status === 'approved'
-            ? 'verified'
-            : status === 'pending'
-              ? 'pending'
-              : step.status,
-        };
-      }
-      if (step.id === 'selfie') return { ...step, status: user?.selfieVerified ? 'verified' : step.status };
+      if (step.id === 'id' || step.id === 'selfie') return { ...step, status: 'not_started' };
       return step;
     }));
-  }, [user?.emailVerified, user?.phoneVerified, user?.identityVerified, user?.identityVerificationStatus, user?.selfieVerified]);
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('persona') !== 'return') return;
-    const inquiryId = params.get('inquiry-id') || params.get('inquiry_id') || params.get('inquiryId') || '';
-    const status = params.get('status');
-    const referenceId = params.get('reference-id') || params.get('reference_id') || params.get('referenceId');
-    window.history.replaceState({}, document.title, window.location.pathname || '/verify');
-    if (!inquiryId) {
-      toast.success('Returned from Persona. Verification is pending review.');
-      return;
-    }
-    savePersonaReturn(inquiryId, status, referenceId)
-      .then(() => toast.success('Persona verification saved. Final status may update after review.'))
-      .catch((error) => toast.error(error instanceof Error ? error.message : 'Unable to save Persona verification result.'));
-  }, []);
+  }, [user?.emailVerified, user?.phoneVerified]);
 
   const setStatus = (id: string, status: VerifStatus) => {
     setSteps((prev) => prev.map((s) => s.id === id ? { ...s, status } : s));
@@ -324,17 +301,8 @@ export function VerificationPage() {
       setStatus(id, 'verified');
       return;
     }
-    if (id === 'id') {
-      setPersonaLoading(true);
-      startPersonaVerification()
-        .then(({ url }) => {
-          setStatus('id', 'pending');
-          window.location.assign(url);
-        })
-        .catch((error) => {
-          toast.error(error instanceof Error ? error.message : 'Unable to start Persona verification.');
-        })
-        .finally(() => setPersonaLoading(false));
+    if (id === 'id' || id === 'selfie') {
+      toast.success('Identity verification is coming soon and is unavailable during the current beta.');
       return;
     }
     setStatus(id, 'in_progress');
@@ -344,13 +312,6 @@ export function VerificationPage() {
   const handleDone = async (id: string, finalStatus: VerifStatus) => {
     setModal(null);
     setStatus(id, finalStatus);
-    if (id === 'id' || id === 'selfie') {
-      try {
-        await submitVerificationRequest(id === 'id' ? 'identity' : 'selfie');
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Unable to send verification to admin review.');
-      }
-    }
   };
 
   const handleModalClose = (id: string) => {
@@ -363,8 +324,9 @@ export function VerificationPage() {
 
   const score = steps.reduce((sum, s) => sum + (s.status === 'verified' ? s.points : 0), 0);
   const max   = steps.reduce((sum, s) => sum + s.points, 0);
-  const level = score >= 80 ? 'High Trust' : score >= 30 ? 'Partially Verified' : 'Unverified';
-  const levelColor = score >= 80 ? 'text-green-500' : score >= 30 ? 'text-amber-500' : 'text-muted-foreground';
+  const fullyVerified = max > 0 && score === max;
+  const level = fullyVerified ? 'Available Steps Complete' : score > 0 ? 'Partially Verified' : 'Unverified';
+  const levelColor = fullyVerified ? 'text-green-500' : score > 0 ? 'text-amber-500' : 'text-muted-foreground';
 
   if (authLoading) {
     return (
@@ -395,7 +357,7 @@ export function VerificationPage() {
         <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary mb-2">Trust & Safety</p>
         <h1 className="text-3xl font-black tracking-tight">Verification Center</h1>
         <p className="text-[13px] text-muted-foreground mt-2">
-          Verified sellers get 2x more messages and unlock all Kerodex features.
+          Complete available verification steps to strengthen your beta profile.
         </p>
       </div>
 
@@ -410,7 +372,7 @@ export function VerificationPage() {
             </div>
             <div className={`text-[13px] font-bold mt-1 ${levelColor}`}>{level}</div>
           </div>
-          <BadgeCheck className={`h-14 w-14 ${score >= 80 ? 'text-primary' : 'text-muted-foreground/20'}`} />
+          <BadgeCheck className={`h-14 w-14 ${fullyVerified ? 'text-primary' : 'text-muted-foreground/20'}`} />
         </div>
 
         <div className="space-y-1.5">
@@ -454,13 +416,13 @@ export function VerificationPage() {
                   <div className="space-y-3">
                     <div>
                       <h3 className="text-[15px] font-black tracking-tight">Identity Verification</h3>
-                      <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.16em] text-primary">Powered by Persona</p>
+                      <p className="mt-1 text-[11px] font-bold uppercase tracking-[0.16em] text-amber-600 dark:text-amber-400">Coming soon · Powered by Persona</p>
                     </div>
                     <div className="space-y-3 text-[12px] leading-relaxed text-muted-foreground">
                       <p>Identity verification helps reduce fraud, impersonation, fake accounts, and scams on Kerodex.</p>
-                      <p>Persona performs the identity verification process. Kerodex does not manually review identification documents as part of the normal verification process.</p>
-                      <p>After verification, Kerodex receives and stores the Persona inquiry and reference identifiers plus the verification status needed to determine whether verification was successful and whether a user qualifies for Verified Seller status. Kerodex does not receive or store the ID images submitted through Persona in the current normal verification flow.</p>
-                      <p>Your identity documents are processed through Persona's secure verification platform and are subject to Persona's privacy and security practices.</p>
+                      <p>Kerodex plans to use Persona for identity verification, but document submission is disabled during the current beta.</p>
+                      <p>No identity documents can currently be submitted through Kerodex, and Verified Seller badges are not being issued during this beta.</p>
+                      <p>When launched, identity documents will be processed through Persona's hosted verification platform and subject to Persona's privacy and security practices.</p>
                     </div>
                     <div className="flex gap-2 border-t border-primary/15 pt-3 text-[11px] leading-relaxed text-muted-foreground">
                       <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-amber-500" />
@@ -481,14 +443,14 @@ export function VerificationPage() {
             <Lock className="h-4 w-4 text-primary" />
             <h3 className="text-[12px] font-bold uppercase tracking-[0.12em]">Privacy First</h3>
           </div>
-          <p className="text-[12px] text-muted-foreground">Identity documents stay within Persona's hosted verification flow during normal verification. Kerodex receives the resulting status and identifiers, not the ID images.</p>
+          <p className="text-[12px] text-muted-foreground">Identity-document submission is disabled during beta. Kerodex will publish updated privacy details before enabling Persona.</p>
         </div>
         <div className="p-4 border border-border bg-card rounded-lg space-y-1.5">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4 text-amber-500" />
             <h3 className="text-[12px] font-bold uppercase tracking-[0.12em]">Why Verify?</h3>
           </div>
-          <p className="text-[12px] text-muted-foreground">Verified sellers close deals 40% faster and buyers trust them more.</p>
+          <p className="text-[12px] text-muted-foreground">Email and phone verification are available now. Identity verification and Verified Seller badges are coming soon.</p>
         </div>
       </div>
 
@@ -499,9 +461,9 @@ export function VerificationPage() {
         </div>
         <div className="divide-y divide-border border-y border-border">
           {[
-            ['Who sees my ID?', 'Identity verification is processed through Persona. Kerodex does not manually inspect identification documents during the normal verification process.'],
-            ['What does Verified Seller mean?', "Verified Seller means the seller completed Kerodex's identity verification process. It is not a guarantee of the vehicle, listing accuracy, or transaction outcome."],
-            ['Is my information secure?', "Identity verification is handled through Persona using industry-standard security practices. Information submitted to Persona is also subject to Persona's privacy and security practices."],
+            ['Can I submit my ID during beta?', 'No. Identity-document submission is disabled while Kerodex finalizes its Persona integration.'],
+            ['What does Verified Seller mean?', 'Verified Seller badges are not being issued during the current beta. When launched, the badge will indicate completion of Kerodex identity verification through Persona.'],
+            ['Who will process my information?', "Kerodex plans to use Persona's hosted identity-verification platform. Updated privacy and security details will be published before the feature is enabled."],
           ].map(([question, answer]) => (
             <details key={question} className="group py-4">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-[13px] font-bold">

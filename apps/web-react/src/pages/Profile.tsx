@@ -92,10 +92,8 @@ export function ProfilePage() {
   const totalViews = (myVehicles || []).reduce((sum, vehicle: any) => sum + Number(vehicle.views || 0), 0);
   const trustScore =
     (user?.emailVerified ? 10 : 0) +
-    (user?.phoneVerified ? 20 : 0) +
-    (user?.identityVerified ? 35 : 0) +
-    (user?.selfieVerified ? 25 : 0);
-  const trustMax = 90;
+    (user?.phoneVerified ? 20 : 0);
+  const trustMax = 30;
   const memberSince = user?.createdAt
     ? new Date(user.createdAt).getFullYear()
     : user?.acceptedTermsAt
@@ -406,8 +404,8 @@ export function ProfilePage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <VerifBadge done={Boolean(user.emailVerified)} label="Email Verified" />
           <VerifBadge done={Boolean(user.phoneVerified)} label="Phone Verified" />
-          <VerifBadge done={Boolean(user.identityVerified)} label="Identity Verified (Gov ID)" />
-          <VerifBadge done={Boolean(user.selfieVerified)} label="Selfie Verification" />
+          <VerifBadge done={false} label="Identity Verification — Coming Soon" />
+          <VerifBadge done={false} label="Selfie Match — Coming Soon" />
         </div>
 
         {/* Trust Score Preview */}
@@ -423,7 +421,7 @@ export function ProfilePage() {
           </div>
           <Link to="/verify">
             <Button className="h-10 px-5 text-[11px] font-bold uppercase tracking-wider">
-              {user.identityVerified ? 'View Verification' : 'Verify Identity'}
+              Verification Center
             </Button>
           </Link>
         </div>

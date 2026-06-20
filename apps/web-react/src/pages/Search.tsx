@@ -556,7 +556,6 @@ function FilterSidebarContent({
         <div>
           <p className={SECTION_LBL}>Trust Filters</p>
           <div className="space-y-2">
-            <CheckboxItem id="f-verified-seller" label="Verified Seller" checked={filters.verifiedSeller} onChange={(v) => setFilters({ ...filters, verifiedSeller: v })} />
             <CheckboxItem id="f-ownership" label="Ownership documents reviewed" checked={filters.ownershipVerified} onChange={(v) => setFilters({ ...filters, ownershipVerified: v })} />
             <CheckboxItem id="f-vehicle-ver" label="Vehicle Verified" checked={filters.vehicleVerified} onChange={(v) => setFilters({ ...filters, vehicleVerified: v })} />
             <CheckboxItem id="f-inspection" label="Inspection Verified" checked={filters.inspectionVerified} onChange={(v) => setFilters({ ...filters, inspectionVerified: v })} />

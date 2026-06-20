@@ -113,26 +113,34 @@ requiredFiles.forEach((file) => {
 
   const homeSource = fs.readFileSync(path.join(root, "apps/web-react/src/pages/Home.tsx"), "utf8");
   assert(homeSource.includes("Verify who you're dealing with"), "Homepage must include the identity verification feature section.");
-  assert(homeSource.includes("Optional identity verification"), "Homepage identity feature must describe verification as optional.");
+  assert(homeSource.includes("Persona identity verification is coming soon"), "Homepage must disclose that identity verification is unavailable during beta.");
   assert(fs.existsSync(path.join(root, "apps/web-react/public/Dagim_editorial_vector_illustration_vehicle_verification_conc_466c222c-fe96-4e55-80ec-9d17c19483a1_1.png")), "Homepage identity verification image must exist.");
 
+  const serverSource = fs.readFileSync(path.join(root, "apps/api/server.js"), "utf8");
+  const storeSource = fs.readFileSync(path.join(root, "apps/api/store.js"), "utf8");
+  const searchSource = fs.readFileSync(path.join(root, "apps/web-react/src/pages/Search.tsx"), "utf8");
   const verificationSource = fs.readFileSync(path.join(root, "apps/web-react/src/pages/Verification.tsx"), "utf8");
   assert(verificationSource.includes("Powered by Persona"), "Verification page must identify Persona as the identity provider.");
-  assert(verificationSource.includes("Who sees my ID?"), "Verification page must answer who sees identity documents.");
-  assert(verificationSource.includes("does not receive or store the ID images"), "Verification page must accurately describe Kerodex identity-image handling.");
+  assert(verificationSource.includes("Coming soon · Powered by Persona"), "Persona must be visibly disabled during beta.");
+  assert(verificationSource.includes("Verified Seller badges are not being issued during the current beta"), "Beta must disclose that Verified Seller badges are disabled.");
+  assert(serverSource.includes("PERSONA_IDENTITY_VERIFICATION_ENABLED = false"), "Persona identity verification must have a hard beta safety gate.");
+  assert(serverSource.includes("identity_verification_beta_disabled"), "Persona start and return routes must reject beta submissions.");
+  assert(!serverSource.includes('returnedStatus === "approved"'), "Browser-returned Persona status must never award identity verification.");
+  assert(serverSource.includes("seller: listing.seller") && serverSource.includes("verified: false"), "Public listing responses must suppress legacy Verified Seller flags.");
+  assert(!searchSource.includes('label="Verified Seller"'), "Search must not offer a Verified Seller filter while Persona is disabled.");
+  assert(verificationSource.includes("Can I submit my ID during beta?"), "Verification page must explain that identity submission is unavailable.");
+  assert(verificationSource.includes("No identity documents can currently be submitted"), "Verification page must accurately disclose the disabled identity flow.");
 
   const verifiedSellerTrustSource = fs.readFileSync(path.join(root, "apps/web-react/src/components/VerifiedSellerTrust.tsx"), "utf8");
   assert(verifiedSellerTrustSource.includes("It does not guarantee the vehicle"), "Verified Seller badges must include the trust limitation.");
 
   const legalSource = fs.readFileSync(path.join(root, "apps/web-react/src/pages/LegalPage.tsx"), "utf8");
-  assert(legalSource.includes("Kerodex uses Persona to provide identity verification services."), "Privacy policy must specifically identify Persona.");
+  assert(legalSource.includes("Kerodex plans to use Persona to provide identity verification services."), "Privacy policy must identify Persona and disclose beta availability.");
 
   const seoSource = fs.readFileSync(path.join(root, "apps/web-react/src/components/Seo.tsx"), "utf8");
   assert(seoSource.includes("Prohibited Listings"), "SEO metadata must include prohibited listings page.");
   assert(seoSource.includes("Dealer Policy"), "SEO metadata must include dealer policy page.");
 
-  const serverSource = fs.readFileSync(path.join(root, "apps/api/server.js"), "utf8");
-  const storeSource = fs.readFileSync(path.join(root, "apps/api/store.js"), "utf8");
   assert(serverSource.includes("SELLER_CHECKLIST_KEYS"), "API must define seller checklist validation.");
   ["authorizedToList", "privateParty", "vinMatchesVehicle", "accurateInformation"].forEach((key) => {
     assert(serverSource.includes(`"${key}"`), `API Seller Checklist validation must require ${key}.`);
@@ -210,7 +218,6 @@ requiredFiles.forEach((file) => {
   assert(!profileSource.includes('label="Messages" value={0}'), "Profile message count must be dynamic.");
   const vehicleDetailSource = fs.readFileSync(path.join(root, "apps/web-react/src/pages/VehicleDetail.tsx"), "utf8");
   assert(vehicleDetailSource.includes("This listing is for demonstration/testing only"), "Listing detail must display the demo-only notice.");
-  const searchSource = fs.readFileSync(path.join(root, "apps/web-react/src/pages/Search.tsx"), "utf8");
   assert(!searchSource.includes('placeholder="Search make, model..."'), "Search results page must not duplicate the global header search bar.");
   assert(searchSource.includes("kerodex-scrollbar-hidden hidden md:flex"), "Map listing rail must hide its visible scrollbar.");
   assert(searchSource.includes("style={{ height: 'calc(100vh - 7rem)' }}"), "Map search workspace must retain its stable fixed-height layout.");
