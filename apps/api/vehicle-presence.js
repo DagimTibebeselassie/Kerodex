@@ -67,6 +67,15 @@ function vehiclePresenceError(event, payload = {}) {
 
 function safeImageUrlSummary(imageUrl = "") {
   if (!imageUrl) return { present: false };
+  if (String(imageUrl).startsWith("data:")) {
+    const mediaType = String(imageUrl).slice(5, String(imageUrl).indexOf(";") || undefined);
+    return {
+      present: true,
+      protocol: "data:",
+      mediaType,
+      length: String(imageUrl).length
+    };
+  }
   try {
     const parsed = new URL(imageUrl);
     return {
@@ -135,6 +144,7 @@ async function analyzeWithOpenAi({ imageUrl, code, listing }) {
     "Determine whether the photo likely shows a real vehicle, a visible windshield VIN plate, and a visible handwritten or printed verification code beside that windshield VIN.",
     "Extract the visible VIN from the image. Extract the visible verification code from the image. The exact listing-specific code must match. The visible VIN must match the listing VIN.",
     "Look for screenshot-like artifacts such as app chrome, browser UI, obvious copied marketplace screenshots, or a photo of a screen.",
+    "Treat AI-generated, composited, materially edited, or otherwise synthetic images as invalid. For those images, set likelyNewPhoto to false even if the requested VIN or code appears in the image.",
     "Return JSON only with keys: vehicleVisible, vinPlateVisible, textVisible, codeMatches, vinMatches, likelyNewPhoto, confidence, observedText, observedVin, reason.",
     "Confidence must be a decimal from 0.0 to 1.0, not a percentage.",
     `Expected verification code: ${code}`,
@@ -236,9 +246,10 @@ async function analyzeWithOpenAi({ imageUrl, code, listing }) {
   const combinedText = [parsed.observedText, parsed.observedVin].filter(Boolean).join("\n");
   const expectedVin = normalizeVin(listing.vin);
   const extractedVins = extractVins(combinedText);
-  const vinMatches = Boolean(expectedVin && extractedVins.includes(expectedVin)) ||
-    Boolean(parsed.vinMatches && expectedVin);
-  const codeMatches = normalizeCode(combinedText).includes(normalizeCode(code)) || Boolean(parsed.codeMatches);
+  // Treat the model's extracted text as the source of truth. Boolean claims from
+  // the model must not override a mismatched VIN or verification code.
+  const vinMatches = Boolean(expectedVin && extractedVins.includes(expectedVin));
+  const codeMatches = normalizeCode(combinedText).includes(normalizeCode(code));
   const likelyNewPhoto = parsed.likelyNewPhoto !== false;
   const checks = {
     vehicleVisible: Boolean(parsed.vehicleVisible),

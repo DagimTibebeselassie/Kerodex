@@ -42,6 +42,7 @@ const phoneVerificationBuckets = new Map();
 const phoneVerificationCooldowns = new Map();
 const pendingPresenceCodes = new Map();
 const vehiclePresenceJobs = new Set();
+const vehiclePresenceVinJobs = new Map();
 const guestBuyerGuideSessions = new Map();
 const TERMS_VERSION = "v1.0";
 const PRIVACY_VERSION = "v1.0";
@@ -416,6 +417,23 @@ function createReportRecord({ reporter, reportedUserId = "", listingId = "", mes
     adminNotes: "",
     metadata
   };
+}
+
+async function transferVerifiedPhoneOwnership(phone, user) {
+  if (typeof store.getUserByPhone !== "function") return null;
+  const owner = await store.getUserByPhone(phone);
+  if (!owner || owner.id === user.id) return null;
+  const previousOwner = {
+    ...owner,
+    phone: "",
+    phoneNumber: "",
+    phoneVerified: false,
+    phoneVerifiedAt: "",
+    phoneVerificationTransferredAt: new Date().toISOString(),
+    phoneVerificationTransferredToUserId: user.id
+  };
+  await saveRuntimeUser(previousOwner);
+  return owner;
 }
 
 function createBuyerGuideRecord({ buyer, listing }) {
@@ -1732,15 +1750,25 @@ function sellerChecklistComplete(value = {}) {
   return SELLER_CHECKLIST_KEYS.every((key) => value[key] === true);
 }
 
-function activeListingMatchesVin(listing, vin, excludeId = "") {
+function verifiedListingMatchesVin(listing, vin, excludeId = "") {
   if (!listing || normalizeVin(listing.vin) !== vin || listing.id === excludeId) return false;
   const status = String(listing.status || "active");
-  return !["deleted", "removed", "sold", "expired"].includes(status);
+  if (["deleted", "removed", "sold", "expired", "rejected"].includes(status)) return false;
+  const presenceStatus = String(
+    listing.vehiclePresence?.verificationStatus ||
+    listing.vehiclePresence?.verification_status ||
+    ""
+  );
+  return Boolean(
+    listing.vehiclePresenceVerified ||
+    listing.verificationStatus === "vehicle_presence_verified" ||
+    presenceStatus === vehiclePresence.PRESENCE_STATUSES.VERIFIED
+  );
 }
 
-async function findActiveListingByVin(vin, excludeId = "") {
+async function findVerifiedListingByVin(vin, excludeId = "") {
   const listings = await store.getListings();
-  return listings.find((listing) => activeListingMatchesVin(listing, vin, excludeId)) || null;
+  return listings.find((listing) => verifiedListingMatchesVin(listing, vin, excludeId)) || null;
 }
 
 function validateSellerListingInput(body = {}, { requirePresence = false } = {}) {
@@ -2121,6 +2149,9 @@ async function sellerWithReadableProfile(seller, sellerId = "") {
   const safeOwner = owner ? publicUser(owner) : null;
   return sellerWithReadableImages({
     ...seller,
+    listings: Array.isArray(seller.listings)
+      ? seller.listings.filter((listing) => ["active", "sold"].includes(String(listing?.status || "").toLowerCase()))
+      : [],
     id,
     name: seller.name || safeOwner?.name || safeOwner?.email?.split("@")[0] || "Kerodex seller",
     avatarUrl: safeOwner?.avatarUrl || seller.avatarUrl || seller.profileImageUrl || defaultProfileIconUrl(id || seller.name),
@@ -2195,7 +2226,25 @@ async function createVehiclePresenceReview(listing, result) {
   );
 }
 
-async function processVehiclePresenceNow(listingId) {
+async function withVehiclePresenceVinLock(vin, callback) {
+  const key = normalizeVin(vin) || "missing_vin";
+  const previous = vehiclePresenceVinJobs.get(key) || Promise.resolve();
+  let release;
+  const current = new Promise((resolve) => {
+    release = resolve;
+  });
+  const tail = previous.then(() => current);
+  vehiclePresenceVinJobs.set(key, tail);
+  await previous;
+  try {
+    return await callback();
+  } finally {
+    release();
+    if (vehiclePresenceVinJobs.get(key) === tail) vehiclePresenceVinJobs.delete(key);
+  }
+}
+
+async function processVehiclePresenceUnlocked(listingId) {
   const listing = await store.getListingById(listingId);
   if (!listing || !listing.vehiclePresence) return null;
   const uploadIdentity = listing.vehiclePresence.verificationPhotoS3Key ||
@@ -2250,11 +2299,22 @@ async function processVehiclePresenceNow(listingId) {
     imageSource: listing.vehiclePresence.verificationPhotoS3Key ? "s3_signed_get" : "stored_url",
     hasCode: Boolean(listing.vehiclePresence.verification_code || listing.vehiclePresence.verificationCode)
   });
-  const result = await vehiclePresence.analyze({
+  let result = await vehiclePresence.analyze({
     imageUrl: signedImageUrl,
     code: listing.vehiclePresence.verification_code || listing.vehiclePresence.verificationCode,
     listing
   });
+  if (result.status === vehiclePresence.PRESENCE_STATUSES.VERIFIED) {
+    const reservedBy = await findVerifiedListingByVin(normalizeVin(listing.vin), listing.id);
+    if (reservedBy) {
+      result = {
+        ...result,
+        status: vehiclePresence.PRESENCE_STATUSES.MANUAL_REVIEW,
+        reason: `This VIN is already reserved by verified listing ${reservedBy.id}. Remove that listing before publishing another one with this VIN.`,
+        duplicateVerifiedListingId: reservedBy.id
+      };
+    }
+  }
   if (vehiclePresence.openAiConfig()) {
     await recordCost("openai", "vehicle_presence_verification", {
       userId: listing.userId || listing.seller?.id || "",
@@ -2327,6 +2387,12 @@ async function processVehiclePresenceNow(listingId) {
     provider: result.provider
   });
   return store.createListing(next);
+}
+
+async function processVehiclePresenceNow(listingId) {
+  const listing = await store.getListingById(listingId);
+  if (!listing) return null;
+  return withVehiclePresenceVinLock(listing.vin, () => processVehiclePresenceUnlocked(listingId));
 }
 
 function scheduleVehiclePresenceVerification(listingId) {
@@ -4090,19 +4156,17 @@ const server = http.createServer((req, res) => {
           return;
         }
 
-        if (await phoneBelongsToAnotherUser(phone, user.id)) {
-          await trackEvent(req, "phone_verification_failed", user, { type: "phone", reason: "phone_conflict" });
-          sendJson(res, 400, { error: "Invalid verification code." });
-          return;
-        }
-
         const now = new Date().toISOString();
+        const previousOwner = await transferVerifiedPhoneOwnership(phone, user);
         user.phoneNumber = phone;
         user.phone = phone;
         user.phoneVerified = true;
         user.phoneVerifiedAt = now;
         await saveRuntimeUser(user);
-        await trackEvent(req, "phone_verification_passed", user, { type: "phone" });
+        await trackEvent(req, "phone_verification_passed", user, {
+          type: "phone",
+          transferredFromAnotherAccount: Boolean(previousOwner)
+        });
         sendJson(res, 200, { ok: true, message: "Phone verified.", user: publicUser(user) });
       })
       .catch((error) => {
@@ -4568,10 +4632,10 @@ const server = http.createServer((req, res) => {
           return;
         }
         const cleanVin = validation.cleanVin;
-        const duplicate = await findActiveListingByVin(cleanVin);
+        const duplicate = await findVerifiedListingByVin(cleanVin);
         if (duplicate) {
           sendJson(res, 409, {
-            error: "This VIN is already attached to an active Kerodex listing.",
+            error: "This VIN is already attached to a verified Kerodex listing. Remove that listing before creating another one with this VIN.",
             code: "duplicate_vin"
           });
           return;
@@ -4714,10 +4778,10 @@ const server = http.createServer((req, res) => {
           return;
         }
         if (updated.vin) {
-          const duplicate = await findActiveListingByVin(normalizeVin(updated.vin), existing.id);
+          const duplicate = await findVerifiedListingByVin(normalizeVin(updated.vin), existing.id);
           if (duplicate) {
             sendJson(res, 409, {
-              error: "This VIN is already attached to another active Kerodex listing.",
+              error: "This VIN is already attached to another verified Kerodex listing. Remove that listing before using this VIN.",
               code: "duplicate_vin"
             });
             return;

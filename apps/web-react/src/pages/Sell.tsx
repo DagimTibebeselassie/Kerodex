@@ -824,7 +824,10 @@ export function SellPage() {
       navigate({ to: '/vehicle/$id', params: { id: vehicle.id } });
     } catch (err) {
       console.error('Create listing error:', err);
-      toast.error('Failed to create listing. Please try again.');
+      const message = err instanceof Error && err.message
+        ? err.message
+        : 'Failed to create listing. Please try again.';
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
     }

@@ -132,6 +132,7 @@ requiredFiles.forEach((file) => {
   assert(seoSource.includes("Dealer Policy"), "SEO metadata must include dealer policy page.");
 
   const serverSource = fs.readFileSync(path.join(root, "apps/api/server.js"), "utf8");
+  const storeSource = fs.readFileSync(path.join(root, "apps/api/store.js"), "utf8");
   assert(serverSource.includes("SELLER_CHECKLIST_KEYS"), "API must define seller checklist validation.");
   ["authorizedToList", "privateParty", "vinMatchesVehicle", "accurateInformation"].forEach((key) => {
     assert(serverSource.includes(`"${key}"`), `API Seller Checklist validation must require ${key}.`);
@@ -151,13 +152,32 @@ requiredFiles.forEach((file) => {
     "This listing does not include prohibited, stolen, or misleading content.",
     "I agree to keep buyer communication safe and accurate on Kerodex."
   ].forEach((item) => assert(!sellSource.includes(item), `Seller Checklist must remove: ${item}`));
-  assert(serverSource.includes("duplicate_vin"), "API must reject duplicate active VINs.");
+  assert(serverSource.includes("duplicate_vin"), "API must reject duplicate verified VINs.");
+  assert(serverSource.includes("findVerifiedListingByVin"), "Only verified listings should reserve a VIN.");
+  assert(
+    serverSource.includes("listing.vehiclePresenceVerified") &&
+      serverSource.includes('listing.verificationStatus === "vehicle_presence_verified"'),
+    "VIN reservation must require successful vehicle-presence verification."
+  );
+  assert(
+    serverSource.includes("withVehiclePresenceVinLock"),
+    "Vehicle verification publication must be serialized by VIN."
+  );
   assert(serverSource.includes("auditMarketplaceAction"), "API must write marketplace audit actions.");
   assert(serverSource.includes("/api/buyer-guides/start"), "API must expose buyer guide start route.");
   assert(serverSource.includes("/api/buyer-guide/recommendations"), "API must expose Buyer Guide recommendations route.");
   assert(serverSource.includes("automated demo-seller reply"), "Demo listings must support a clearly sandboxed messaging experience.");
   assert(!serverSource.includes("demo_listing_contact_disabled"), "Demo listings must no longer block the messaging demo.");
   assert(serverSource.includes("/api/me/saved"), "API must expose authenticated saved-vehicle records.");
+  assert(
+    serverSource.includes("transferVerifiedPhoneOwnership"),
+    "A valid Twilio code must be able to transfer a recycled phone number from an older account."
+  );
+  assert(
+    storeSource.includes("isPublicMarketplaceListing") &&
+      storeSource.includes("payload->>'status' IN ('active', 'sold')"),
+    "Public seller profiles must exclude removed and non-public listings."
+  );
   assert(serverSource.includes("/favorite"), "API must expose a database-backed listing favorite action.");
   assert(serverSource.includes("/api/me/listing-analytics"), "API must expose seller-owned listing analytics.");
   assert(serverSource.includes("/status"), "API must expose the seller sold/available flow.");

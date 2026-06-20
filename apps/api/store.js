@@ -330,6 +330,10 @@ function toAdminUserRecord(user) {
   };
 }
 
+function isPublicMarketplaceListing(listing) {
+  return ["active", "sold"].includes(String(listing?.status || "").toLowerCase());
+}
+
 function realAdminUsersForStore(store, persistedUsers = []) {
   const runtimeUsers = store.kind === "postgres" ? [] : store.getRuntimeAdminUsers();
   const seedUsers = store.kind === "postgres" ? [] : (store.adminState?.users || []);
@@ -812,12 +816,17 @@ class JsonStore {
   async getSellerById(id) {
     const seller = this.sellers.find((item) => item.id === id);
     if (!seller) return null;
-    const listings = this.listings.filter((listing) => listing.userId === id);
+    const listings = this.listings.filter((listing) =>
+      listing.userId === id && isPublicMarketplaceListing(listing)
+    );
     return { ...seller, listings };
   }
 
   async addSellerReview(sellerId, review) {
-    const listings = this.listings.filter((listing) => listing.userId === sellerId || listing.seller?.id === sellerId);
+    const listings = this.listings.filter((listing) =>
+      (listing.userId === sellerId || listing.seller?.id === sellerId) &&
+      isPublicMarketplaceListing(listing)
+    );
     const existingIndex = this.sellers.findIndex((item) => item.id === sellerId);
     const current = existingIndex >= 0
       ? this.sellers[existingIndex]
@@ -1652,7 +1661,14 @@ class PostgresStore {
     await this.ensureCoreTables();
     const sellerResult = await this.pool.query("SELECT payload FROM seller_records WHERE id = $1 LIMIT 1", [id]);
     let seller = sellerResult.rows[0]?.payload;
-    const listingsResult = await this.pool.query("SELECT payload FROM listing_records WHERE payload->>'userId' = $1 ORDER BY updated_at DESC", [id]);
+    const listingsResult = await this.pool.query(
+      `SELECT payload
+       FROM listing_records
+       WHERE payload->>'userId' = $1
+         AND payload->>'status' IN ('active', 'sold')
+       ORDER BY updated_at DESC`,
+      [id]
+    );
     if (!seller) {
       const userResult = await this.pool.query("SELECT payload FROM user_records WHERE id = $1 LIMIT 1", [id]);
       const user = userResult.rows[0]?.payload || null;
@@ -1669,7 +1685,14 @@ class PostgresStore {
   async addSellerReview(sellerId, review) {
     await this.ensureCoreTables();
     const sellerResult = await this.pool.query("SELECT payload FROM seller_records WHERE id = $1 LIMIT 1", [sellerId]);
-    const listingsResult = await this.pool.query("SELECT payload FROM listing_records WHERE payload->>'userId' = $1 ORDER BY updated_at DESC", [sellerId]);
+    const listingsResult = await this.pool.query(
+      `SELECT payload
+       FROM listing_records
+       WHERE payload->>'userId' = $1
+         AND payload->>'status' IN ('active', 'sold')
+       ORDER BY updated_at DESC`,
+      [sellerId]
+    );
     const listings = listingsResult.rows.map((row) => row.payload);
     let seller = sellerResult.rows[0]?.payload;
     if (!seller) {
