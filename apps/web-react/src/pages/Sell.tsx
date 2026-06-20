@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { Button, toast } from '@blinkdotnew/ui';
 import { MAKES, MAKES_MODELS } from '@/data/makes-models';
-import { createUploadUrl, createVehicle, createVehiclePresenceCode, getVehicle, updateVehicle } from '@/lib/api';
+import { createUploadUrl, createVehicle, createVehiclePresenceCode, getVehicle, trackAnalyticsEvent, updateVehicle } from '@/lib/api';
 import {
   Camera, X, Loader2, Search, BadgeCheck, CheckCircle2,
   MapPin, ChevronDown, AlertCircle, FileText,
@@ -24,12 +24,10 @@ const TITLE_OPTIONS = ['Clean Title', 'Lienholder / Loan', 'Rebuilt Title', 'Sal
 const ACCIDENT_OPTIONS = ['No accidents reported', 'Minor accident disclosed', 'Major accident disclosed', 'Not sure'] as const;
 const OWNER_OPTIONS = ['1 previous owner', '2 previous owners', '3+ previous owners', 'Not sure'] as const;
 const SELLER_CHECKLIST = [
-  ['accurateInformation', 'The VIN, mileage, price, title, accident history, and condition are accurate.'],
   ['authorizedToList', 'I own this vehicle or am authorized by the owner to list it.'],
-  ['privateParty', 'This is a private-party listing, not dealership inventory.'],
-  ['vinMatchesVehicle', 'The VIN entered matches the vehicle and uploaded verification photo.'],
-  ['noProhibitedContent', 'This listing does not include prohibited, stolen, or misleading content.'],
-  ['safeCommunication', 'I agree to keep buyer communication safe and accurate on Kerodex.'],
+  ['privateParty', 'This is a private-party listing and not dealership inventory.'],
+  ['vinMatchesVehicle', 'The VIN entered matches the vehicle and any verification materials submitted.'],
+  ['accurateInformation', 'I certify that this listing is accurate to the best of my knowledge, including mileage, condition, title status, accident history, images, and documents, and I agree to communicate honestly and safely on Kerodex.'],
 ] as const;
 const FEATURE_OPTIONS = [
   'Apple CarPlay', 'Android Auto', 'Backup Camera', 'Blind Spot Monitoring',
@@ -250,11 +248,11 @@ export function SellPage() {
   const [titleDocument, setTitleDocument] = useState<TitleDocument | null>(null);
   const [timelineEvents, setTimelineEvents] = useState<TimelineEvent[]>([]);
   const [editLoading, setEditLoading] = useState(false);
-  const [accuracyCertified, setAccuracyCertified] = useState(false);
   const [sellerChecklist, setSellerChecklist] = useState<Record<string, boolean>>({});
   const [presenceCode, setPresenceCode] = useState<{ token: string; code: string; generatedAt: string; expiresAt: string } | null>(null);
   const [presencePhoto, setPresencePhoto] = useState<{ url: string; s3Key: string; name: string } | null>(null);
   const [presenceLoading, setPresenceLoading] = useState(false);
+  const listingStartTracked = useRef(false);
 
   // VIN decode state
   const [vin, setVin] = useState('');
@@ -315,6 +313,12 @@ export function SellPage() {
   const removeFeature = (feature: string) => {
     setSelectedFeatures((prev) => prev.filter((item) => item !== feature));
   };
+
+  useEffect(() => {
+    if (!user || editId || listingStartTracked.current) return;
+    listingStartTracked.current = true;
+    trackAnalyticsEvent({ eventType: 'listing_started', route: '/sell' });
+  }, [editId, user]);
 
   useEffect(() => {
     if (!editId || !user) return;
@@ -431,8 +435,14 @@ export function SellPage() {
           title: event.title || event.label || '',
           notes: event.notes || '',
         })));
-        setAccuracyCertified(Boolean(vehicle.listingAccuracyCertifiedAt || vehicle.listingAccuracyCertified));
-        setSellerChecklist(vehicle.sellerChecklist || {});
+        setSellerChecklist({
+          ...(vehicle.sellerChecklist || {}),
+          accurateInformation: Boolean(
+            vehicle.sellerChecklist?.accurateInformation
+            || vehicle.listingAccuracyCertifiedAt
+            || vehicle.listingAccuracyCertified
+          ),
+        });
       })
       .catch((error) => {
         if (!active) return;
@@ -695,6 +705,7 @@ export function SellPage() {
           size: file.size,
           uploadedAt: new Date().toISOString(),
         }]);
+        trackAnalyticsEvent({ eventType: 'listing_photos_uploaded', route: '/sell' });
       } catch (err: any) {
         URL.revokeObjectURL(previewUrl);
         console.error('Upload error:', err);
@@ -719,7 +730,7 @@ export function SellPage() {
       toast.error('Please add at least one photo of your vehicle.');
       return;
     }
-    if (!accuracyCertified) {
+    if (!sellerChecklist.accurateInformation) {
       toast.error('Certify that the listing is accurate before publishing.');
       return;
     }
@@ -799,7 +810,7 @@ export function SellPage() {
         vehiclePresenceExpiresAt: presenceCode?.expiresAt,
         vehiclePresencePhotoUrl: presencePhoto?.url,
         vehiclePresenceS3Key: presencePhoto?.s3Key,
-        listingAccuracyCertified: true,
+        listingAccuracyCertified: Boolean(sellerChecklist.accurateInformation),
         listingAccuracyVersion: 'v1.0',
         listingAccuracyCertifiedAt: new Date().toISOString(),
         sellerChecklist,
@@ -1525,22 +1536,9 @@ export function SellPage() {
               </label>
             ))}
           </div>
-          <label className="flex items-start gap-3 p-3 border border-border bg-muted/20 rounded-md text-[12px] text-muted-foreground leading-relaxed">
-            <input
-              type="checkbox"
-              checked={accuracyCertified}
-              onChange={(e) => setAccuracyCertified(e.target.checked)}
-              className="mt-0.5 h-4 w-4 accent-foreground"
-              required
-            />
-            <span>
-              I certify that this listing is accurate to the best of my knowledge, including mileage,
-              condition, title status, accident history, images, and documents.
-            </span>
-          </label>
           <Button
             type="submit"
-            disabled={isSubmitting || images.length === 0 || !accuracyCertified || !SELLER_CHECKLIST.every(([key]) => sellerChecklist[key])}
+            disabled={isSubmitting || images.length === 0 || !SELLER_CHECKLIST.every(([key]) => sellerChecklist[key])}
             className="w-full h-12 text-[13px] font-bold uppercase tracking-widest"
           >
             {isSubmitting

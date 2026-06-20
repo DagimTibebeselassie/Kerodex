@@ -1,7 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
-import { Vehicle } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
-import { listVehicles, savedVehicleIds } from '@/lib/api';
+import { useSavedVehicles } from '@/hooks/useSavedVehicles';
 import { Link } from '@tanstack/react-router';
 import { useNavigate } from '@tanstack/react-router';
 import { Button, EmptyState } from '@blinkdotnew/ui';
@@ -10,18 +8,7 @@ import { Heart, MapPin, Gauge, ArrowRight } from 'lucide-react';
 export function SavedVehiclesPage() {
   const { user, login, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
-
-  const { data: savedVehicles, isLoading: savedLoading } = useQuery({
-    queryKey: ['saved-vehicles', user?.id],
-    queryFn: async () => {
-      if (!user) return [];
-      const ids = savedVehicleIds();
-      if (ids.size === 0) return [];
-      const vehicles = await listVehicles();
-      return vehicles.filter((vehicle) => ids.has(vehicle.id)) as Vehicle[];
-    },
-    enabled: !!user,
-  });
+  const { vehicles: savedVehicles, isLoading: savedLoading } = useSavedVehicles(user?.id);
 
   if (authLoading) return <div className="p-12 animate-pulse" />;
 
@@ -53,7 +40,7 @@ export function SavedVehiclesPage() {
             <div key={i} className="aspect-video bg-muted animate-pulse" />
           ))}
         </div>
-      ) : savedVehicles?.length === 0 ? (
+      ) : savedVehicles.length === 0 ? (
         <EmptyState 
           title="No saved vehicles"
           description="Browse the marketplace and heart the listings you love."
@@ -63,7 +50,7 @@ export function SavedVehiclesPage() {
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {savedVehicles?.map((vehicle) => (
+          {savedVehicles.map((vehicle) => (
             <Link 
               key={vehicle.id} 
               to="/vehicle/$id" 

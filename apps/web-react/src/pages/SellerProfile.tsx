@@ -110,6 +110,11 @@ export function SellerProfilePage() {
 
       <section className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-8">
         <div className="space-y-8">
+          {(seller.isDemo || seller.is_demo) && (
+            <div className="border border-amber-300 bg-amber-50/70 p-4 text-[12px] leading-relaxed text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-200">
+              <strong>Demo Seller Profile:</strong> this profile and its listings exist only for demonstration/testing. Contact and reviews are not real marketplace activity.
+            </div>
+          )}
           <div className="flex items-start gap-5">
             <div className="h-20 w-20 rounded-full overflow-hidden bg-foreground text-background flex items-center justify-center text-xl font-black shrink-0">
               <img
@@ -214,8 +219,8 @@ export function SellerProfilePage() {
             </Link>
           </div>
 
-          <Button onClick={openReview} className="w-full h-10 text-[11px] font-bold uppercase tracking-widest">
-            <Star className="h-3.5 w-3.5 mr-2" /> Leave a review
+          <Button onClick={openReview} disabled={Boolean(seller.isDemo || seller.is_demo)} className="w-full h-10 text-[11px] font-bold uppercase tracking-widest">
+            <Star className="h-3.5 w-3.5 mr-2" /> {(seller.isDemo || seller.is_demo) ? 'Demo Reviews Disabled' : 'Leave a review'}
           </Button>
         </aside>
       </section>

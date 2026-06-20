@@ -36,6 +36,7 @@ export interface KerodexUser {
   privacyVersion?: string;
   acceptedPrivacyAt?: string;
   safetyNoticeSeenAt?: string;
+  createdAt?: string;
 }
 
 export interface AuthSession {
@@ -90,11 +91,16 @@ export interface ConversationRecord {
   scamRiskScore?: number;
   scamFlags?: string[];
   moderationStatus?: 'clear' | 'needs_review' | 'high_risk';
+  outcomes?: Record<'buyer' | 'seller', string>;
+  currentUserOutcome?: string;
+  isDemo?: boolean;
 }
 
 export interface SellerProfileRecord {
   id: string;
   name: string;
+  isDemo?: boolean;
+  is_demo?: boolean;
   initials?: string;
   avatarUrl?: string;
   avatarS3Key?: string;
@@ -130,7 +136,7 @@ export interface BuyerPurchaseGuideRecord {
   listingId?: string;
   seller_id?: string;
   sellerId?: string;
-  status: 'active' | 'completed' | 'cancelled';
+  status: 'active' | 'completed' | 'cancelled' | 'abandoned';
   current_step?: string;
   currentStep?: string;
   completed_steps?: string[];
@@ -146,6 +152,52 @@ export interface BuyerPurchaseGuideRecord {
   updatedAt?: string;
   listing?: ListingPayload;
   seller?: SellerProfileRecord | Record<string, any>;
+  journey_type?: 'discovery' | 'purchase';
+  journeyType?: 'discovery' | 'purchase';
+  current_stage?: string;
+  currentStage?: string;
+  buyer_answers?: Record<string, any>;
+  buyerAnswers?: Record<string, any>;
+  buyer_profile?: Record<string, any>;
+  buyerProfile?: Record<string, any>;
+  recommendations?: BuyerGuideRecommendations | null;
+  listing_matches?: BuyerGuideListingMatch[];
+  listingMatches?: BuyerGuideListingMatch[];
+  selected_listing_id?: string | null;
+  selectedListingId?: string | null;
+}
+
+export interface BuyerGuideRecommendedModel {
+  make: string;
+  model: string;
+  reason: string;
+  idealYears: string;
+  idealMileageMax: number;
+  tradeoffs: string[];
+}
+
+export interface BuyerGuideRecommendations {
+  buyerProfileSummary: string;
+  recommendedCategories: string[];
+  recommendedModels: BuyerGuideRecommendedModel[];
+  kerodexFilters: {
+    makes: string[];
+    models: string[];
+    maxPrice: number;
+    bodyTypes: string[];
+    maxMileage: number;
+  };
+  safetyNotes: string[];
+  provider?: string;
+  providerError?: string;
+}
+
+export interface BuyerGuideListingMatch {
+  listing: ListingPayload;
+  score: number;
+  matchLevel: 'best' | 'close' | 'explore';
+  matchReason: string;
+  concerns: string[];
 }
 
 type ListingPayload = Record<string, any>;
@@ -226,6 +278,10 @@ export function toVehicle(listing: ListingPayload): Vehicle {
     createdAt: listing.createdAt || listing.updatedAt || new Date().toISOString(),
     lat: Number(listing.lat || 39.5),
     lng: Number(listing.lng || -98.35),
+    isDemo: Boolean(listing.isDemo || listing.is_demo),
+    is_demo: Boolean(listing.is_demo || listing.isDemo),
+    demoSeedId: listing.demoSeedId || '',
+    demoNotice: listing.demoNotice || '',
   };
 }
 
@@ -443,6 +499,67 @@ export async function startBuyerGuide(listingId: string) {
   return body.guide;
 }
 
+export async function startBuyerGuideDiscovery() {
+  const body = await request<{ session: BuyerPurchaseGuideRecord; guest: boolean }>('/api/buyer-guide/start', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({}),
+  });
+  return body;
+}
+
+export async function respondToBuyerGuide(
+  sessionId: string,
+  payload: { answerKey?: string; value?: any; answers?: Record<string, any>; currentStage?: string; currentStep?: string }
+) {
+  const body = await request<{ session: BuyerPurchaseGuideRecord }>('/api/buyer-guide/respond', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ sessionId, ...payload }),
+  });
+  return body.session;
+}
+
+export async function getBuyerGuideRecommendations(sessionId: string, answers: Record<string, any>) {
+  return request<{
+    session: BuyerPurchaseGuideRecord;
+    recommendations: BuyerGuideRecommendations;
+    matches: BuyerGuideListingMatch[];
+    fallbackUsed: boolean;
+  }>('/api/buyer-guide/recommendations', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ sessionId, answers }),
+  });
+}
+
+export async function getBuyerGuideSession(sessionId: string) {
+  const body = await request<{ session: BuyerPurchaseGuideRecord }>(`/api/buyer-guide/session/${encodeURIComponent(sessionId)}`, {
+    headers: authHeaders(),
+  });
+  return body.session;
+}
+
+export async function updateBuyerGuideSession(sessionId: string, payload: Partial<BuyerPurchaseGuideRecord>) {
+  const body = await request<{ session: BuyerPurchaseGuideRecord }>(`/api/buyer-guide/session/${encodeURIComponent(sessionId)}`, {
+    method: 'PATCH',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+  return body.session;
+}
+
+export async function selectBuyerGuideListing(sessionId: string, listingId: string) {
+  return request<{ session: BuyerPurchaseGuideRecord; guide: BuyerPurchaseGuideRecord }>(
+    `/api/buyer-guide/session/${encodeURIComponent(sessionId)}/listing/${encodeURIComponent(listingId)}`,
+    {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({}),
+    }
+  );
+}
+
 export async function listBuyerGuides() {
   const body = await request<{ guides: BuyerPurchaseGuideRecord[] }>('/api/buyer-guides', {
     headers: authHeaders(),
@@ -467,7 +584,7 @@ export async function updateBuyerGuide(id: string, payload: Partial<BuyerPurchas
 }
 
 export async function trackAnalyticsEvent(payload: {
-  eventType: 'page_view' | 'listing_view' | 'search_performed' | 'filter_used' | 'save_listing' | 'unsave_listing';
+  eventType: 'page_view' | 'listing_view' | 'listing_viewed' | 'search_performed' | 'filter_used' | 'save_listing' | 'unsave_listing' | 'listing_started' | 'listing_photos_uploaded' | 'seller_contact_clicked' | 'buyer_guide_started' | 'buyer_guide_completed';
   route?: string;
   listingId?: string;
   query?: string;
@@ -634,6 +751,80 @@ export async function listMyVehicles() {
   return body.listings.map(toVehicle);
 }
 
+export async function listMyListingAnalytics() {
+  const body = await request<{ analytics: Array<{ listing: ListingPayload; metrics: Record<string, any> }> }>('/api/me/listing-analytics', {
+    headers: authHeaders(),
+  });
+  return body.analytics.map((item) => ({ listing: toVehicle(item.listing), metrics: item.metrics }));
+}
+
+export async function updateListingStatus(
+  listingId: string,
+  payload: {
+    status: 'sold' | 'active';
+    soldSource?: 'kerodex' | 'elsewhere' | 'prefer_not_to_say';
+    finalSalePrice?: number | null;
+    wouldUseAgain?: 'yes' | 'maybe' | 'no';
+    feedbackText?: string;
+  }
+) {
+  const body = await request<{ listing: ListingPayload }>(`/api/listings/${encodeURIComponent(listingId)}/status`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+  return toVehicle(body.listing);
+}
+
+export async function removeListing(listingId: string) {
+  const body = await request<{ listing: ListingPayload }>(`/api/listings/${encodeURIComponent(listingId)}`, {
+    method: 'DELETE',
+    headers: authHeaders(),
+  });
+  return toVehicle(body.listing);
+}
+
+export async function updateConversationOutcome(conversationId: string, status: string) {
+  const body = await request<{ conversation: ConversationRecord }>(`/api/conversations/${encodeURIComponent(conversationId)}/outcome`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ status }),
+  });
+  return body.conversation;
+}
+
+export async function listBuyerFollowups() {
+  return request<{ prompts: Array<{ listingId: string; conversationId: string; vehicleTitle: string; createdAt: string }>; responses: any[] }>('/api/me/followups', {
+    headers: authHeaders(),
+  });
+}
+
+export async function answerBuyerFollowup(payload: {
+  listingId: string;
+  conversationId: string;
+  answer: string;
+  feedbackText?: string;
+}) {
+  return request<{ followup: any }>('/api/me/followups', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function submitFeedback(payload: {
+  listingId?: string;
+  context: string;
+  rating?: number;
+  responseText?: string;
+}) {
+  return request<{ feedback: any }>('/api/feedback', {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function startPersonaVerification() {
   return request<{ url: string; status: string; referenceId: string }>('/api/me/persona/start', {
     method: 'POST',
@@ -678,21 +869,50 @@ export async function markConversationRead(conversationId: string) {
   return body.conversation;
 }
 
-export function saveVehicleLocal(vehicleId: string, saved: boolean) {
-  const user = currentUser();
-  const key = user ? `kerodex-saved-vehicles:${user.id}` : 'kerodex-saved-vehicles:guest';
-  const ids = new Set(JSON.parse(localStorage.getItem(key) || '[]') as string[]);
-  if (saved) ids.add(vehicleId);
-  else ids.delete(vehicleId);
-  localStorage.setItem(key, JSON.stringify([...ids]));
-  trackAnalyticsEvent({ eventType: saved ? 'save_listing' : 'unsave_listing', listingId: vehicleId });
-  window.dispatchEvent(new CustomEvent('kerodex:saved-changed'));
+interface SavedVehiclesResponse {
+  listingIds: string[];
+  listings: ListingPayload[];
+  count: number;
 }
 
-export function savedVehicleIds() {
+function legacySavedVehicleKey(userId: string) {
+  return `kerodex-saved-vehicles:${userId}`;
+}
+
+export async function listSavedVehicles() {
   const user = currentUser();
-  const key = user ? `kerodex-saved-vehicles:${user.id}` : 'kerodex-saved-vehicles:guest';
-  return new Set(JSON.parse(localStorage.getItem(key) || '[]') as string[]);
+  if (!user) return { listingIds: [], vehicles: [], count: 0 };
+
+  const legacyKey = legacySavedVehicleKey(user.id);
+  let legacyIds: string[] = [];
+  try {
+    legacyIds = JSON.parse(localStorage.getItem(legacyKey) || '[]') as string[];
+  } catch {
+    legacyIds = [];
+  }
+
+  const path = legacyIds.length ? '/api/me/saved/sync' : '/api/me/saved';
+  const body = await request<SavedVehiclesResponse>(path, {
+    method: legacyIds.length ? 'POST' : 'GET',
+    headers: authHeaders(),
+    ...(legacyIds.length ? { body: JSON.stringify({ listingIds: legacyIds }) } : {}),
+  });
+  localStorage.removeItem(legacyKey);
+  return {
+    listingIds: body.listingIds,
+    vehicles: body.listings.map(toVehicle),
+    count: body.count,
+  };
+}
+
+export async function setVehicleSaved(vehicleId: string, saved: boolean) {
+  const body = await request<{ saved: boolean; listing: ListingPayload }>(`/api/listings/${encodeURIComponent(vehicleId)}/favorite`, {
+    method: 'POST',
+    headers: authHeaders(),
+    body: JSON.stringify({ saved }),
+  });
+  window.dispatchEvent(new CustomEvent('kerodex:saved-changed'));
+  return { saved: body.saved, vehicle: toVehicle(body.listing) };
 }
 
 export interface AdminAccount {
@@ -749,12 +969,20 @@ export async function adminLogout() {
   }
 }
 
-export async function adminDashboard() {
-  return request<Record<string, any>>('/api/admin/dashboard', { headers: adminHeaders() });
+export async function adminDashboard(includeDemo = false) {
+  return request<Record<string, any>>(`/api/admin/dashboard?includeDemo=${includeDemo ? 'true' : 'false'}`, { headers: adminHeaders() });
 }
 
-export async function adminAnalytics() {
-  return request<Record<string, any>>('/api/admin/analytics', { headers: adminHeaders() });
+export async function adminAnalytics(includeDemo = false) {
+  return request<Record<string, any>>(`/api/admin/analytics?includeDemo=${includeDemo ? 'true' : 'false'}`, { headers: adminHeaders() });
+}
+
+export async function adminCosts() {
+  return request<Record<string, any>>('/api/admin/costs', { headers: adminHeaders() });
+}
+
+export async function adminFeedback() {
+  return request<Record<string, any>>('/api/admin/feedback', { headers: adminHeaders() });
 }
 
 export async function adminActivity(params: Record<string, string | number> = {}) {

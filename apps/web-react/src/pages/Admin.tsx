@@ -6,8 +6,10 @@ import {
   adminApplyAction,
   adminActivity,
   adminAnalytics,
+  adminCosts,
   adminCollection,
   adminDashboard,
+  adminFeedback,
   adminItem,
   adminLogin,
   adminLogout,
@@ -32,10 +34,12 @@ import {
   TrendingUp,
   Users,
   Eye,
+  DollarSign,
+  Star,
   X,
 } from 'lucide-react';
 
-type AdminTab = 'overview' | 'activity' | 'users' | 'listings' | 'verifications' | 'reports' | 'analytics' | 'logs';
+type AdminTab = 'overview' | 'activity' | 'users' | 'listings' | 'verifications' | 'reports' | 'analytics' | 'costs' | 'feedback' | 'logs';
 type PendingAction = { id: string; action: string; label: string; record: string } | null;
 type DetailRecord = { collection: string; id: string; title: string } | null;
 
@@ -47,17 +51,21 @@ const tabs: Array<{ id: AdminTab; label: string; icon: ReactNode }> = [
   { id: 'verifications', label: 'Verifications', icon: <ClipboardCheck className="h-4 w-4" /> },
   { id: 'reports', label: 'Reports', icon: <FileWarning className="h-4 w-4" /> },
   { id: 'analytics', label: 'Analytics', icon: <BarChart3 className="h-4 w-4" /> },
+  { id: 'costs', label: 'Costs', icon: <DollarSign className="h-4 w-4" /> },
+  { id: 'feedback', label: 'Feedback', icon: <Star className="h-4 w-4" /> },
   { id: 'logs', label: 'Admin Logs', icon: <Shield className="h-4 w-4" /> },
 ];
 
 const statusOptions: Record<AdminTab, string[]> = {
   overview: [],
   users: ['active', 'suspended', 'banned', 'deleted'],
-  listings: ['active', 'pending_verification', 'removed', 'rejected', 'flagged', 'sold', 'vehicle_presence_verified'],
+  listings: ['demo', 'real', 'active', 'pending_verification', 'removed', 'rejected', 'flagged', 'sold', 'vehicle_presence_verified'],
   verifications: ['pending', 'manual_review_required', 'approved', 'rejected', 'verified'],
   reports: ['open', 'reviewing', 'resolved', 'dismissed', 'escalated', 'warning_sent'],
   activity: [],
   analytics: [],
+  costs: [],
+  feedback: [],
   logs: [],
 };
 
@@ -93,6 +101,8 @@ const actionOptions: Record<AdminTab, Array<{ action: string; label: string; ton
   ],
   activity: [],
   analytics: [],
+  costs: [],
+  feedback: [],
   logs: [],
 };
 
@@ -222,6 +232,8 @@ function Overview({ dashboard }: { dashboard: Record<string, any> }) {
     ['Active this week', cards.activeUsers7d, <TrendingUp className="h-4 w-4" />],
     ['Verified users', cards.verifiedUsers, <BadgeCheck className="h-4 w-4" />],
     ['Listings', cards.totalListings, <Car className="h-4 w-4" />],
+    ['Demo listings', cards.demoListings, <Car className="h-4 w-4" />],
+    ['Real listings', cards.realListings, <Car className="h-4 w-4" />],
     ['Active listings', cards.activeListings, <BadgeCheck className="h-4 w-4" />],
     ['Pending listings', cards.pendingListings, <AlertTriangle className="h-4 w-4" />],
     ['Vehicles sold', cards.vehiclesSold, <Car className="h-4 w-4" />],
@@ -229,6 +241,8 @@ function Overview({ dashboard }: { dashboard: Record<string, any> }) {
     ['Reports open', cards.reportsSubmitted, <FileWarning className="h-4 w-4" />],
     ['Verification queue', cards.pendingVerificationRequests, <ClipboardCheck className="h-4 w-4" />],
     ['Fraud flags', cards.fraudFlagsTriggered, <Shield className="h-4 w-4" />],
+    ['Buyer Guide sessions', cards.buyerGuideSessions, <ClipboardCheck className="h-4 w-4" />],
+    ['Guides completed', cards.buyerGuideCompleted, <BadgeCheck className="h-4 w-4" />],
   ];
 
   return (
@@ -271,7 +285,7 @@ function Overview({ dashboard }: { dashboard: Record<string, any> }) {
           ))}
         </div>
       </section>
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-4">
         <MetricList title="User operations" items={[
           { label: 'Unverified users', value: cards.unverifiedUsers || 0 },
           { label: 'Banned users', value: cards.bannedUsers || 0 },
@@ -293,13 +307,49 @@ function Overview({ dashboard }: { dashboard: Record<string, any> }) {
           { label: 'Suspicious-user conversations', value: cards.suspiciousConversations || 0 },
           { label: 'Reports under review', value: cards.reportsReviewing || 0 },
         ]} />
+        <MetricList title="Buyer Guide" items={[
+          { label: 'Active sessions', value: Math.max(0, Number(cards.buyerGuideSessions || 0) - Number(cards.buyerGuideCompleted || 0) - Number(cards.buyerGuideAbandoned || 0)) },
+          { label: 'Completed sessions', value: cards.buyerGuideCompleted || 0 },
+          { label: 'Abandoned sessions', value: cards.buyerGuideAbandoned || 0 },
+          { label: 'Selected listings', value: cards.buyerGuideSelectedListings || 0 },
+          { label: 'Safety flags triggered', value: cards.buyerGuideSafetyFlags || 0 },
+        ]} />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <MetricList title="Transaction outcomes" items={[
+          { label: 'Sold through Kerodex', value: cards.soldThroughKerodex || 0 },
+          { label: 'Sold elsewhere', value: cards.soldElsewhere || 0 },
+          { label: 'Unknown sold source', value: cards.soldSourceUnknown || 0 },
+          { label: 'Buyer follow-up responses', value: cards.buyerFollowupResponses || 0 },
+          { label: 'Buyer purchases through Kerodex', value: cards.buyerPurchasesThroughKerodex || 0 },
+          { label: 'Seller would use again', value: cards.sellerWouldUseAgainYes || 0 },
+        ]} />
+        <MetricList title="Verification outcomes" items={[
+          { label: 'Phone attempts', value: cards.phoneVerificationAttempts || 0 },
+          { label: 'Phone passed / failed', value: `${cards.phoneVerificationPassed || 0} / ${cards.phoneVerificationFailed || 0}` },
+          { label: 'Persona attempts', value: cards.personaVerificationAttempts || 0 },
+          { label: 'Persona passed / failed', value: `${cards.personaVerificationPassed || 0} / ${cards.personaVerificationFailed || 0}` },
+          { label: 'Vehicle presence attempts', value: cards.vehiclePresenceAttempts || 0 },
+          { label: 'Vehicle passed / failed', value: `${cards.vehiclePresencePassed || 0} / ${cards.vehiclePresenceFailed || 0}` },
+        ]} />
+        <MetricList title="Platform costs and feedback" items={[
+          { label: 'Estimated cost (30d)', value: `$${Number(cards.estimatedCost30d || 0).toFixed(4)}` },
+          { label: 'Failed paid calls', value: cards.failedPaidCalls || 0 },
+          { label: 'Feedback responses', value: cards.feedbackResponses || 0 },
+        ]} />
       </div>
       <div className="grid gap-4 lg:grid-cols-2">
         <MetricList title="Listings by status" items={dashboard.breakdowns?.listingsByStatus} />
+        <MetricList title="Common Buyer Guide recommendations" items={dashboard.breakdowns?.buyerGuideRecommendedModels} />
+        <MetricList title="Costs by service" items={(dashboard.breakdowns?.costsByService || []).map((item: any) => ({ label: item.label, value: `$${Number(item.value || 0).toFixed(4)}` }))} />
         <MetricList title="Recent admin actions" items={(dashboard.recent?.adminActions || []).slice(0, 8).map((item: any) => ({
           label: `${item.actionType || 'action'} / ${item.targetId || ''}`,
           value: formatDate(item.timestamp),
         }))} />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <MetricList title="Seller funnel" items={dashboard.sellerFunnel} />
+        <MetricList title="Buyer funnel" items={dashboard.buyerFunnel} />
       </div>
     </div>
   );
@@ -340,7 +390,9 @@ function AdminTable({
         <tbody>
           {items.map((item) => {
             const title = item.fullName || item.title || item.listingTitle || item.type || item.actionType || item.id;
-            const subtitle = item.email || item.seller || item.vehicleVin || item.reporter || item.adminAccount || item.id;
+            const subtitle = item.isDemo
+              ? `Demo Listing · ${item.seller || item.id}`
+              : item.email || item.seller || item.vehicleVin || item.reporter || item.adminAccount || item.id;
             const status = item.status || item.verificationStatus || item.riskLevel || item.actionType;
             const details = tab === 'listings'
               ? `${item.vin || 'No VIN'} • ${item.location || 'No location'} • ${money(item.price)}`
@@ -506,6 +558,59 @@ function AnalyticsView({ analytics, dashboard }: { analytics: Record<string, any
   );
 }
 
+function CostsView({ data }: { data: Record<string, any> }) {
+  const summary = data.summary || {};
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard label="Today" value={`$${Number(summary.today || 0).toFixed(4)}`} icon={<DollarSign className="h-4 w-4" />} />
+        <StatCard label="Last 7 days" value={`$${Number(summary.last7Days || 0).toFixed(4)}`} icon={<DollarSign className="h-4 w-4" />} />
+        <StatCard label="Last 30 days" value={`$${Number(summary.last30Days || 0).toFixed(4)}`} icon={<DollarSign className="h-4 w-4" />} />
+        <StatCard label="Failed paid calls" value={summary.failedCalls || 0} icon={<AlertTriangle className="h-4 w-4" />} />
+      </div>
+      <MetricList title="Cost by service" items={(data.byService || []).map((item: any) => ({ label: item.service, value: `$${Number(item.cost || 0).toFixed(4)}` }))} />
+      <section className="border border-border bg-card p-5">
+        <h3 className="font-semibold">Recent cost records</h3>
+        <div className="mt-4 space-y-2">
+          {(data.records || []).slice(0, 30).map((record: any) => (
+            <div key={record.id} className="grid gap-2 border-b border-border py-2 text-xs sm:grid-cols-5">
+              <span className="font-semibold">{record.serviceName}</span>
+              <span>{record.actionType}</span>
+              <span>{record.status}</span>
+              <span>${Number(record.estimatedCost || 0).toFixed(4)}</span>
+              <span className="text-muted-foreground">{formatDate(record.createdAt)}</span>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function FeedbackView({ data }: { data: Record<string, any> }) {
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-4 sm:grid-cols-2">
+        <StatCard label="Responses" value={data.summary?.total || 0} icon={<MessageSquare className="h-4 w-4" />} />
+        <StatCard label="Average rating" value={data.summary?.averageRating ?? '—'} icon={<Star className="h-4 w-4" />} />
+      </div>
+      <MetricList title="Feedback contexts" items={(data.summary?.byContext || []).map((item: any) => ({ label: item.context, value: item.count }))} />
+      <section className="border border-border bg-card p-5">
+        <h3 className="font-semibold">Recent feedback</h3>
+        <div className="mt-4 space-y-3">
+          {(data.records || []).slice(0, 40).map((record: any) => (
+            <div key={record.id} className="border-b border-border pb-3 text-sm">
+              <div className="flex justify-between gap-3"><strong>{record.context}</strong><span>{record.rating ? `${record.rating}/5` : 'No rating'}</span></div>
+              {record.responseText && <p className="mt-1 text-muted-foreground">{record.responseText}</p>}
+              <p className="mt-1 text-[11px] text-muted-foreground">{formatDate(record.createdAt)}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function ActivityView({
   data,
   loading,
@@ -638,6 +743,7 @@ export function AdminPage() {
   const [activitySource, setActivitySource] = useState('');
   const [activityDateFrom, setActivityDateFrom] = useState('');
   const [activityDateTo, setActivityDateTo] = useState('');
+  const [includeDemo, setIncludeDemo] = useState(false);
 
   const sessionQuery = useQuery({
     queryKey: ['admin-session'],
@@ -647,16 +753,26 @@ export function AdminPage() {
   });
 
   const dashboardQuery = useQuery({
-    queryKey: ['admin-dashboard'],
-    queryFn: adminDashboard,
+    queryKey: ['admin-dashboard', includeDemo],
+    queryFn: () => adminDashboard(includeDemo),
     enabled: !!admin,
     refetchInterval: 30000,
   });
 
   const analyticsQuery = useQuery({
-    queryKey: ['admin-analytics'],
-    queryFn: adminAnalytics,
+    queryKey: ['admin-analytics', includeDemo],
+    queryFn: () => adminAnalytics(includeDemo),
     enabled: !!admin && tab === 'analytics',
+  });
+  const costsQuery = useQuery({
+    queryKey: ['admin-costs'],
+    queryFn: adminCosts,
+    enabled: !!admin && tab === 'costs',
+  });
+  const feedbackQuery = useQuery({
+    queryKey: ['admin-feedback'],
+    queryFn: adminFeedback,
+    enabled: !!admin && tab === 'feedback',
   });
 
   const activityQuery = useQuery({
@@ -676,7 +792,7 @@ export function AdminPage() {
   const collectionQuery = useQuery({
     queryKey: ['admin-collection', collectionName, q, status],
     queryFn: () => adminCollection(collectionName, { q, status, pageSize: 50 }),
-    enabled: !!admin && !['overview', 'activity', 'analytics'].includes(tab),
+    enabled: !!admin && !['overview', 'activity', 'analytics', 'costs', 'feedback'].includes(tab),
   });
 
   const detailQuery = useQuery({
@@ -775,6 +891,10 @@ export function AdminPage() {
               <p className="mt-2 text-sm text-muted-foreground">Live platform controls backed by Kerodex API data.</p>
             </div>
             <div className="flex items-center gap-2">
+              <label className="flex items-center gap-2 border border-border px-3 py-2 text-[11px] font-bold uppercase tracking-wider">
+                <input type="checkbox" checked={includeDemo} onChange={(event) => setIncludeDemo(event.target.checked)} />
+                Include demo data
+              </label>
               <Button
                 variant="outline"
                 onClick={async () => {
@@ -821,6 +941,18 @@ export function AdminPage() {
             ) : (
               <AnalyticsView analytics={analyticsQuery.data || {}} dashboard={dashboardQuery.data || {}} />
             )
+          ) : tab === 'costs' ? (
+            costsQuery.isLoading ? (
+              <div className="flex h-64 items-center justify-center"><Loader2 className="h-5 w-5 animate-spin" /></div>
+            ) : costsQuery.isError ? (
+              <div className="border border-destructive/40 p-6 text-sm text-destructive">Unable to load cost analytics.</div>
+            ) : <CostsView data={costsQuery.data || {}} />
+          ) : tab === 'feedback' ? (
+            feedbackQuery.isLoading ? (
+              <div className="flex h-64 items-center justify-center"><Loader2 className="h-5 w-5 animate-spin" /></div>
+            ) : feedbackQuery.isError ? (
+              <div className="border border-destructive/40 p-6 text-sm text-destructive">Unable to load feedback.</div>
+            ) : <FeedbackView data={feedbackQuery.data || {}} />
           ) : tab === 'activity' ? (
             <div className="space-y-5">
               <Input value={q} onChange={(event) => setQ(event.target.value)} placeholder="Search platform activity..." />

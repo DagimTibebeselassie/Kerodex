@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useAuth } from '@/hooks/useAuth';
-import { Button, Input } from '@blinkdotnew/ui';
-import { listMyVehicles } from '@/lib/api';
+import { Button, Input, toast } from '@blinkdotnew/ui';
+import { listMyListingAnalytics, removeListing, updateListingStatus } from '@/lib/api';
 import {
   Plus, BarChart3, MessageSquare, Car, ExternalLink, Eye, Heart,
   Pencil, Trash2, BadgeCheck, TrendingUp, DollarSign, AlertTriangle,
@@ -55,6 +55,11 @@ interface MockListing {
   views: number;
   saves: number;
   messages: number;
+  conversations: number;
+  uniqueViewers: number;
+  contactClicks: number;
+  verificationStatus: string;
+  reportCount: number;
   images: string[];
   daysListed: number;
   dealScore: 'great' | 'good' | 'fair' | null;
@@ -119,9 +124,13 @@ function StatCard({ icon, label, value, sub }: {
 function ListingCard({
   listing,
   onDelete,
+  onMarkSold,
+  onMarkAvailable,
 }: {
   listing: MockListing;
   onDelete: (id: string) => void;
+  onMarkSold: (listing: MockListing) => void;
+  onMarkAvailable: (id: string) => void;
 }) {
   const tips = listingTips(listing);
 
@@ -154,10 +163,14 @@ function ListingCard({
               <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-1 border ${
                 listing.status === 'active'
                   ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                  : listing.status === 'sold'
+                    ? 'border-border bg-muted text-muted-foreground'
                   : 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400'
               }`}>
                 {listing.status === 'active'
                   ? 'Active'
+                  : listing.status === 'sold'
+                    ? 'Sold'
                   : listing.status === 'pending_verification' || listing.status === 'verification_in_progress'
                     ? 'Pending verification'
                     : 'Draft'}
@@ -228,7 +241,7 @@ function ListingCard({
       )}
 
       {/* Stats row */}
-      {listing.status === 'active' && (
+      {['active', 'sold'].includes(listing.status) && (
         <div className="flex items-center gap-4 text-[12px] text-muted-foreground border-t border-border pt-3">
           <span className="flex items-center gap-1.5">
             <Eye className="h-3.5 w-3.5" />
@@ -240,8 +253,10 @@ function ListingCard({
           </span>
           <span className="flex items-center gap-1.5">
             <MessageSquare className="h-3.5 w-3.5" />
-            {listing.messages} messages
+            {listing.conversations} conversations
           </span>
+          <span>{listing.verificationStatus.replace(/_/g, ' ')}</span>
+          <span>{listing.daysListed} days active</span>
         </div>
       )}
 
@@ -267,6 +282,23 @@ function ListingCard({
             Edit
           </button>
         </Link>
+        {listing.status === 'active' && (
+          <button
+            onClick={() => onMarkSold(listing)}
+            className="flex items-center gap-1.5 h-8 px-3 text-[11px] font-bold uppercase tracking-wider border border-border hover:border-foreground/30 transition-colors"
+          >
+            <CheckCircle2 className="h-3 w-3" />
+            Mark Sold
+          </button>
+        )}
+        {listing.status === 'sold' && (
+          <button
+            onClick={() => onMarkAvailable(listing.id)}
+            className="flex items-center gap-1.5 h-8 px-3 text-[11px] font-bold uppercase tracking-wider border border-border hover:border-foreground/30 transition-colors"
+          >
+            Mark Available
+          </button>
+        )}
         <button
           onClick={() => onDelete(listing.id)}
           className="flex items-center gap-1.5 h-8 px-3 text-[11px] font-bold uppercase tracking-wider border border-border hover:border-destructive/30 hover:text-destructive transition-colors ml-auto"
@@ -424,14 +456,20 @@ export function SellerCockpitPage() {
   const [activeTab, setActiveTab] = useState<'listings' | 'analytics' | 'vin'>('listings');
   const [vinResult, setVinResult] = useState<VinResult | null>(null);
   const [listings, setListings] = useState<MockListing[]>([]);
+  const [soldListing, setSoldListing] = useState<MockListing | null>(null);
+  const [soldSource, setSoldSource] = useState<'kerodex' | 'elsewhere' | 'prefer_not_to_say'>('kerodex');
+  const [finalSalePrice, setFinalSalePrice] = useState('');
+  const [wouldUseAgain, setWouldUseAgain] = useState<'yes' | 'maybe' | 'no'>('yes');
+  const [saleFeedback, setSaleFeedback] = useState('');
+  const [statusSaving, setStatusSaving] = useState(false);
 
   useEffect(() => {
     if (!user) return;
     let alive = true;
-    listMyVehicles()
-      .then((vehicles) => {
+    listMyListingAnalytics()
+      .then((records) => {
         if (!alive) return;
-        setListings(vehicles.map((v: any) => ({
+        setListings(records.map(({ listing: v, metrics }: any) => ({
           id: v.id,
           make: v.make,
           model: v.model,
@@ -439,13 +477,18 @@ export function SellerCockpitPage() {
           price: v.price,
           mileage: v.mileage,
           location: v.location,
-          status: v.status === 'sold' ? 'active' : (v.status || 'active'),
+          status: v.status || 'active',
           completeness: listingCompleteness(v),
-          views: numberField(v.views),
-          saves: numberField(v.favorites || v.saves),
-          messages: numberField(v.inquiries || v.messages),
+          views: numberField(metrics.views),
+          uniqueViewers: numberField(metrics.uniqueViewers),
+          saves: numberField(metrics.saves),
+          messages: numberField(metrics.messagesReceived),
+          conversations: numberField(metrics.conversations),
+          contactClicks: numberField(metrics.contactClicks),
+          verificationStatus: metrics.verificationStatus || 'not_started',
+          reportCount: numberField(metrics.reportCount),
           images: v.images,
-          daysListed: daysSince(v.createdAt),
+          daysListed: numberField(metrics.daysActive) || daysSince(v.createdAt),
           dealScore: Number(v.fairValueDelta) < -1000 ? 'great' : Number(v.fairValueDelta) < 0 ? 'good' : Number.isFinite(Number(v.fairValueDelta)) ? 'fair' : null,
           createdAt: v.createdAt,
           sellerNotification: v.sellerNotification,
@@ -457,7 +500,46 @@ export function SellerCockpitPage() {
 
   const handleDelete = (id: string) => {
     if (confirm('Delete this listing permanently?')) {
-      setListings((prev) => prev.filter((l) => l.id !== id));
+      removeListing(id)
+        .then(() => {
+          setListings((prev) => prev.map((listing) => listing.id === id ? { ...listing, status: 'removed' } : listing));
+          toast.success('Listing removed.');
+        })
+        .catch((error) => toast.error(error?.message || 'Unable to remove listing.'));
+    }
+  };
+
+  const handleMarkAvailable = async (id: string) => {
+    try {
+      await updateListingStatus(id, { status: 'active' });
+      setListings((current) => current.map((listing) => listing.id === id ? { ...listing, status: 'active' } : listing));
+      toast.success('Listing is available again.');
+    } catch (error: any) {
+      toast.error(error?.message || 'Unable to update listing.');
+    }
+  };
+
+  const submitSoldOutcome = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!soldListing) return;
+    setStatusSaving(true);
+    try {
+      await updateListingStatus(soldListing.id, {
+        status: 'sold',
+        soldSource,
+        finalSalePrice: finalSalePrice ? Number(finalSalePrice) : null,
+        wouldUseAgain,
+        feedbackText: saleFeedback,
+      });
+      setListings((current) => current.map((listing) => listing.id === soldListing.id ? { ...listing, status: 'sold' } : listing));
+      setSoldListing(null);
+      setFinalSalePrice('');
+      setSaleFeedback('');
+      toast.success('Listing marked sold.');
+    } catch (error: any) {
+      toast.error(error?.message || 'Unable to mark listing sold.');
+    } finally {
+      setStatusSaving(false);
     }
   };
 
@@ -494,6 +576,46 @@ export function SellerCockpitPage() {
 
   return (
     <div className="animate-fade-in px-4 md:px-6 py-10 max-w-screen-xl mx-auto">
+      {soldListing && (
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-background/80 px-4 backdrop-blur-sm">
+          <form onSubmit={submitSoldOutcome} className="w-full max-w-lg border border-border bg-background p-6 shadow-2xl space-y-5">
+            <div>
+              <h2 className="text-xl font-black">Mark as sold</h2>
+              <p className="mt-1 text-[13px] text-muted-foreground">
+                {soldListing.year} {soldListing.make} {soldListing.model}
+              </p>
+            </div>
+            <label className="block space-y-2 text-[12px] font-bold">
+              <span>Did it sell through Kerodex?</span>
+              <select value={soldSource} onChange={(event) => setSoldSource(event.target.value as typeof soldSource)} className="h-10 w-full border border-border bg-background px-3 font-normal">
+                <option value="kerodex">Yes, through Kerodex</option>
+                <option value="elsewhere">No, sold somewhere else</option>
+                <option value="prefer_not_to_say">Prefer not to say</option>
+              </select>
+            </label>
+            <label className="block space-y-2 text-[12px] font-bold">
+              <span>Final sale price (optional)</span>
+              <Input type="number" min="0" value={finalSalePrice} onChange={(event) => setFinalSalePrice(event.target.value)} placeholder="Final sale price" />
+            </label>
+            <label className="block space-y-2 text-[12px] font-bold">
+              <span>Would you use Kerodex again?</span>
+              <select value={wouldUseAgain} onChange={(event) => setWouldUseAgain(event.target.value as typeof wouldUseAgain)} className="h-10 w-full border border-border bg-background px-3 font-normal">
+                <option value="yes">Yes</option>
+                <option value="maybe">Maybe</option>
+                <option value="no">No</option>
+              </select>
+            </label>
+            <label className="block space-y-2 text-[12px] font-bold">
+              <span>Feedback (optional)</span>
+              <textarea value={saleFeedback} onChange={(event) => setSaleFeedback(event.target.value)} rows={3} className="w-full border border-border bg-background p-3 font-normal" />
+            </label>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setSoldListing(null)}>Cancel</Button>
+              <Button type="submit" disabled={statusSaving}>{statusSaving ? 'Saving...' : 'Mark Sold'}</Button>
+            </div>
+          </form>
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-10">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary mb-1">Seller Tools</p>
@@ -608,7 +730,13 @@ export function SellerCockpitPage() {
             </div>
           ) : (
             listings.map((listing) => (
-              <ListingCard key={listing.id} listing={listing} onDelete={handleDelete} />
+              <ListingCard
+                key={listing.id}
+                listing={listing}
+                onDelete={handleDelete}
+                onMarkSold={setSoldListing}
+                onMarkAvailable={handleMarkAvailable}
+              />
             ))
           )}
         </div>

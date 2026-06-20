@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router';
 import { Heart, X, MapPin, Gauge, CheckCircle2 } from 'lucide-react';
 import { Vehicle } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
-import { saveVehicleLocal, savedVehicleIds } from '@/lib/api';
+import { useSavedVehicles } from '@/hooks/useSavedVehicles';
 import { toast } from '@blinkdotnew/ui';
 import { VerifiedSellerBadge } from './VerifiedSellerTrust';
 
@@ -14,6 +14,7 @@ interface MapViewProps {
   className?: string;
   isDark?: boolean;
   userLocation?: { lat: number; lng: number } | null;
+  locationFocusRequest?: number;
 }
 
 function pseudoGeo(id: string): [number, number] {
@@ -145,6 +146,11 @@ function PopupCard({
 
           {/* Badges */}
           <div className="hidden items-center gap-1.5 flex-wrap sm:flex">
+            {vehicle.isDemo && (
+              <span className="inline-flex items-center gap-1 border border-foreground px-2 py-1 text-[10px] font-black uppercase tracking-wider">
+                Demo Listing
+              </span>
+            )}
             {vehicle.seller?.verified && <VerifiedSellerBadge />}
             <span className={[
               'inline-flex items-center gap-1 border border-border px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground',
@@ -176,6 +182,7 @@ export function MapView({
   className = '',
   isDark = false,
   userLocation = null,
+  locationFocusRequest = 0,
 }: MapViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
@@ -183,10 +190,11 @@ export function MapView({
   const markersRef = useRef<any[]>([]);
 
   const [activeVehicle, setActiveVehicle] = useState<Vehicle | null>(null);
-  const [savedIds, setSavedIds] = useState<Set<string>>(() => savedVehicleIds());
+  const { user, login } = useAuth();
+  const savedVehicles = useSavedVehicles(user?.id);
+  const savedIds = savedVehicles.savedIds;
   const [mapReady, setMapReady] = useState(false);
   const [tileFailed, setTileFailed] = useState(false);
-  const { user, login } = useAuth();
 
   // Sync active vehicle with selectedId prop
   useEffect(() => {
@@ -343,34 +351,36 @@ export function MapView({
 
       if (bounds.length > 0 && !selectedId) {
         try {
-          if (userLocation) {
-            map.setView([userLocation.lat, userLocation.lng], 11, { animate: true });
-          } else {
-            map.fitBounds(L.latLngBounds(bounds), { padding: [40, 40], maxZoom: 10 });
-          }
+          map.fitBounds(L.latLngBounds(bounds), { padding: [40, 40], maxZoom: 10 });
         } catch { /* ignore */ }
       }
     });
-  }, [vehicles, selectedId, isDark, onSelectPin, mapReady, userLocation]);
+  }, [vehicles, selectedId, isDark, onSelectPin, mapReady]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady || !userLocation) return;
+    map.invalidateSize();
+    map.setView([userLocation.lat, userLocation.lng], 11, { animate: false });
+  }, [userLocation, locationFocusRequest, mapReady]);
 
   const handleClose = () => {
     setActiveVehicle(null);
     onSelectPin?.(null);
   };
 
-  const handleSave = (id: string) => {
+  const handleSave = async (id: string) => {
     if (!user) {
       login();
       toast.error('Sign in to save vehicles.');
       return;
     }
-    setSavedIds((prev) => {
-      const next = new Set(prev);
-      const saved = !next.has(id);
-      saved ? next.add(id) : next.delete(id);
-      saveVehicleLocal(id, saved);
-      return next;
-    });
+    const saved = !savedIds.has(id);
+    try {
+      await savedVehicles.setSaved(id, saved);
+    } catch (error: any) {
+      toast.error(error?.message || 'Unable to update saved vehicles.');
+    }
   };
 
   return (

@@ -1,7 +1,8 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useParams, Link } from '@tanstack/react-router';
-import { createReport, createUploadUrl, getVehicle, listVehicles, saveVehicleLocal, savedVehicleIds, startBuyerGuide, startConversation, updateVehicle } from '@/lib/api';
+import { createReport, createUploadUrl, getVehicle, listVehicles, startConversation, trackAnalyticsEvent, updateVehicle } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
+import { useSavedVehicles } from '@/hooks/useSavedVehicles';
 import { Vehicle } from '@/types';
 import { VehicleCard } from '@/components/VehicleCard';
 import { defaultProfileIconForUser } from '@/lib/profile-icons';
@@ -1003,6 +1004,8 @@ export function VehicleDetailPage() {
   const { id } = useParams({ from: '/vehicle/$id' });
   const navigate = useNavigate();
   const { user, login } = useAuth();
+  const savedVehicles = useSavedVehicles(user?.id);
+  const currentVehicleSaved = Boolean(id && savedVehicles.savedIds.has(id));
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [relatedVehicles, setRelatedVehicles] = useState<Vehicle[]>([]);
   const [vehicleError, setVehicleError] = useState('');
@@ -1010,13 +1013,12 @@ export function VehicleDetailPage() {
   const [activeIdx, setActiveIdx] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'features' | 'history' | 'timeline'>('overview');
-  const [isSaved, setIsSaved] = useState(savedVehicleIds().has(id || ''));
+  const [isSaved, setIsSaved] = useState(false);
   const [challengeSubmitting, setChallengeSubmitting] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportText, setReportText] = useState('');
   const [reportCategory, setReportCategory] = useState('fake_listing');
   const [reportSubmitting, setReportSubmitting] = useState(false);
-  const [guideStarting, setGuideStarting] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -1028,7 +1030,6 @@ export function VehicleDetailPage() {
           ...remote,
           status: remote.status === 'sold' ? 'sold' : 'available',
         } as Vehicle);
-        setIsSaved(savedVehicleIds().has(id));
       })
       .catch((error) => {
         if (!alive) return;
@@ -1036,6 +1037,10 @@ export function VehicleDetailPage() {
       });
     return () => { alive = false; };
   }, [id]);
+
+  useEffect(() => {
+    setIsSaved(currentVehicleSaved);
+  }, [currentVehicleSaved]);
 
   useEffect(() => {
     let alive = true;
@@ -1074,12 +1079,17 @@ export function VehicleDetailPage() {
     }
     return true;
   };
-  const toggleSaved = (short = false) => {
+  const toggleSaved = async (short = false) => {
     if (!requireSignedInSave()) return;
     const next = !isSaved;
     setIsSaved(next);
-    saveVehicleLocal(vehicle.id, next);
-    toast.success(next ? (short ? 'Saved!' : 'Saved to your collection.') : 'Removed from saved.');
+    try {
+      await savedVehicles.setSaved(vehicle.id, next);
+      toast.success(next ? (short ? 'Saved!' : 'Saved to your collection.') : 'Removed from saved.');
+    } catch (error: any) {
+      setIsSaved(!next);
+      toast.error(error?.message || 'Unable to update saved vehicles.');
+    }
   };
   const handlePhotoChallengeUpload = async (file: File) => {
     if (!user || vehicle.userId !== user.id) {
@@ -1125,11 +1135,16 @@ export function VehicleDetailPage() {
     }
   };
   const handleMessageSeller = async () => {
+    if (vehicle.status === 'sold') {
+      toast.error('This vehicle has been marked sold.');
+      return;
+    }
     if (!user) {
       login();
       return;
     }
     try {
+      trackAnalyticsEvent({ eventType: 'seller_contact_clicked', listingId: vehicle.id, route: `/vehicle/${vehicle.id}` });
       await startConversation(vehicle.id);
       toast.success('Message thread opened.');
       navigate({ to: '/messages' });
@@ -1139,27 +1154,11 @@ export function VehicleDetailPage() {
   };
 
   const handleStartBuyerGuide = async () => {
-    if (!user) {
-      login();
-      return;
-    }
-    if (vehicle.userId === user.id) {
+    if (user && vehicle.userId === user.id) {
       toast.error('Buyer guides are for listings you are interested in buying.');
       return;
     }
-    setGuideStarting(true);
-    try {
-      const guide = await startBuyerGuide(vehicle.id);
-      if (!guide?.id) {
-        throw new Error('Buyer guide could not be opened. Please try again.');
-      }
-      toast.success('Buyer guide ready.');
-      navigate({ to: '/buyer-guides/$guideId', params: { guideId: guide.id } });
-    } catch (error: any) {
-      toast.error(error.message || 'Unable to start buyer guide.');
-    } finally {
-      setGuideStarting(false);
-    }
+    navigate({ to: '/buyer-guide', search: { listing: vehicle.id } as any });
   };
 
   const handleReportListing = async () => {
@@ -1267,6 +1266,20 @@ export function VehicleDetailPage() {
         Back to Listings
       </Link>
 
+      {vehicle.isDemo && (
+        <div className="mb-8 border border-amber-300 bg-amber-50/70 p-4 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-200">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-[11px] font-black uppercase tracking-[0.16em]">Demo Listing</p>
+              <p className="mt-1 text-[12px] leading-relaxed">
+                This listing is for demonstration/testing only and the vehicle is not actually for sale. Messages open a sandboxed demo conversation with an automated demo seller so you can test the experience.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 xl:gap-16">
 
         <div className="lg:col-span-8 space-y-10">
@@ -1328,19 +1341,14 @@ export function VehicleDetailPage() {
               <div className="space-y-3">
                 <Button className="w-full h-12 text-[12px] font-bold uppercase tracking-widest"
                   onClick={handleMessageSeller}>
-                  <MessageSquare className="h-4 w-4 mr-2" /> Message Seller
+                  <MessageSquare className="h-4 w-4 mr-2" /> {vehicle.isDemo ? 'Try Demo Messages' : 'Message Seller'}
                 </Button>
                 <Button
                   variant="outline"
                   className="w-full h-11 text-[11px] font-bold uppercase tracking-widest"
                   onClick={handleStartBuyerGuide}
-                  disabled={guideStarting}
                 >
-                  {guideStarting ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <BookOpenCheck className="h-4 w-4 mr-2" />
-                  )}
+                  <BookOpenCheck className="h-4 w-4 mr-2" />
                   Buying Guide
                 </Button>
                 <div className="grid grid-cols-2 gap-3">
@@ -1360,7 +1368,7 @@ export function VehicleDetailPage() {
                   <Flag className="h-4 w-4 mr-1.5" /> Report Listing
                 </Button>
                 <button className="w-full text-[12px] text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4 text-center pt-1"
-                  onClick={() => toast.success('Message sent to seller!')}>
+                  onClick={handleMessageSeller}>
                   Is this still available?
                 </button>
               </div>
@@ -1403,7 +1411,7 @@ export function VehicleDetailPage() {
         </Button>
         <Button size="sm" className="text-[11px] font-bold uppercase tracking-widest h-10 px-5"
           onClick={handleMessageSeller}>
-          <MessageSquare className="h-4 w-4 mr-1.5" /> Message
+          <MessageSquare className="h-4 w-4 mr-1.5" /> {vehicle.isDemo ? 'Demo Message' : 'Message'}
         </Button>
       </div>
 

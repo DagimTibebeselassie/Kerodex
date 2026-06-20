@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { Vehicle } from '@/types';
-import { savedVehicleIds, saveVehicleLocal } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
+import { useSavedVehicles } from '@/hooks/useSavedVehicles';
 import { Heart, MapPin, Gauge, BadgeCheck, Star } from 'lucide-react';
 import { toast } from '@blinkdotnew/ui';
 import { VERIFIED_SELLER_EXPLANATION, VerifiedSellerBadge } from './VerifiedSellerTrust';
@@ -25,9 +25,13 @@ export function VehicleCard({
   className = '',
 }: VehicleCardProps) {
   const { user, login } = useAuth();
-  const [saved, setSaved] = useState(savedIds?.has(vehicle.id) ?? savedVehicleIds().has(vehicle.id));
+  const savedVehicles = useSavedVehicles(user?.id);
+  const serverSaved = savedIds?.has(vehicle.id) ?? savedVehicles.savedIds.has(vehicle.id);
+  const [saved, setSaved] = useState(serverSaved);
   const verified = isVerified || Boolean(vehicle.seller?.verified);
   const visibleBadges = (vehicle.badges || []).slice(0, 2);
+
+  useEffect(() => setSaved(serverSaved), [serverSaved]);
 
   const imageUrl = (() => {
     try {
@@ -38,7 +42,7 @@ export function VehicleCard({
     }
   })() || 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=800';
 
-  const handleSave = (e: React.MouseEvent) => {
+  const handleSave = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     if (!user) {
@@ -48,8 +52,13 @@ export function VehicleCard({
     }
     const next = !saved;
     setSaved(next);
-    saveVehicleLocal(vehicle.id, next);
-    onSave?.(vehicle.id, next);
+    try {
+      await savedVehicles.setSaved(vehicle.id, next);
+      onSave?.(vehicle.id, next);
+    } catch (error: any) {
+      setSaved(!next);
+      toast.error(error?.message || 'Unable to update saved vehicles.');
+    }
   };
 
   const dealColors: Record<string, string> = {
@@ -93,8 +102,18 @@ export function VehicleCard({
 
         {/* Deal Score Badge */}
         {dealScore && (
-          <div className={`absolute top-3 left-3 px-2 py-1 text-[10px] font-bold uppercase tracking-wider border ${dealColors[dealScore]}`}>
+          <div className={`absolute ${vehicle.isDemo ? 'top-11' : 'top-3'} left-3 px-2 py-1 text-[10px] font-bold uppercase tracking-wider border ${dealColors[dealScore]}`}>
             {dealScore === 'great' ? '* Great Deal' : dealScore === 'good' ? 'Good Deal' : 'Fair Price'}
+          </div>
+        )}
+        {vehicle.isDemo && (
+          <div className="absolute top-3 left-3 border border-foreground bg-background/95 px-2 py-1 text-[10px] font-black uppercase tracking-wider text-foreground">
+            Demo Listing
+          </div>
+        )}
+        {vehicle.status === 'sold' && (
+          <div className="absolute bottom-3 right-3 border border-foreground bg-foreground px-2 py-1 text-[10px] font-black uppercase tracking-wider text-background">
+            Sold
           </div>
         )}
 
@@ -111,11 +130,13 @@ export function VehicleCard({
             {vehicle.year} {vehicle.make} {vehicle.model}
           </h3>
           {verified && (
-            <BadgeCheck
-              className="h-4 w-4 text-foreground shrink-0 mt-0.5"
+            <span
               title={VERIFIED_SELLER_EXPLANATION}
               aria-label={`Verified Seller. ${VERIFIED_SELLER_EXPLANATION}`}
-            />
+              className="shrink-0 mt-0.5"
+            >
+              <BadgeCheck className="h-4 w-4 text-foreground" />
+            </span>
           )}
         </div>
 
@@ -132,6 +153,11 @@ export function VehicleCard({
 
         {/* Badges row */}
         <div className="mt-auto flex min-h-[3.35rem] content-start flex-wrap gap-1.5 overflow-hidden pt-3">
+          {vehicle.isDemo && (
+            <span className="inline-flex items-center text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 border border-border text-muted-foreground">
+              Testing only
+            </span>
+          )}
           {verified && (
             <VerifiedSellerBadge compact />
           )}

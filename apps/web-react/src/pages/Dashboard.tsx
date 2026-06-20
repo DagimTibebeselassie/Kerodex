@@ -127,10 +127,10 @@ export function DashboardPage() {
         <div className="flex items-end justify-between gap-4">
           <div>
             <h2 className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground">My Buying Guides</h2>
-            <p className="text-[12px] text-muted-foreground mt-2">Resume optional private-party purchase checklists tied to listings you are considering.</p>
+            <p className="text-[12px] text-muted-foreground mt-2">Resume vehicle discovery or a private-party purchase checklist.</p>
           </div>
-          <Link to="/cars" className="hidden sm:inline-flex">
-            <Button variant="outline" className="h-9 px-4 text-[11px] font-bold uppercase tracking-widest">Browse Cars</Button>
+          <Link to="/buyer-guide" className="hidden sm:inline-flex">
+            <Button variant="outline" className="h-9 px-4 text-[11px] font-bold uppercase tracking-widest">Start Buyer Guide</Button>
           </Link>
         </div>
         {buyerGuides.length === 0 ? (
@@ -155,15 +155,21 @@ export function DashboardPage() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <h3 className="text-[13px] font-bold truncate">{listing ? `${listing.year} ${listing.make} ${listing.model}` : 'Listing unavailable'}</h3>
+                        <h3 className="text-[13px] font-bold truncate">{listing ? `${listing.year} ${listing.make} ${listing.model}` : 'Vehicle discovery guide'}</h3>
                         <p className="text-[12px] text-muted-foreground mt-1">{completed} of {total} complete · {guide.status}</p>
                       </div>
-                      <Link to="/buyer-guides/$guideId" params={{ guideId: guide.id }}>
-                        <Button size="sm" variant="outline" className="h-8 px-3 text-[10px] font-bold uppercase tracking-widest">Resume</Button>
-                      </Link>
+                      {listing ? (
+                        <Link to="/buyer-guides/$guideId" params={{ guideId: guide.id }}>
+                          <Button size="sm" variant="outline" className="h-8 px-3 text-[10px] font-bold uppercase tracking-widest">Resume</Button>
+                        </Link>
+                      ) : (
+                        <Link to="/buyer-guide">
+                          <Button size="sm" variant="outline" className="h-8 px-3 text-[10px] font-bold uppercase tracking-widest">Resume</Button>
+                        </Link>
+                      )}
                     </div>
                     <div className="h-1.5 bg-muted mt-4 overflow-hidden">
-                      <div className="h-full bg-foreground" style={{ width: `${Math.round((completed / total) * 100)}%` }} />
+                      <div className="h-full bg-foreground" style={{ width: `${listing ? Math.round((completed / total) * 100) : (guide.recommendations ? 66 : 20)}%` }} />
                     </div>
                   </div>
                 </div>

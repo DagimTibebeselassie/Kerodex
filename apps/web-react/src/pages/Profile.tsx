@@ -2,7 +2,8 @@ import { useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useAuth } from '@/hooks/useAuth';
-import { createUploadUrl, deleteAccountImmediately, listMyVehicles, savedVehicleIds, updateAccountPassword, updateAccountProfile, updateProfileAvatar } from '@/lib/api';
+import { createUploadUrl, deleteAccountImmediately, listConversations, listMyVehicles, updateAccountPassword, updateAccountProfile, updateProfileAvatar } from '@/lib/api';
+import { useSavedVehicles } from '@/hooks/useSavedVehicles';
 import { DEFAULT_PROFILE_ICONS, defaultProfileIconForUser } from '@/lib/profile-icons';
 import { Button, Input, toast } from '@blinkdotnew/ui';
 import {
@@ -82,14 +83,24 @@ export function ProfilePage() {
     enabled: !!user,
   });
 
-  const { data: savedCount } = useQuery({
-    queryKey: ['saved-count', user?.id],
-    queryFn: async () => {
-      if (!user) return [];
-      return [...savedVehicleIds()];
-    },
-    enabled: !!user,
+  const { count: savedCount } = useSavedVehicles(user?.id);
+  const { data: conversations = [] } = useQuery({
+    queryKey: ['profile-conversations', user?.id],
+    queryFn: async () => user ? listConversations() : [],
+    enabled: Boolean(user),
   });
+  const totalViews = (myVehicles || []).reduce((sum, vehicle: any) => sum + Number(vehicle.views || 0), 0);
+  const trustScore =
+    (user?.emailVerified ? 10 : 0) +
+    (user?.phoneVerified ? 20 : 0) +
+    (user?.identityVerified ? 35 : 0) +
+    (user?.selfieVerified ? 25 : 0);
+  const trustMax = 90;
+  const memberSince = user?.createdAt
+    ? new Date(user.createdAt).getFullYear()
+    : user?.acceptedTermsAt
+      ? new Date(user.acceptedTermsAt).getFullYear()
+      : '—';
 
   const updateMutation = useMutation({
     mutationFn: async () => {
@@ -366,7 +377,7 @@ export function ProfilePage() {
               <BadgeCheck className="h-3 w-3" /> {user.emailVerified ? 'Email Verified' : 'Email Unverified'}
             </span>
             <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-1 border border-border text-muted-foreground">
-              Member since 2026
+              Member since {memberSince}
             </span>
           </div>
         </div>
@@ -376,9 +387,9 @@ export function ProfilePage() {
         <SectionHeader title="Activity" />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <StatTile icon={<Car className="h-5 w-5" />} label="Listings" value={myVehicles?.length ?? 0} href="/cockpit" />
-          <StatTile icon={<Heart className="h-5 w-5" />} label="Saved" value={savedCount?.length ?? 0} href="/saved" />
-          <StatTile icon={<MessageSquare className="h-5 w-5" />} label="Messages" value={0} href="/messages" />
-          <StatTile icon={<LayoutDashboard className="h-5 w-5" />} label="Views" value="-" href="/cockpit" />
+          <StatTile icon={<Heart className="h-5 w-5" />} label="Saved" value={savedCount} href="/saved" />
+          <StatTile icon={<MessageSquare className="h-5 w-5" />} label="Messages" value={conversations.length} href="/messages" />
+          <StatTile icon={<LayoutDashboard className="h-5 w-5" />} label="Views" value={totalViews} href="/cockpit" />
         </div>
       </section>
 
@@ -394,7 +405,7 @@ export function ProfilePage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <VerifBadge done={Boolean(user.emailVerified)} label="Email Verified" />
-          <VerifBadge done={false} label="Phone Verified" />
+          <VerifBadge done={Boolean(user.phoneVerified)} label="Phone Verified" />
           <VerifBadge done={Boolean(user.identityVerified)} label="Identity Verified (Gov ID)" />
           <VerifBadge done={Boolean(user.selfieVerified)} label="Selfie Verification" />
         </div>
@@ -404,9 +415,11 @@ export function ProfilePage() {
           <div>
             <div className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground mb-1">Trust Score</div>
             <div className="text-3xl font-black tracking-tight">
-              24<span className="text-[16px] text-muted-foreground font-normal">/100</span>
+              {trustScore}<span className="text-[16px] text-muted-foreground font-normal">/{trustMax}</span>
             </div>
-            <div className="text-[12px] text-amber-500 font-medium mt-1">Partially Verified - Complete steps to improve</div>
+            <div className="text-[12px] text-amber-500 font-medium mt-1">
+              {trustScore === trustMax ? 'Fully verified' : 'Complete verification steps to improve'}
+            </div>
           </div>
           <Link to="/verify">
             <Button className="h-10 px-5 text-[11px] font-bold uppercase tracking-wider">
@@ -492,7 +505,7 @@ export function ProfilePage() {
             { to: '/feature-tour', icon: <Sparkles className="h-4 w-4" />, label: 'View Kerodex Guide', desc: 'Replay the quick feature tour' },
             { to: '/cockpit', icon: <LayoutDashboard className="h-4 w-4" />, label: 'Seller Cockpit', desc: 'Manage your listings and view performance' },
             { to: '/verify', icon: <Shield className="h-4 w-4" />, label: 'Verification Center', desc: 'Complete verification to unlock all features' },
-            { to: '/saved', icon: <Heart className="h-4 w-4" />, label: 'Saved Vehicles', desc: `${savedCount?.length ?? 0} saved listings` },
+            { to: '/saved', icon: <Heart className="h-4 w-4" />, label: 'Saved Vehicles', desc: `${savedCount} saved listings` },
             { to: '/messages', icon: <MessageSquare className="h-4 w-4" />, label: 'Messages', desc: 'View all conversations' },
           ].map((item) => (
             <Link key={item.to} to={item.to as any}>

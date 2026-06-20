@@ -57,6 +57,11 @@ const seoByPath: Record<string, SeoEntry> = {
     description: 'Continue a saved Kerodex buyer purchase guide for a private-party vehicle listing.',
     canonicalPath: '/dashboard',
   },
+  '/buyer-guide': {
+    title: 'Buyer Guide | Kerodex',
+    description: 'Get calm, step-by-step guidance from choosing a vehicle through inspection, payment, title transfer, insurance, and registration.',
+    canonicalPath: '/buyer-guide',
+  },
   '/profile': {
     title: 'Account Settings | Kerodex',
     description: 'Manage your Kerodex account, saved vehicles, verification, and seller settings.',

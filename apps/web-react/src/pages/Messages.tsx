@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { useAuth } from '@/hooks/useAuth';
-import { ConversationRecord, createReport, listConversations, markConversationRead, markSafetyNoticeSeen, sendConversationMessage } from '@/lib/api';
+import { answerBuyerFollowup, ConversationRecord, createReport, listBuyerFollowups, listConversations, markConversationRead, markSafetyNoticeSeen, sendConversationMessage, updateConversationOutcome } from '@/lib/api';
 import { Button, Input, toast } from '@blinkdotnew/ui';
 import {
   MessageSquare, Send, Car, ArrowLeft, Search, User, Circle, AlertTriangle, Flag, X, Copy,
@@ -23,6 +23,9 @@ interface ThreadPreview {
   scamRiskScore?: number;
   scamFlags?: string[];
   moderationStatus?: 'clear' | 'needs_review' | 'high_risk';
+  currentUserRole?: 'buyer' | 'seller';
+  currentUserOutcome?: string;
+  isDemo?: boolean;
 }
 
 const SAFETY_NOTICE_TEXT = 'Safety reminder: Meet in a public, well-lit place. Bring another person if possible. Do not send deposits or payments before verifying the vehicle and documents in person. Verify the title, VIN, seller identity, and vehicle condition before completing a purchase. If anything feels suspicious, stop the conversation and report the user.';
@@ -158,6 +161,7 @@ export function MessagesPage() {
   const [reportText, setReportText] = useState('');
   const [reportCategory, setReportCategory] = useState('suspected_scam');
   const [safetyDismissed, setSafetyDismissed] = useState(Boolean(user?.safetyNoticeSeenAt || localStorage.getItem('kerodex_safety_notice_seen')));
+  const [followupFeedback, setFollowupFeedback] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch server-backed conversations. Polling keeps two open browsers in sync for MVP.
@@ -174,6 +178,11 @@ export function MessagesPage() {
     },
     refetchOnWindowFocus: false,
   });
+  const { data: followups } = useQuery({
+    queryKey: ['buyer-followups', user?.id],
+    queryFn: () => listBuyerFollowups(),
+    enabled: Boolean(user),
+  });
 
   const threads: ThreadPreview[] = conversations.map((conversation) => ({
     conversationId: conversation.id,
@@ -188,6 +197,9 @@ export function MessagesPage() {
     scamRiskScore: conversation.scamRiskScore,
     scamFlags: conversation.scamFlags,
     moderationStatus: conversation.moderationStatus,
+    currentUserRole: conversation.currentUserRole,
+    currentUserOutcome: conversation.currentUserOutcome,
+    isDemo: conversation.isDemo,
     messages: (conversation.messages || []).slice().sort(
       (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
     ) as Message[],
@@ -236,6 +248,28 @@ export function MessagesPage() {
       queryClient.invalidateQueries({ queryKey: ['conversations', user?.id] });
     },
     onError: () => toast.error('Failed to send message.'),
+  });
+  const outcomeMutation = useMutation({
+    mutationFn: ({ conversationId, status }: { conversationId: string; status: string }) => updateConversationOutcome(conversationId, status),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['conversations', user?.id] });
+      toast.success('Conversation status updated.');
+    },
+    onError: (error: any) => toast.error(error?.message || 'Unable to update conversation status.'),
+  });
+  const followupMutation = useMutation({
+    mutationFn: ({ answer }: { answer: string }) => answerBuyerFollowup({
+      listingId: selectedThread!.vehicleId,
+      conversationId: selectedThread!.conversationId,
+      answer,
+      feedbackText: followupFeedback,
+    }),
+    onSuccess: () => {
+      setFollowupFeedback('');
+      queryClient.invalidateQueries({ queryKey: ['buyer-followups', user?.id] });
+      toast.success('Thanks for the update.');
+    },
+    onError: (error: any) => toast.error(error?.message || 'Unable to save follow-up.'),
   });
 
   const handleSend = (e: React.FormEvent) => {
@@ -299,6 +333,22 @@ export function MessagesPage() {
     t.vehicleTitle.toLowerCase().includes(search.toLowerCase()) ||
     t.partnerName.toLowerCase().includes(search.toLowerCase())
   );
+  const selectedFollowup = followups?.prompts.find((prompt) => prompt.conversationId === selectedThread?.conversationId);
+  const outcomeOptions = selectedThread?.currentUserRole === 'seller'
+    ? [
+        ['still_available', 'Still available'],
+        ['test_drive_scheduled', 'Test drive scheduled'],
+        ['buyer_no_show', 'Buyer no-show'],
+        ['sold', 'Sold'],
+        ['passed', 'Not interested / passed'],
+      ]
+    : [
+        ['interested', 'Interested'],
+        ['scheduled_meetup', 'Scheduled meetup'],
+        ['passed', 'Passed'],
+        ['bought', 'Bought'],
+        ['seller_no_response', 'Seller did not respond'],
+      ];
 
   if (authLoading) {
     return (
@@ -500,6 +550,15 @@ export function MessagesPage() {
                     </Button>
                   </Link>
                 )}
+                <select
+                  value={selectedThread.currentUserOutcome || ''}
+                  onChange={(event) => outcomeMutation.mutate({ conversationId: selectedThread.conversationId, status: event.target.value })}
+                  className="hidden lg:block h-8 border border-border bg-background px-2 text-[11px] font-bold"
+                  aria-label="Conversation outcome"
+                >
+                  <option value="">Set status</option>
+                  {outcomeOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                </select>
                 <Button
                   variant="outline"
                   onClick={handleReportThread}
@@ -512,6 +571,35 @@ export function MessagesPage() {
 
               {/* Messages */}
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                {selectedThread.isDemo && (
+                  <div className="border border-amber-400/30 bg-amber-400/10 p-3 text-[12px] leading-relaxed text-foreground">
+                    <strong>Demo conversation:</strong> messages are stored so you can test Kerodex, but no real seller is contacted and this vehicle is not for sale.
+                  </div>
+                )}
+                {selectedFollowup && (
+                  <div className="border border-primary/20 bg-primary/5 p-4 space-y-3">
+                    <div>
+                      <p className="text-[13px] font-bold">Did you end up buying this vehicle?</p>
+                      <p className="text-[11px] text-muted-foreground">Optional—your answer helps Kerodex understand marketplace outcomes.</p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        ['bought_through_kerodex', 'Bought through Kerodex'],
+                        ['still_looking', 'Still looking'],
+                        ['bought_elsewhere', 'Bought elsewhere'],
+                        ['seller_no_response', 'Seller did not respond'],
+                        ['already_sold', 'Already sold'],
+                        ['other', 'Other'],
+                      ].map(([answer, label]) => (
+                        <button key={answer} type="button" onClick={() => followupMutation.mutate({ answer })} className="border border-border bg-background px-3 py-2 text-[10px] font-bold uppercase tracking-wider hover:border-foreground">
+                          {label}
+                        </button>
+                      ))}
+                      <button type="button" onClick={() => followupMutation.mutate({ answer: 'dismissed' })} className="px-3 py-2 text-[10px] text-muted-foreground">Dismiss</button>
+                    </div>
+                    <Input value={followupFeedback} onChange={(event) => setFollowupFeedback(event.target.value)} placeholder="Optional feedback" className="h-9 text-[12px]" />
+                  </div>
+                )}
                 {!safetyDismissed && (
                   <div className="border border-amber-400/30 bg-amber-400/10 p-3 text-[12px] leading-relaxed text-foreground flex gap-3">
                     <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />

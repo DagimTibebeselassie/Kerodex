@@ -4,6 +4,7 @@ import { Vehicle } from '@/types';
 import { MAKES, getModelsForMake } from '@/data/makes-models';
 import { VehicleCard } from '@/components/VehicleCard';
 import { MapView } from '@/components/MapView';
+import { BuyerGuideEntryCard } from '@/components/buyer-guide/BuyerGuideComponents';
 import { currentUser, listVehicles } from '@/lib/api';
 import { Button } from '@blinkdotnew/ui';
 import {
@@ -39,7 +40,7 @@ function BetaBanner() {
       role="alert"
     >
       <p className="text-[12px] text-amber-800 dark:text-amber-300 font-medium flex-1 text-center">
-        <span className="font-bold">Kerodex is in beta</span> - listings are demo data. Some features may be incomplete.
+        <span className="font-bold">Kerodex is in beta</span> - demonstration listings are clearly labeled and are not actually for sale.
       </p>
       <button
         onClick={dismiss}
@@ -603,6 +604,10 @@ export function HomePage() {
             >
               View all listings
             </Link>
+          </div>
+
+          <div className="mt-8 max-w-3xl">
+            <BuyerGuideEntryCard compact />
           </div>
         </div>
       </section>

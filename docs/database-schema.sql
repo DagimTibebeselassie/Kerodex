@@ -5,11 +5,17 @@
 CREATE TABLE IF NOT EXISTS listing_records (
   id TEXT PRIMARY KEY,
   payload JSONB NOT NULL,
+  is_demo BOOLEAN NOT NULL DEFAULT false,
+  demo_seed_id TEXT,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE INDEX IF NOT EXISTS listing_records_deal_score_idx
   ON listing_records (COALESCE((payload->>'dealScore')::int, 0));
+CREATE INDEX IF NOT EXISTS listing_records_demo_idx
+  ON listing_records (is_demo, updated_at DESC);
+CREATE UNIQUE INDEX IF NOT EXISTS listing_records_demo_seed_unique_idx
+  ON listing_records (demo_seed_id) WHERE demo_seed_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS seller_records (
   id TEXT PRIMARY KEY,
@@ -133,9 +139,9 @@ CREATE TABLE saved_searches (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE TABLE favorites (
-  user_id UUID NOT NULL REFERENCES users(id),
-  listing_id UUID NOT NULL REFERENCES listings(id),
+CREATE TABLE favorite_records (
+  user_id TEXT NOT NULL,
+  listing_id TEXT NOT NULL REFERENCES listing_records(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   PRIMARY KEY (user_id, listing_id)
 );
@@ -225,14 +231,85 @@ CREATE TABLE support_tickets (
 );
 
 CREATE TABLE analytics_events (
-  id UUID PRIMARY KEY,
-  user_id UUID REFERENCES users(id),
+  id TEXT PRIMARY KEY,
+  event_type TEXT NOT NULL,
+  user_id TEXT,
   session_id TEXT,
-  event_name TEXT NOT NULL,
-  page_path TEXT,
-  listing_id UUID REFERENCES listings(id),
-  metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+  ip_hash TEXT,
+  route TEXT,
+  listing_id TEXT,
+  conversation_id TEXT,
+  related_entity_type TEXT,
+  related_entity_id TEXT,
+  city TEXT,
+  state TEXT,
+  country TEXT,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  user_agent TEXT,
+  referrer TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX analytics_events_name_created_idx ON analytics_events (event_name, created_at DESC);
+CREATE INDEX analytics_events_name_created_idx ON analytics_events (event_type, created_at DESC);
+CREATE INDEX analytics_events_user_created_idx ON analytics_events (user_id, created_at DESC);
+CREATE INDEX analytics_events_listing_created_idx ON analytics_events (listing_id, created_at DESC);
+CREATE INDEX analytics_events_conversation_created_idx ON analytics_events (conversation_id, created_at DESC);
+
+CREATE TABLE cost_records (
+  id TEXT PRIMARY KEY,
+  service_name TEXT NOT NULL,
+  action_type TEXT NOT NULL,
+  user_id TEXT,
+  listing_id TEXT,
+  request_id TEXT,
+  status TEXT NOT NULL,
+  units_used NUMERIC,
+  estimated_cost NUMERIC(12, 6) NOT NULL DEFAULT 0,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE feedback_records (
+  id TEXT PRIMARY KEY,
+  user_id TEXT,
+  listing_id TEXT,
+  context TEXT NOT NULL,
+  rating INTEGER,
+  response_text TEXT,
+  metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE followup_records (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  listing_id TEXT NOT NULL,
+  conversation_id TEXT,
+  followup_type TEXT NOT NULL,
+  answer TEXT,
+  feedback_text TEXT,
+  dismissed BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE (user_id, listing_id, conversation_id, followup_type)
+);
+
+CREATE TABLE buyer_guide_sessions (
+  id TEXT PRIMARY KEY,
+  user_id UUID REFERENCES users(id),
+  status TEXT NOT NULL DEFAULT 'active',
+  current_stage TEXT NOT NULL DEFAULT 'understand_buyer',
+  current_step TEXT,
+  buyer_answers JSONB NOT NULL DEFAULT '{}'::jsonb,
+  buyer_profile JSONB NOT NULL DEFAULT '{}'::jsonb,
+  recommendations JSONB,
+  selected_listing_id UUID REFERENCES listings(id),
+  completed_steps JSONB NOT NULL DEFAULT '[]'::jsonb,
+  safety_red_flags JSONB NOT NULL DEFAULT '[]'::jsonb,
+  payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX buyer_guide_sessions_user_updated_idx ON buyer_guide_sessions (user_id, updated_at DESC);
+CREATE INDEX buyer_guide_sessions_status_updated_idx ON buyer_guide_sessions (status, updated_at DESC);

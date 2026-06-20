@@ -2,7 +2,13 @@
 
 The current prototype exposes a tiny local API. It is shaped so it can later become REST routes behind an API gateway.
 
-Listings, sellers, and conversations now load through `apps/api/store.js`. Local development uses the seed JSON files, and hosted environments can set `DATABASE_URL` to read the same records from Postgres tables (`seller_records`, `listing_records`, and `conversation_records`). Run `npm run db:seed` after creating the database tables to reset and copy the current demo marketplace into Postgres.
+Listings, sellers, and conversations now load through `apps/api/store.js`. Local development uses the seed JSON files, and hosted environments can set `DATABASE_URL` to read the same records from Postgres tables (`seller_records`, `listing_records`, and `conversation_records`).
+
+Use `npm run seed:demo-listings` to upsert the deterministic 75-listing nationwide
+demo marketplace. Use `npm run clear:demo-listings` to remove only demo
+listings. Both commands preserve real listings. Demo records use `is_demo`,
+`isDemo`, and a stable `demoSeedId` so rerunning the seed does not create
+duplicates.
 
 ## Current Routes
 
@@ -23,7 +29,28 @@ POST /api/auth/email
 POST /api/auth/email/verify
 POST /api/auth/password/forgot
 POST /api/auth/password/reset
+POST /api/buyer-guide/start
+POST /api/buyer-guide/respond
+POST /api/buyer-guide/recommendations
+GET /api/buyer-guide/session/:id
+PATCH /api/buyer-guide/session/:id
+POST /api/buyer-guide/session/:id/listing/:listingId
+POST /api/buyer-guides/start
+GET /api/buyer-guides
+GET /api/buyer-guides/:id
+PATCH /api/buyer-guides/:id
 ```
+
+The singular `/api/buyer-guide/*` routes power the full discovery journey and
+allow temporary guest sessions. Logged-in sessions are persisted. The plural
+`/api/buyer-guides/*` routes remain the listing-specific purchase checklist
+surface for saved account guides.
+
+`POST /api/buyer-guide/recommendations` returns a constrained structured object
+containing a buyer profile, recommended categories and models, Kerodex listing
+filters, safety notes, and scored listing matches. If the configured OpenAI
+provider is unavailable or returns invalid output, the API returns deterministic
+fallback recommendations rather than breaking the flow.
 
 ## Admin Routes
 
@@ -104,6 +131,45 @@ GET /listings/:id
 PATCH /listings/:id
 POST /listings/:id/images
 POST /listings/:id/favorite
+
+Authenticated saved vehicles are persisted in `favorite_records`.
+
+GET /me/saved
+
+Returns only saved listings that still exist. Deleted listing references are
+removed automatically by the database relationship.
+
+POST /me/saved/sync
+
+Migrates valid legacy browser-saved listing IDs into the authenticated
+account. IDs for listings that no longer exist are ignored.
+
+GET /me/listing-analytics
+
+Returns database-backed analytics only for the signed-in seller's listings.
+
+POST /listings/:id/status
+
+Marks a seller-owned listing sold or available and stores voluntary sale
+outcome details.
+
+GET|POST /me/followups
+
+Returns and records optional buyer purchase follow-ups after meaningful
+conversation activity.
+
+POST /conversations/:id/outcome
+
+Stores the signed-in participant's lightweight conversation outcome.
+
+POST /feedback
+
+Stores optional contextual product feedback.
+
+GET /admin/costs
+GET /admin/feedback
+
+Protected admin-only cost and feedback analytics.
 POST /listings/:id/report
 POST /offers
 PATCH /offers/:id

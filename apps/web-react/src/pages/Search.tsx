@@ -14,6 +14,7 @@ import {
   Filter,
   BadgeCheck,
   CheckCircle2,
+  Loader2,
 } from 'lucide-react';
 
 const YEARS: number[] = [];
@@ -55,6 +56,28 @@ const SORT_OPTIONS = [
 ];
 
 const DEFAULT_SEARCH_LOCATION = { lat: 33.749, lng: -84.388 };
+const LOCATION_CACHE_KEY = 'kerodex:last-map-location';
+const LOCATION_CACHE_MAX_AGE_MS = 30 * 60 * 1000;
+
+function readCachedLocation(): { lat: number; lng: number } | null {
+  try {
+    const cached = JSON.parse(localStorage.getItem(LOCATION_CACHE_KEY) || 'null');
+    if (
+      Number.isFinite(cached?.lat)
+      && Number.isFinite(cached?.lng)
+      && Date.now() - Number(cached?.savedAt || 0) <= LOCATION_CACHE_MAX_AGE_MS
+    ) {
+      return { lat: cached.lat, lng: cached.lng };
+    }
+  } catch { /* ignore invalid cache */ }
+  return null;
+}
+
+function cacheLocation(location: { lat: number; lng: number }) {
+  try {
+    localStorage.setItem(LOCATION_CACHE_KEY, JSON.stringify({ ...location, savedAt: Date.now() }));
+  } catch { /* storage may be unavailable */ }
+}
 
 interface FilterState {
   priceMin: string;
@@ -656,7 +679,7 @@ export function SearchPage() {
   const [viewMode, setViewMode]         = useState<'grid' | 'map'>('grid');
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [selectedMapId, setSelectedMapId] = useState<string | null>(null);
-  const [searchText, setSearchText]     = useState(urlParams.get('q') || '');
+  const searchText                     = urlParams.get('q') || '';
   const [sortOpen, setSortOpen]         = useState(false);
   const [remoteVehicles, setRemoteVehicles] = useState<Vehicle[]>([]);
   const [vehicleLoadError, setVehicleLoadError] = useState('');
@@ -664,6 +687,9 @@ export function SearchPage() {
     hasInitialLocation ? { lat: initialLat, lng: initialLng } : (nearbyMode || urlParams.get('radius') ? DEFAULT_SEARCH_LOCATION : null)
   );
   const [locationError, setLocationError] = useState('');
+  const [locationLoading, setLocationLoading] = useState(false);
+  const [locationFocusRequest, setLocationFocusRequest] = useState(0);
+  const locationRequestRef               = useRef(0);
   const mapListRef                      = useRef<HTMLDivElement>(null);
   const isDark = document.documentElement.classList.contains('dark');
 
@@ -695,35 +721,57 @@ export function SearchPage() {
 
   // Filtered + sorted vehicles
   const vehicles = useMemo(() => {
-    const locationAnchor = userLocation || (filters.radius ? DEFAULT_SEARCH_LOCATION : null);
+    const filterLocationAnchor = filters.radius
+      ? (hasInitialLocation ? { lat: initialLat, lng: initialLng } : DEFAULT_SEARCH_LOCATION)
+      : null;
     const filtered = applyLocationFilter(
       applyFilters(remoteVehicles, filters, searchText),
-      locationAnchor,
+      filterLocationAnchor,
       filters.radius
     );
-    return applySort(filtered, sortBy, locationAnchor);
+    return applySort(filtered, sortBy, userLocation || filterLocationAnchor);
   }, [filters, remoteVehicles, sortBy, searchText, userLocation]);
 
   const filterCount = countFilters(filters);
   const clearFilters = () => setFilters(DEFAULT_FILTERS);
 
   const enableLocation = () => {
+    const requestId = locationRequestRef.current + 1;
+    locationRequestRef.current = requestId;
+    setLocationError('');
+
+    const cachedLocation = readCachedLocation();
+    if (cachedLocation) {
+      setUserLocation(cachedLocation);
+      setLocationFocusRequest((current) => current + 1);
+    }
+
     if (!navigator.geolocation) {
       setLocationError('Location is not supported by this browser.');
       return;
     }
+    setLocationLoading(true);
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setUserLocation({
+        if (locationRequestRef.current !== requestId) return;
+        const nextLocation = {
           lat: position.coords.latitude,
           lng: position.coords.longitude,
-        });
-        setFilters((current) => ({ ...current, radius: current.radius || '100' }));
-        setSortBy((current) => current === 'recommended' ? 'closest' : current);
+        };
+        cacheLocation(nextLocation);
+        setUserLocation(nextLocation);
+        setLocationFocusRequest((current) => current + 1);
         setLocationError('');
+        setLocationLoading(false);
       },
-      () => setLocationError('Unable to access your location. Check browser location permissions and try again.'),
-      { enableHighAccuracy: false, timeout: 5000, maximumAge: 300000 }
+      () => {
+        if (locationRequestRef.current !== requestId) return;
+        setLocationLoading(false);
+        if (!cachedLocation) {
+          setLocationError('Unable to access your location. Check browser location permissions and try again.');
+        }
+      },
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: LOCATION_CACHE_MAX_AGE_MS }
     );
   };
 
@@ -761,20 +809,8 @@ export function SearchPage() {
           )}
         </button>
 
-        {/* Search input */}
-        <div className="relative flex-1 max-w-72 min-w-[160px]">
-          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-          <input
-            type="text"
-            placeholder="Search make, model..."
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            className={`${INPUT_CLS} pl-9 pr-3`}
-          />
-        </div>
-
-        {/* Results count - desktop */}
-        <span className="text-[12px] text-muted-foreground hidden sm:block shrink-0">
+        {/* Results count */}
+        <span className="text-[12px] text-muted-foreground shrink-0">
           {vehicles.length} vehicle{vehicles.length !== 1 ? 's' : ''} found
         </span>
 
@@ -837,10 +873,18 @@ export function SearchPage() {
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className={`flex flex-1 ${
+        viewMode === 'map'
+          ? 'min-h-0 overflow-hidden'
+          : 'items-start overflow-visible'
+      }`}>
 
         <aside
-          className="hidden lg:flex w-64 h-[calc(100vh-7rem)] shrink-0 flex-col border-r border-border px-5 pt-3 pb-5 overflow-hidden"
+          className={`hidden lg:flex w-64 shrink-0 flex-col border-r border-border px-5 pt-3 pb-5 overflow-hidden ${
+            viewMode === 'map'
+              ? 'h-[calc(100vh-7rem)]'
+              : 'sticky top-[7rem] h-[calc(100dvh-8rem)] self-start'
+          }`}
         >
           <FilterSidebarContent filters={filters} setFilters={setFilters} onClear={clearFilters} />
         </aside>
@@ -885,7 +929,9 @@ export function SearchPage() {
           </div>
         </div>
 
-        <div className="flex-1 min-w-0 overflow-hidden">
+        <div className={`flex-1 min-w-0 ${
+          viewMode === 'map' ? 'overflow-hidden' : 'overflow-visible'
+        }`}>
           {viewMode === 'grid' ? (
 
             <div className="px-4 md:px-6 py-5">
@@ -919,16 +965,18 @@ export function SearchPage() {
             <div className="flex" style={{ height: 'calc(100vh - 7rem)' }}>
 
               {/* Left: scrollable card list */}
-              <div ref={mapListRef} className="hidden md:flex w-72 shrink-0 border-r border-border overflow-y-auto flex-col">
+              <div ref={mapListRef} className="kerodex-scrollbar-hidden hidden md:flex w-72 shrink-0 border-r border-border overflow-y-auto flex-col">
                 <div className="px-4 py-2.5 border-b border-border bg-background sticky top-0 z-10 shrink-0">
                   <p className="text-[11px] text-muted-foreground font-medium">
                     {vehicles.length} listing{vehicles.length !== 1 ? 's' : ''}
                   </p>
                   <button
                     onClick={enableLocation}
-                    className="mt-2 text-[11px] font-bold uppercase tracking-wider text-foreground underline underline-offset-2"
+                    disabled={locationLoading}
+                    className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-foreground underline underline-offset-2 disabled:cursor-wait disabled:opacity-60"
                   >
-                    {userLocation ? 'Location enabled' : 'Use my location'}
+                    {locationLoading && <Loader2 className="h-3 w-3 animate-spin" />}
+                    {locationLoading ? 'Finding location' : userLocation ? 'Center on my location' : 'Use my location'}
                   </button>
                   {locationError && <p className="mt-1 text-[11px] text-destructive">{locationError}</p>}
                 </div>
@@ -961,7 +1009,8 @@ export function SearchPage() {
                   selectedId={selectedMapId}
                   onSelectPin={setSelectedMapId}
                   isDark={isDark}
-                  userLocation={userLocation || (filters.radius ? DEFAULT_SEARCH_LOCATION : null)}
+                  userLocation={userLocation}
+                  locationFocusRequest={locationFocusRequest}
                   className="w-full h-full"
                 />
               </div>

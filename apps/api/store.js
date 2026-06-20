@@ -62,6 +62,21 @@ function money(value) {
   return Math.round(value);
 }
 
+function followupFromRow(row) {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    listingId: row.listing_id,
+    conversationId: row.conversation_id || "",
+    followupType: row.followup_type,
+    answer: row.answer || "",
+    feedbackText: row.feedback_text || "",
+    dismissed: Boolean(row.dismissed),
+    createdAt: row.created_at.toISOString(),
+    updatedAt: row.updated_at.toISOString()
+  };
+}
+
 function initialsForName(name) {
   return String(name || "Kerodex Seller")
     .split(/\s+/)
@@ -192,6 +207,8 @@ function buildAdminState(listings, conversations) {
     mileage: Number(listing.mileage || 0),
     location: listing.location,
     status: listing.status || "active",
+    isDemo: Boolean(listing.isDemo || listing.is_demo),
+    demoSeedId: listing.demoSeedId || "",
     verificationStatus: listingVerificationStatus(listing),
     views: Number(listing.views || 0),
     favorites: Number(listing.saves || listing.favorites || 0),
@@ -361,8 +378,9 @@ function dateKey(iso) {
 }
 
 function countEvents(events, type, sinceMs = 0) {
+  const types = Array.isArray(type) ? type : [type];
   return events.filter((event) =>
-    (!type || event.eventType === type) &&
+    (!type || types.includes(event.eventType)) &&
     (!sinceMs || Date.parse(event.createdAt) >= sinceMs)
   ).length;
 }
@@ -532,13 +550,17 @@ class JsonStore {
     this.sellers = readJsonFile("sellers.json");
     this.reports = [];
     this.events = [];
+    this.favorites = [];
+    this.costRecords = [];
+    this.feedbackRecords = [];
+    this.followupRecords = [];
     this.buyerGuides = [];
     this.marketCheckCache = new Map();
     this.authSessions = new Map();
   }
 
   async getListings() {
-    return this.listings;
+    return this.listings.map((listing) => this.withListingMetrics(listing));
   }
 
   async connect() {
@@ -558,7 +580,39 @@ class JsonStore {
   }
 
   async getListingById(id) {
-    return this.listings.find((listing) => listing.id === id);
+    const listing = this.listings.find((item) => item.id === id);
+    return listing ? this.withListingMetrics(listing) : null;
+  }
+
+  withListingMetrics(listing) {
+    const views = this.events.filter((event) => ["listing_view", "listing_viewed"].includes(event.eventType) && event.listingId === listing.id).length;
+    const favorites = this.favorites.filter((favorite) => favorite.listingId === listing.id).length;
+    return { ...listing, views, favorites, saves: favorites };
+  }
+
+  async getSavedListings(userId) {
+    const liveIds = new Set(this.listings.map((listing) => listing.id));
+    this.favorites = this.favorites.filter((favorite) => liveIds.has(favorite.listingId));
+    const savedIds = new Set(this.favorites.filter((favorite) => favorite.userId === userId).map((favorite) => favorite.listingId));
+    return this.listings.filter((listing) => savedIds.has(listing.id)).map((listing) => this.withListingMetrics(listing));
+  }
+
+  async setListingSaved(userId, listingId, saved) {
+    const listing = this.listings.find((item) => item.id === listingId);
+    if (!listing) return null;
+    this.favorites = this.favorites.filter((favorite) => !(favorite.userId === userId && favorite.listingId === listingId));
+    if (saved) this.favorites.push({ userId, listingId, createdAt: new Date().toISOString() });
+    return { saved, listing: this.withListingMetrics(listing) };
+  }
+
+  async syncSavedListings(userId, listingIds) {
+    const liveIds = new Set(this.listings.map((listing) => listing.id));
+    const validIds = Array.from(new Set(listingIds)).filter((id) => liveIds.has(id));
+    const existing = new Set(this.favorites.filter((favorite) => favorite.userId === userId).map((favorite) => favorite.listingId));
+    validIds.forEach((listingId) => {
+      if (!existing.has(listingId)) this.favorites.push({ userId, listingId, createdAt: new Date().toISOString() });
+    });
+    return this.getSavedListings(userId);
   }
 
   async createListing(listing) {
@@ -627,6 +681,18 @@ class JsonStore {
     return this.buyerGuides.find((guide) => guide.id === id) || null;
   }
 
+  async getAllBuyerGuides() {
+    return this.buyerGuides.slice().sort((a, b) => Date.parse(b.updated_at || b.updatedAt || "") - Date.parse(a.updated_at || a.updatedAt || ""));
+  }
+
+  async getActiveDiscoveryBuyerGuide(buyerId) {
+    return this.buyerGuides.find((guide) =>
+      (guide.buyer_id === buyerId || guide.buyerId === buyerId) &&
+      !(guide.listing_id || guide.listingId) &&
+      String(guide.status || "active") === "active"
+    ) || null;
+  }
+
   async getActiveBuyerGuide(buyerId, listingId) {
     return this.buyerGuides.find((guide) =>
       (guide.buyer_id === buyerId || guide.buyerId === buyerId) &&
@@ -671,6 +737,41 @@ class JsonStore {
     return user;
   }
 
+  async saveCostRecord(record) {
+    this.costRecords.unshift(record);
+    return record;
+  }
+
+  async getCostRecords() {
+    return this.costRecords.slice();
+  }
+
+  async saveFeedback(record) {
+    this.feedbackRecords.unshift(record);
+    return record;
+  }
+
+  async getFeedbackRecords() {
+    return this.feedbackRecords.slice();
+  }
+
+  async saveFollowup(record) {
+    const index = this.followupRecords.findIndex((item) =>
+      item.userId === record.userId && item.listingId === record.listingId && item.conversationId === record.conversationId
+    );
+    if (index >= 0) this.followupRecords[index] = { ...this.followupRecords[index], ...record };
+    else this.followupRecords.unshift(record);
+    return record;
+  }
+
+  async getFollowupsByUser(userId) {
+    return this.followupRecords.filter((record) => record.userId === userId);
+  }
+
+  async getAllFollowups() {
+    return this.followupRecords.slice();
+  }
+
   async deleteUserAccount(userId) {
     const id = String(userId || "");
     this.listings = this.listings.filter((listing) => listing.userId !== id && listing.seller?.id !== id);
@@ -684,6 +785,7 @@ class JsonStore {
       conversation.partnerId !== id &&
       !(conversation.participants || []).includes(id)
     );
+    this.favorites = this.favorites.filter((favorite) => favorite.userId !== id);
     Array.from(this.authSessions.entries()).forEach(([token, session]) => {
       if (session.userId === id) this.authSessions.delete(token);
     });
@@ -774,9 +876,13 @@ class PostgresStore {
       CREATE TABLE IF NOT EXISTS listing_records (
         id TEXT PRIMARY KEY,
         payload JSONB NOT NULL,
+        is_demo BOOLEAN NOT NULL DEFAULT FALSE,
+        demo_seed_id TEXT,
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
     `);
+    await this.pool.query(`ALTER TABLE listing_records ADD COLUMN IF NOT EXISTS is_demo BOOLEAN NOT NULL DEFAULT FALSE`);
+    await this.pool.query(`ALTER TABLE listing_records ADD COLUMN IF NOT EXISTS demo_seed_id TEXT`);
     await this.pool.query(`
       CREATE TABLE IF NOT EXISTS conversation_records (
         id TEXT PRIMARY KEY,
@@ -834,6 +940,12 @@ class PostgresStore {
         created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
     `);
+    await this.pool.query(`ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS conversation_id TEXT`);
+    await this.pool.query(`ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS related_entity_type TEXT`);
+    await this.pool.query(`ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS related_entity_id TEXT`);
+    await this.pool.query(`ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS city TEXT`);
+    await this.pool.query(`ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS state TEXT`);
+    await this.pool.query(`ALTER TABLE analytics_events ADD COLUMN IF NOT EXISTS country TEXT`);
     await this.pool.query(`
       CREATE TABLE IF NOT EXISTS verification_records (
         id TEXT PRIMARY KEY,
@@ -859,8 +971,8 @@ class PostgresStore {
     await this.pool.query(`
       CREATE TABLE IF NOT EXISTS buyer_purchase_guides (
         id TEXT PRIMARY KEY,
-        buyer_id TEXT NOT NULL,
-        listing_id TEXT NOT NULL,
+        buyer_id TEXT,
+        listing_id TEXT,
         seller_id TEXT,
         status TEXT NOT NULL DEFAULT 'active',
         current_step TEXT,
@@ -873,18 +985,80 @@ class PostgresStore {
         updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
       )
     `);
+    await this.pool.query(`
+      CREATE TABLE IF NOT EXISTS favorite_records (
+        user_id TEXT NOT NULL,
+        listing_id TEXT NOT NULL REFERENCES listing_records(id) ON DELETE CASCADE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        PRIMARY KEY (user_id, listing_id)
+      )
+    `);
+    await this.pool.query(`
+      CREATE TABLE IF NOT EXISTS cost_records (
+        id TEXT PRIMARY KEY,
+        service_name TEXT NOT NULL,
+        action_type TEXT NOT NULL,
+        user_id TEXT,
+        listing_id TEXT,
+        request_id TEXT,
+        status TEXT NOT NULL,
+        units_used NUMERIC,
+        estimated_cost NUMERIC(12, 6) NOT NULL DEFAULT 0,
+        metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await this.pool.query(`
+      CREATE TABLE IF NOT EXISTS feedback_records (
+        id TEXT PRIMARY KEY,
+        user_id TEXT,
+        listing_id TEXT,
+        context TEXT NOT NULL,
+        rating INTEGER,
+        response_text TEXT,
+        metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+    await this.pool.query(`
+      CREATE TABLE IF NOT EXISTS followup_records (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        listing_id TEXT NOT NULL,
+        conversation_id TEXT,
+        followup_type TEXT NOT NULL,
+        answer TEXT,
+        feedback_text TEXT,
+        dismissed BOOLEAN NOT NULL DEFAULT FALSE,
+        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+        UNIQUE (user_id, listing_id, conversation_id, followup_type)
+      )
+    `);
+    await this.pool.query(`ALTER TABLE buyer_purchase_guides ALTER COLUMN buyer_id DROP NOT NULL`);
+    await this.pool.query(`ALTER TABLE buyer_purchase_guides ALTER COLUMN listing_id DROP NOT NULL`);
     await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_listing_records_status ON listing_records ((payload->>'status'))`);
     await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_listing_records_vin ON listing_records ((payload->>'vin'))`);
+    await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_listing_records_demo ON listing_records (is_demo, updated_at DESC)`);
+    await this.pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_listing_records_demo_seed_unique ON listing_records (demo_seed_id) WHERE demo_seed_id IS NOT NULL`);
     await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_report_records_status_created ON report_records (status, created_at DESC)`);
     await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_analytics_events_type_created ON analytics_events (event_type, created_at DESC)`);
     await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_analytics_events_user_created ON analytics_events (user_id, created_at DESC)`);
     await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_analytics_events_listing_created ON analytics_events (listing_id, created_at DESC)`);
+    await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_analytics_events_conversation_created ON analytics_events (conversation_id, created_at DESC)`);
     await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_audit_records_created ON audit_records (created_at DESC)`);
     await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_verification_records_status_updated ON verification_records (status, updated_at DESC)`);
     await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_verification_records_listing ON verification_records (listing_id)`);
     await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_auth_sessions_user ON auth_sessions (user_id, last_seen_at DESC)`);
     await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_buyer_guides_buyer_updated ON buyer_purchase_guides (buyer_id, updated_at DESC)`);
     await this.pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_buyer_guides_active_unique ON buyer_purchase_guides (buyer_id, listing_id) WHERE status = 'active'`);
+    await this.pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_buyer_guides_active_discovery_unique ON buyer_purchase_guides (buyer_id) WHERE status = 'active' AND listing_id IS NULL AND buyer_id IS NOT NULL`);
+    await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_favorite_records_user_created ON favorite_records (user_id, created_at DESC)`);
+    await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_favorite_records_listing ON favorite_records (listing_id)`);
+    await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_cost_records_service_created ON cost_records (service_name, created_at DESC)`);
+    await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_cost_records_listing ON cost_records (listing_id, created_at DESC)`);
+    await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_feedback_records_context_created ON feedback_records (context, created_at DESC)`);
+    await this.pool.query(`CREATE INDEX IF NOT EXISTS idx_followup_records_user ON followup_records (user_id, updated_at DESC)`);
     try {
       await this.pool.query(`CREATE UNIQUE INDEX IF NOT EXISTS idx_user_records_verified_phone_unique ON user_records (phone_number) WHERE phone_number IS NOT NULL AND phone_verified_at IS NOT NULL`);
     } catch (error) {
@@ -910,21 +1084,94 @@ class PostgresStore {
 
   async getListings() {
     await this.ensureCoreTables();
-    const result = await this.pool.query("SELECT payload FROM listing_records ORDER BY COALESCE((payload->>'dealScore')::int, 0) DESC, updated_at DESC");
-    return result.rows.map((row) => row.payload);
+    const result = await this.pool.query(`
+      SELECT
+        listing_records.payload,
+        COUNT(DISTINCT favorite_records.user_id)::int AS favorites,
+        COUNT(DISTINCT analytics_events.id) FILTER (WHERE analytics_events.event_type IN ('listing_view', 'listing_viewed'))::int AS views
+      FROM listing_records
+      LEFT JOIN favorite_records ON favorite_records.listing_id = listing_records.id
+      LEFT JOIN analytics_events ON analytics_events.listing_id = listing_records.id
+      GROUP BY listing_records.id, listing_records.payload, listing_records.updated_at
+      ORDER BY COALESCE((listing_records.payload->>'dealScore')::int, 0) DESC, listing_records.updated_at DESC
+    `);
+    return result.rows.map((row) => ({ ...row.payload, favorites: row.favorites, saves: row.favorites, views: row.views }));
   }
 
   async getListingById(id) {
     await this.ensureCoreTables();
-    const result = await this.pool.query("SELECT payload FROM listing_records WHERE id = $1 LIMIT 1", [id]);
-    return result.rows[0]?.payload;
+    const result = await this.pool.query(`
+      SELECT
+        listing_records.payload,
+        (SELECT COUNT(*)::int FROM favorite_records WHERE listing_id = listing_records.id) AS favorites,
+        (SELECT COUNT(*)::int FROM analytics_events WHERE listing_id = listing_records.id AND event_type IN ('listing_view', 'listing_viewed')) AS views
+      FROM listing_records
+      WHERE listing_records.id = $1
+      LIMIT 1
+    `, [id]);
+    const row = result.rows[0];
+    return row ? { ...row.payload, favorites: row.favorites, saves: row.favorites, views: row.views } : null;
+  }
+
+  async getSavedListings(userId) {
+    await this.ensureCoreTables();
+    const result = await this.pool.query(`
+      SELECT
+        listing_records.payload,
+        (SELECT COUNT(*)::int FROM favorite_records all_favorites WHERE all_favorites.listing_id = listing_records.id) AS favorites,
+        (SELECT COUNT(*)::int FROM analytics_events WHERE listing_id = listing_records.id AND event_type IN ('listing_view', 'listing_viewed')) AS views
+      FROM favorite_records
+      JOIN listing_records ON listing_records.id = favorite_records.listing_id
+      WHERE favorite_records.user_id = $1
+      ORDER BY favorite_records.created_at DESC
+    `, [String(userId || "")]);
+    return result.rows.map((row) => ({ ...row.payload, favorites: row.favorites, saves: row.favorites, views: row.views }));
+  }
+
+  async setListingSaved(userId, listingId, saved) {
+    await this.ensureCoreTables();
+    const listing = await this.getListingById(listingId);
+    if (!listing) return null;
+    if (saved) {
+      await this.pool.query(
+        "INSERT INTO favorite_records (user_id, listing_id) VALUES ($1, $2) ON CONFLICT (user_id, listing_id) DO NOTHING",
+        [String(userId || ""), String(listingId || "")]
+      );
+    } else {
+      await this.pool.query(
+        "DELETE FROM favorite_records WHERE user_id = $1 AND listing_id = $2",
+        [String(userId || ""), String(listingId || "")]
+      );
+    }
+    return { saved, listing: await this.getListingById(listingId) };
+  }
+
+  async syncSavedListings(userId, listingIds) {
+    await this.ensureCoreTables();
+    const ids = Array.from(new Set(listingIds.map(String).filter(Boolean))).slice(0, 500);
+    if (ids.length) {
+      await this.pool.query(`
+        INSERT INTO favorite_records (user_id, listing_id)
+        SELECT $1, id
+        FROM listing_records
+        WHERE id = ANY($2::text[])
+        ON CONFLICT (user_id, listing_id) DO NOTHING
+      `, [String(userId || ""), ids]);
+    }
+    return this.getSavedListings(userId);
   }
 
   async createListing(listing) {
     await this.ensureCoreTables();
     await this.pool.query(
-      "INSERT INTO listing_records (id, payload, updated_at) VALUES ($1, $2, NOW()) ON CONFLICT (id) DO UPDATE SET payload = EXCLUDED.payload, updated_at = NOW()",
-      [listing.id, listing]
+      `INSERT INTO listing_records (id, payload, is_demo, demo_seed_id, updated_at)
+       VALUES ($1, $2, $3, $4, NOW())
+       ON CONFLICT (id) DO UPDATE SET
+         payload = EXCLUDED.payload,
+         is_demo = EXCLUDED.is_demo,
+         demo_seed_id = EXCLUDED.demo_seed_id,
+         updated_at = NOW()`,
+      [listing.id, listing, Boolean(listing.isDemo || listing.is_demo), listing.demoSeedId || null]
     );
     syncAdminListing(this, listing);
     return listing;
@@ -1005,6 +1252,21 @@ class PostgresStore {
     return result.rows[0]?.payload || null;
   }
 
+  async getAllBuyerGuides() {
+    await this.ensureCoreTables();
+    const result = await this.pool.query("SELECT payload FROM buyer_purchase_guides ORDER BY updated_at DESC");
+    return result.rows.map((row) => row.payload);
+  }
+
+  async getActiveDiscoveryBuyerGuide(buyerId) {
+    await this.ensureCoreTables();
+    const result = await this.pool.query(
+      "SELECT payload FROM buyer_purchase_guides WHERE buyer_id = $1 AND listing_id IS NULL AND status = 'active' ORDER BY updated_at DESC LIMIT 1",
+      [buyerId]
+    );
+    return result.rows[0]?.payload || null;
+  }
+
   async getActiveBuyerGuide(buyerId, listingId) {
     await this.ensureCoreTables();
     const result = await this.pool.query(
@@ -1034,9 +1296,9 @@ class PostgresStore {
         updated_at = NOW()`,
       [
         guide.id,
-        guide.buyer_id || guide.buyerId,
-        guide.listing_id || guide.listingId,
-        guide.seller_id || guide.sellerId || "",
+        guide.buyer_id ?? guide.buyerId ?? null,
+        guide.listing_id ?? guide.listingId ?? null,
+        guide.seller_id ?? guide.sellerId ?? null,
         guide.status || "active",
         guide.current_step || guide.currentStep || "",
         guide.completed_steps || guide.completedSteps || [],
@@ -1053,8 +1315,8 @@ class PostgresStore {
   async trackEvent(event) {
     await this.ensureCoreTables();
     await this.pool.query(
-      `INSERT INTO analytics_events (id, event_type, user_id, session_id, ip_hash, route, listing_id, metadata, user_agent, referrer, created_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+      `INSERT INTO analytics_events (id, event_type, user_id, session_id, ip_hash, route, listing_id, conversation_id, related_entity_type, related_entity_id, city, state, country, metadata, user_agent, referrer, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
        ON CONFLICT (id) DO NOTHING`,
       [
         event.id,
@@ -1064,6 +1326,12 @@ class PostgresStore {
         event.ipHash || null,
         event.route || null,
         event.listingId || null,
+        event.conversationId || null,
+        event.relatedEntityType || null,
+        event.relatedEntityId || null,
+        event.city || null,
+        event.state || null,
+        event.country || null,
         event.metadata || {},
         event.userAgent || "",
         event.referrer || "",
@@ -1077,7 +1345,7 @@ class PostgresStore {
     await this.ensureCoreTables();
     const limit = Math.min(20000, Math.max(100, Number(params.limit || 5000)));
     const result = await this.pool.query(
-      `SELECT id, event_type, user_id, session_id, ip_hash, route, listing_id, metadata, user_agent, referrer, created_at
+      `SELECT id, event_type, user_id, session_id, ip_hash, route, listing_id, conversation_id, related_entity_type, related_entity_id, city, state, country, metadata, user_agent, referrer, created_at
        FROM analytics_events
        ORDER BY created_at DESC
        LIMIT $1`,
@@ -1091,6 +1359,12 @@ class PostgresStore {
       ipHash: row.ip_hash || "",
       route: row.route || "",
       listingId: row.listing_id || "",
+      conversationId: row.conversation_id || "",
+      relatedEntityType: row.related_entity_type || "",
+      relatedEntityId: row.related_entity_id || "",
+      city: row.city || "",
+      state: row.state || "",
+      country: row.country || "",
       metadata: row.metadata || {},
       userAgent: row.user_agent || "",
       referrer: row.referrer || "",
@@ -1111,6 +1385,84 @@ class PostgresStore {
     await this.ensureCoreTables();
     const result = await this.pool.query("SELECT payload FROM audit_records ORDER BY created_at DESC LIMIT 5000");
     return result.rows.map((row) => row.payload);
+  }
+
+  async saveCostRecord(record) {
+    await this.ensureCoreTables();
+    await this.pool.query(
+      `INSERT INTO cost_records (id, service_name, action_type, user_id, listing_id, request_id, status, units_used, estimated_cost, metadata, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+       ON CONFLICT (id) DO NOTHING`,
+      [record.id, record.serviceName, record.actionType, record.userId || null, record.listingId || null, record.requestId || null, record.status, record.unitsUsed ?? null, record.estimatedCost || 0, record.metadata || {}, record.createdAt]
+    );
+    return record;
+  }
+
+  async getCostRecords() {
+    await this.ensureCoreTables();
+    const result = await this.pool.query("SELECT * FROM cost_records ORDER BY created_at DESC LIMIT 20000");
+    return result.rows.map((row) => ({
+      id: row.id,
+      serviceName: row.service_name,
+      actionType: row.action_type,
+      userId: row.user_id || "",
+      listingId: row.listing_id || "",
+      requestId: row.request_id || "",
+      status: row.status,
+      unitsUsed: row.units_used === null ? null : Number(row.units_used),
+      estimatedCost: Number(row.estimated_cost || 0),
+      metadata: row.metadata || {},
+      createdAt: row.created_at.toISOString()
+    }));
+  }
+
+  async saveFeedback(record) {
+    await this.ensureCoreTables();
+    await this.pool.query(
+      `INSERT INTO feedback_records (id, user_id, listing_id, context, rating, response_text, metadata, created_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [record.id, record.userId || null, record.listingId || null, record.context, record.rating ?? null, record.responseText || "", record.metadata || {}, record.createdAt]
+    );
+    return record;
+  }
+
+  async getFeedbackRecords() {
+    await this.ensureCoreTables();
+    const result = await this.pool.query("SELECT * FROM feedback_records ORDER BY created_at DESC LIMIT 5000");
+    return result.rows.map((row) => ({
+      id: row.id,
+      userId: row.user_id || "",
+      listingId: row.listing_id || "",
+      context: row.context,
+      rating: row.rating,
+      responseText: row.response_text || "",
+      metadata: row.metadata || {},
+      createdAt: row.created_at.toISOString()
+    }));
+  }
+
+  async saveFollowup(record) {
+    await this.ensureCoreTables();
+    await this.pool.query(
+      `INSERT INTO followup_records (id, user_id, listing_id, conversation_id, followup_type, answer, feedback_text, dismissed, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW())
+       ON CONFLICT (user_id, listing_id, conversation_id, followup_type) DO UPDATE SET
+         answer = EXCLUDED.answer, feedback_text = EXCLUDED.feedback_text, dismissed = EXCLUDED.dismissed, updated_at = NOW()`,
+      [record.id, record.userId, record.listingId, record.conversationId || "", record.followupType, record.answer || "", record.feedbackText || "", Boolean(record.dismissed), record.createdAt]
+    );
+    return record;
+  }
+
+  async getFollowupsByUser(userId) {
+    await this.ensureCoreTables();
+    const result = await this.pool.query("SELECT * FROM followup_records WHERE user_id = $1 ORDER BY updated_at DESC", [userId]);
+    return result.rows.map(followupFromRow);
+  }
+
+  async getAllFollowups() {
+    await this.ensureCoreTables();
+    const result = await this.pool.query("SELECT * FROM followup_records ORDER BY updated_at DESC LIMIT 10000");
+    return result.rows.map(followupFromRow);
   }
 
   async saveVerificationRequest(verification) {
@@ -1247,6 +1599,7 @@ class PostgresStore {
     try {
       await client.query("BEGIN");
       await client.query("DELETE FROM auth_sessions WHERE user_id = $1", [id]);
+      await client.query("DELETE FROM favorite_records WHERE user_id = $1", [id]);
       await client.query("DELETE FROM buyer_purchase_guides WHERE buyer_id = $1 OR seller_id = $1", [id]);
       await client.query("DELETE FROM conversation_records WHERE payload->>'buyerId' = $1 OR payload->>'sellerId' = $1 OR payload->>'partnerId' = $1", [id]);
       await client.query("DELETE FROM listing_records WHERE payload->>'userId' = $1 OR payload->'seller'->>'id' = $1", [id]);
@@ -1395,19 +1748,27 @@ function addAdminMethods(StoreClass) {
     return verification;
   };
 
-  StoreClass.prototype.getAdminDashboard = async function getAdminDashboard() {
+  StoreClass.prototype.getAdminDashboard = async function getAdminDashboard(options = {}) {
     const state = await ensureAdminState(this);
     const persistedUsers = typeof this.getUsers === "function" ? (await this.getUsers()).map(toAdminUserRecord) : [];
-    const rawListings = await this.getListings();
+    const allRawListings = await this.getListings();
+    const includeDemo = options.includeDemo === true;
+    const rawListings = includeDemo ? allRawListings : allRawListings.filter((listing) => !(listing.isDemo || listing.is_demo));
     const listings = rawListings.map(toAdminListingRecord);
     const conversations = await this.getConversations();
     const persistedVerifications = typeof this.getVerificationRequests === "function" ? await this.getVerificationRequests() : [];
+    const buyerGuides = typeof this.getAllBuyerGuides === "function" ? await this.getAllBuyerGuides() : [];
+    const costRecords = typeof this.getCostRecords === "function" ? await this.getCostRecords() : [];
+    const feedbackRecords = typeof this.getFeedbackRecords === "function" ? await this.getFeedbackRecords() : [];
+    const followups = typeof this.getAllFollowups === "function" ? await this.getAllFollowups() : [];
     state.verifications = [
       ...adminVerificationRecordsFromListings(rawListings),
       ...persistedVerifications,
       ...(this.kind === "postgres" ? [] : state.verifications)
     ].filter((item, index, arr) => arr.findIndex((candidate) => candidate.id === item.id) === index);
-    const events = typeof this.getAnalyticsEvents === "function" ? await this.getAnalyticsEvents({ limit: 20000 }) : [];
+    const allEvents = typeof this.getAnalyticsEvents === "function" ? await this.getAnalyticsEvents({ limit: 20000 }) : [];
+    const demoListingIds = new Set(allRawListings.filter((listing) => listing.isDemo || listing.is_demo).map((listing) => listing.id));
+    const events = includeDemo ? allEvents : allEvents.filter((event) => !event.listingId || !demoListingIds.has(event.listingId));
     const auditLogs = typeof this.getAuditLogs === "function" ? await this.getAuditLogs() : state.auditLogs;
     const traffic = buildTrafficFromEvents(events);
     state.traffic = traffic;
@@ -1455,10 +1816,10 @@ function addAdminMethods(StoreClass) {
     const suspiciousConversations = conversations.filter((conversation) =>
       suspiciousUserIds.has(conversation.buyerId) || suspiciousUserIds.has(conversation.sellerId)
     ).length;
-    const savedVehicles = countEvents(events, "save_listing");
-    const listingViews = countEvents(events, "listing_view");
+    const savedVehicles = countEvents(events, ["save_listing", "listing_saved"]);
+    const listingViews = countEvents(events, ["listing_view", "listing_viewed"]);
     const searchActivity = countEvents(events, "search_performed");
-    const loginActivity = countEvents(events, "login");
+    const loginActivity = countEvents(events, ["login", "user_logged_in"]);
     const totalPageViews = traffic.reduce((total, day) => total + day.pageViews, 0);
     const signupConversionRate = totalPageViews ? Number(((signupsThisMonth / totalPageViews) * 100).toFixed(1)) : 0;
     const listingViewConversionRate = totalPageViews ? Number(((listingViews / totalPageViews) * 100).toFixed(1)) : 0;
@@ -1479,6 +1840,9 @@ function addAdminMethods(StoreClass) {
         usersWithListings: users.filter((user) => user.listingCount > 0).length,
         usersWithConversations: users.filter((user) => user.conversationsCount > 0).length,
         totalListings: listings.length,
+        demoListings: allRawListings.filter((listing) => listing.isDemo || listing.is_demo).length,
+        realListings: listings.filter((listing) => !listing.isDemo).length,
+        demoDataIncluded: includeDemo,
         activeListings: listings.filter((listing) => listing.status === "active").length,
         approvedListings: listings.filter((listing) => listing.status === "active").length,
         pendingListings: listings.filter((listing) => String(listing.status || "").includes("pending")).length,
@@ -1523,7 +1887,32 @@ function addAdminMethods(StoreClass) {
         loginActivity,
         inspectionsRequested: state.verifications.filter((item) => item.type === "inspection").length,
         revenue: 0,
-        averageTimeToSellVehicle: "Not enough data"
+        averageTimeToSellVehicle: "Not enough data",
+        buyerGuideSessions: buyerGuides.length,
+        buyerGuideCompleted: buyerGuides.filter((guide) => guide.status === "completed").length,
+        buyerGuideAbandoned: buyerGuides.filter((guide) => guide.status === "abandoned").length,
+        buyerGuideSelectedListings: buyerGuides.filter((guide) => guide.selected_listing_id || guide.selectedListingId || guide.listing_id || guide.listingId).length,
+        buyerGuideSafetyFlags: buyerGuides.reduce((total, guide) => total + Number((guide.safety_red_flags || guide.safetyRedFlags || []).length), 0)
+        ,
+        phoneVerificationAttempts: countEvents(events, "phone_verification_started"),
+        phoneVerificationPassed: countEvents(events, "phone_verification_passed"),
+        phoneVerificationFailed: countEvents(events, "phone_verification_failed"),
+        personaVerificationAttempts: countEvents(events, "persona_verification_started"),
+        personaVerificationPassed: countEvents(events, "persona_verification_passed"),
+        personaVerificationFailed: countEvents(events, "persona_verification_failed"),
+        vehiclePresenceAttempts: countEvents(events, "vehicle_presence_verification_started"),
+        vehiclePresencePassed: countEvents(events, "vehicle_presence_verification_passed"),
+        vehiclePresenceFailed: countEvents(events, "vehicle_presence_verification_failed"),
+        soldThroughKerodex: rawListings.filter((listing) => listing.saleOutcome?.soldSource === "kerodex").length,
+        soldElsewhere: rawListings.filter((listing) => listing.saleOutcome?.soldSource === "elsewhere").length,
+        soldSourceUnknown: rawListings.filter((listing) => listing.status === "sold" && !["kerodex", "elsewhere"].includes(listing.saleOutcome?.soldSource)).length,
+        buyerFollowupResponses: followups.filter((record) => record.followupType === "buyer_purchase" && record.answer).length,
+        buyerPurchasesThroughKerodex: followups.filter((record) => record.answer === "bought_through_kerodex").length,
+        buyerPurchasesElsewhere: followups.filter((record) => record.answer === "bought_elsewhere").length,
+        sellerWouldUseAgainYes: rawListings.filter((listing) => listing.saleOutcome?.wouldUseAgain === "yes").length,
+        estimatedCost30d: Number(costRecords.filter((record) => occurredSince(record.createdAt, startOfMonth)).reduce((sum, record) => sum + Number(record.estimatedCost || 0), 0).toFixed(4)),
+        failedPaidCalls: costRecords.filter((record) => record.status === "failure").length,
+        feedbackResponses: feedbackRecords.length
       },
       breakdowns: {
         listingsByStatus: Object.entries(listings.reduce((acc, listing) => {
@@ -1558,7 +1947,22 @@ function addAdminMethods(StoreClass) {
         mostReportedListings: Object.entries(state.reports.reduce((acc, report) => {
           if (report.listingId) acc[report.listingId] = (acc[report.listingId] || 0) + 1;
           return acc;
-        }, {})).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value).slice(0, 10)
+        }, {})).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value).slice(0, 10),
+        buyerGuideRecommendedModels: Object.entries(buyerGuides.reduce((acc, guide) => {
+          for (const item of guide.recommendations?.recommendedModels || []) {
+            const key = [item.make, item.model].filter(Boolean).join(" ");
+            if (key) acc[key] = (acc[key] || 0) + 1;
+          }
+          return acc;
+        }, {})).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value).slice(0, 10),
+        costsByService: Object.entries(costRecords.reduce((acc, record) => {
+          acc[record.serviceName] = (acc[record.serviceName] || 0) + Number(record.estimatedCost || 0);
+          return acc;
+        }, {})).map(([label, value]) => ({ label, value: Number(value.toFixed(4)) })),
+        feedbackByContext: Object.entries(feedbackRecords.reduce((acc, record) => {
+          acc[record.context] = (acc[record.context] || 0) + 1;
+          return acc;
+        }, {})).map(([label, value]) => ({ label, value }))
       },
       recent: {
         users: users.slice().sort((a, b) => Date.parse(b.accountCreatedAt) - Date.parse(a.accountCreatedAt)).slice(0, 8),
@@ -1622,6 +2026,28 @@ function addAdminMethods(StoreClass) {
         { label: "Listing Created", value: listings.length },
         { label: "Buyer Contacted", value: traffic.reduce((total, day) => total + day.contacts, 0) },
         { label: "Vehicle Sold", value: soldListings }
+      ],
+      sellerFunnel: [
+        { label: "Site visits", value: traffic.reduce((total, day) => total + day.visitors, 0) },
+        { label: "Signed up", value: countEvents(events, ["signup", "user_signed_up"]) },
+        { label: "Listing started", value: countEvents(events, "listing_started") },
+        { label: "Photos uploaded", value: countEvents(events, "listing_photos_uploaded") },
+        { label: "Listing submitted", value: countEvents(events, ["create_listing", "listing_submitted"]) },
+        { label: "Verification passed", value: countEvents(events, "vehicle_presence_verification_passed") },
+        { label: "Listing published", value: countEvents(events, "listing_published") },
+        { label: "Received view", value: new Set(events.filter((event) => ["listing_view", "listing_viewed"].includes(event.eventType)).map((event) => event.listingId).filter(Boolean)).size },
+        { label: "Received save", value: new Set(events.filter((event) => ["save_listing", "listing_saved"].includes(event.eventType)).map((event) => event.listingId).filter(Boolean)).size },
+        { label: "Received message", value: new Set(events.filter((event) => ["send_message", "message_sent"].includes(event.eventType)).map((event) => event.listingId).filter(Boolean)).size },
+        { label: "Marked sold", value: countEvents(events, "listing_marked_sold") }
+      ],
+      buyerFunnel: [
+        { label: "Site visits", value: traffic.reduce((total, day) => total + day.visitors, 0) },
+        { label: "Search or filter", value: countEvents(events, ["search_performed", "filter_used"]) },
+        { label: "Viewed listing", value: countEvents(events, ["listing_view", "listing_viewed"]) },
+        { label: "Saved listing", value: countEvents(events, ["save_listing", "listing_saved"]) },
+        { label: "Messaged seller", value: countEvents(events, ["send_message", "message_sent"]) },
+        { label: "Follow-up answered", value: countEvents(events, "buyer_purchase_followup_answered") },
+        { label: "Reported purchase", value: followups.filter((record) => ["bought_through_kerodex", "bought_elsewhere"].includes(record.answer)).length }
       ],
       futureRevenue: [
         { label: "Featured Listings", enabled: false, projectedMonthly: 0 },
@@ -1720,7 +2146,13 @@ function addAdminMethods(StoreClass) {
     };
     let items = collections[name] || [];
     if (status) {
-      items = items.filter((item) => item.status === status || item.verificationStatus === status || item.riskLevel === status);
+      items = items.filter((item) =>
+        (status === "demo" && item.isDemo) ||
+        (status === "real" && !item.isDemo) ||
+        item.status === status ||
+        item.verificationStatus === status ||
+        item.riskLevel === status
+      );
     }
     const page = Math.max(1, Number(params.get("page") || 1));
     const pageSize = Math.min(100, Math.max(10, Number(params.get("pageSize") || 25)));

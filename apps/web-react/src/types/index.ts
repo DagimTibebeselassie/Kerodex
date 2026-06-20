@@ -83,6 +83,11 @@ export interface Vehicle {
     analysisReason?: string;
   };
   inspectionVerified?: boolean;
+  isDemo?: boolean;
+  is_demo?: boolean;
+  demoSeedId?: string;
+  demoNotice?: string;
+  sellerType?: string;
   seller?: {
     id?: string;
     name?: string;
@@ -97,6 +102,7 @@ export interface Vehicle {
     memberSince?: string;
     rating?: number | null;
     reviewCount?: number;
+    isDemo?: boolean;
   };
 }
 

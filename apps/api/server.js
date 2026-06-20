@@ -17,12 +17,15 @@ function loadLocalEnvFile(filePath) {
   }
 }
 
-loadLocalEnvFile(path.resolve(__dirname, "../../.env.local"));
-loadLocalEnvFile(path.resolve(__dirname, "../../.env"));
+if (process.env.SKIP_LOCAL_ENV !== "true") {
+  loadLocalEnvFile(path.resolve(__dirname, "../../.env.local"));
+  loadLocalEnvFile(path.resolve(__dirname, "../../.env"));
+}
 
 const marketCheck = require("./marketcheck");
 const store = require("./store");
 const vehiclePresence = require("./vehicle-presence");
+const buyerGuideEngine = require("./buyer-guide");
 const twilio = require("twilio");
 const PORT = Number(process.env.PORT || 4100);
 const REACT_DIST_DIR = path.resolve(__dirname, "../web-react/dist");
@@ -39,6 +42,7 @@ const phoneVerificationBuckets = new Map();
 const phoneVerificationCooldowns = new Map();
 const pendingPresenceCodes = new Map();
 const vehiclePresenceJobs = new Set();
+const guestBuyerGuideSessions = new Map();
 const TERMS_VERSION = "v1.0";
 const PRIVACY_VERSION = "v1.0";
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
@@ -75,12 +79,10 @@ const REQUIRED_TITLE_STATUSES = new Set(["Clean Title", "Lienholder / Loan", "Re
 const REQUIRED_ACCIDENT_OPTIONS = new Set(["No accidents reported", "Minor accident disclosed", "Major accident disclosed", "Not sure"]);
 const REQUIRED_OWNER_OPTIONS = new Set(["One previous owner", "Two previous owners", "Three or more owners", "1 previous owner", "2 previous owners", "3+ previous owners", "Not sure"]);
 const SELLER_CHECKLIST_KEYS = [
-  "accurateInformation",
   "authorizedToList",
   "privateParty",
   "vinMatchesVehicle",
-  "noProhibitedContent",
-  "safeCommunication"
+  "accurateInformation"
 ];
 const BUYER_GUIDE_STEP_IDS = [
   "review_listing",
@@ -444,6 +446,66 @@ function createBuyerGuideRecord({ buyer, listing }) {
   };
 }
 
+function createDiscoveryBuyerGuideRecord(user = null) {
+  const now = new Date().toISOString();
+  const buyerId = user?.id || null;
+  return {
+    id: `bgs_${Date.now().toString(36)}_${crypto.randomBytes(5).toString("hex")}`,
+    buyer_id: buyerId,
+    buyerId,
+    listing_id: null,
+    listingId: null,
+    seller_id: null,
+    sellerId: null,
+    journey_type: "discovery",
+    journeyType: "discovery",
+    status: "active",
+    current_stage: "understand_buyer",
+    currentStage: "understand_buyer",
+    current_step: "purpose",
+    currentStep: "purpose",
+    buyer_answers: {},
+    buyerAnswers: {},
+    buyer_profile: {},
+    buyerProfile: {},
+    recommendations: null,
+    listing_matches: [],
+    listingMatches: [],
+    selected_listing_id: null,
+    selectedListingId: null,
+    safety_red_flags: [],
+    safetyRedFlags: [],
+    completed_steps: [],
+    completedSteps: [],
+    notes: {},
+    created_at: now,
+    createdAt: now,
+    updated_at: now,
+    updatedAt: now
+  };
+}
+
+async function getBuyerGuideSession(id, user = null) {
+  const persisted = typeof store.getBuyerGuideById === "function" ? await store.getBuyerGuideById(id) : null;
+  if (persisted) {
+    const ownerId = persisted.buyer_id || persisted.buyerId;
+    return user && ownerId === user.id ? persisted : null;
+  }
+  const guest = guestBuyerGuideSessions.get(id) || null;
+  return guest && !(guest.buyer_id || guest.buyerId) ? guest : null;
+}
+
+async function saveBuyerGuideSession(session) {
+  const now = new Date().toISOString();
+  const next = { ...session, updated_at: now, updatedAt: now };
+  if (next.buyer_id || next.buyerId) {
+    guestBuyerGuideSessions.delete(next.id);
+    return store.saveBuyerGuide(next);
+  }
+  guestBuyerGuideSessions.set(next.id, next);
+  return next;
+}
+
 async function decorateBuyerGuide(guide) {
   if (!guide) return null;
   const listingId = guide.listing_id || guide.listingId;
@@ -493,6 +555,12 @@ function eventFromRequest(req, eventType, user = null, metadata = {}) {
     ipHash: crypto.createHash("sha256").update(`${ip}:${process.env.ANALYTICS_IP_SALT || "kerodex-local"}`).digest("hex").slice(0, 24),
     route: metadata.route || requestUrl.pathname,
     listingId: metadata.listingId || "",
+    conversationId: metadata.conversationId || "",
+    relatedEntityType: metadata.relatedEntityType || "",
+    relatedEntityId: metadata.relatedEntityId || "",
+    city: metadata.city || "",
+    state: metadata.state || "",
+    country: metadata.country || "",
     metadata,
     userAgent: String(req.headers["user-agent"] || ""),
     referrer: String(req.headers.referer || req.headers.referrer || ""),
@@ -528,6 +596,9 @@ function rateLimitCategory(pathname, method = "GET") {
   if (pathname.startsWith("/api/admin/")) {
     return { name: "admin_api", limit: 600, windowMs: 15 * 60 * 1000 };
   }
+  if (pathname.startsWith("/api/buyer-guide/")) {
+    return { name: "buyer_guide", limit: 80, windowMs: 15 * 60 * 1000 };
+  }
   if (
     pathname === "/api/auth/email" ||
     pathname === "/api/auth/password/forgot" ||
@@ -544,6 +615,27 @@ function rateLimitCategory(pathname, method = "GET") {
   return { name: "general_write", limit: 200, windowMs: 15 * 60 * 1000 };
 }
 
+const EVENT_NAME_ALIASES = {
+  signup: "user_signed_up",
+  login: "user_logged_in",
+  create_listing: "listing_submitted",
+  update_listing: "listing_updated",
+  listing_view: "listing_viewed",
+  save_listing: "listing_saved",
+  unsave_listing: "listing_unsaved",
+  send_message: "message_sent",
+  report_listing: "report_submitted",
+  report_user: "report_submitted",
+  phone_verified: "phone_verification_passed",
+  buyer_guide_discovery_started: "buyer_guide_started",
+  buyer_guide_recommendations_generated: "buyer_guide_completed",
+  buyer_guide_listing_selected: "buyer_guide_listing_recommended"
+};
+
+function canonicalEventName(eventType) {
+  return EVENT_NAME_ALIASES[eventType] || eventType;
+}
+
 function applyRateLimit(req, res, pathname) {
   if (!pathname.startsWith("/api/")) return true;
   const category = rateLimitCategory(pathname, req.method);
@@ -558,6 +650,7 @@ function applyRateLimit(req, res, pathname) {
   rateLimitBuckets.set(key, nextBucket);
   if (nextBucket.count <= category.limit) return true;
   console.warn(`[Kerodex security] rate_limit category=${category.name} ip=${ip} path=${pathname}`);
+  trackSystemEvent("rate_limit_hit", { route: pathname, category: category.name }).catch(() => {});
   sendJson(res, 429, {
     success: false,
     error: "Too many requests. Please try again later.",
@@ -580,6 +673,11 @@ function pruneRateLimitBuckets() {
   for (const [key, lastSentAt] of phoneVerificationCooldowns.entries()) {
     if (now - lastSentAt > 15 * 60 * 1000) phoneVerificationCooldowns.delete(key);
   }
+  for (const [key, session] of guestBuyerGuideSessions.entries()) {
+    if (now - Date.parse(session.updated_at || session.updatedAt || session.created_at || session.createdAt || 0) > 24 * 60 * 60 * 1000) {
+      guestBuyerGuideSessions.delete(key);
+    }
+  }
 }
 
 setInterval(pruneRateLimitBuckets, 5 * 60 * 1000).unref();
@@ -587,7 +685,7 @@ setInterval(pruneRateLimitBuckets, 5 * 60 * 1000).unref();
 async function trackEvent(req, eventType, user = null, metadata = {}) {
   if (typeof store.trackEvent !== "function") return null;
   try {
-    return await store.trackEvent(eventFromRequest(req, eventType, user, metadata));
+    return await store.trackEvent(eventFromRequest(req, canonicalEventName(eventType), user, metadata));
   } catch (error) {
     console.warn(`[Kerodex] Unable to track event ${eventType}: ${error.message}`);
     return null;
@@ -755,7 +853,8 @@ function publicUser(user) {
     acceptedTermsAt: safeUser.acceptedTermsAt || "",
     privacyVersion: safeUser.privacyVersion || "",
     acceptedPrivacyAt: safeUser.acceptedPrivacyAt || "",
-    safetyNoticeSeenAt: safeUser.safetyNoticeSeenAt || ""
+    safetyNoticeSeenAt: safeUser.safetyNoticeSeenAt || "",
+    createdAt: safeUser.createdAt || safeUser.acceptedTermsAt || ""
   };
 }
 
@@ -811,6 +910,75 @@ async function invalidateSession(token) {
   sessions.delete(token);
   if (typeof store.deleteAuthSession === "function") {
     await store.deleteAuthSession(token);
+  }
+}
+
+async function trackSystemEvent(eventType, metadata = {}) {
+  if (typeof store.trackEvent !== "function") return null;
+  try {
+    return await store.trackEvent({
+      id: `evt_${Date.now().toString(36)}_${crypto.randomBytes(4).toString("hex")}`,
+      eventType: canonicalEventName(eventType),
+      userId: metadata.userId || "",
+      sessionId: "",
+      ipHash: "",
+      route: metadata.route || "system",
+      listingId: metadata.listingId || "",
+      conversationId: metadata.conversationId || "",
+      relatedEntityType: metadata.relatedEntityType || "",
+      relatedEntityId: metadata.relatedEntityId || "",
+      metadata,
+      userAgent: "kerodex-server",
+      referrer: "",
+      createdAt: new Date().toISOString()
+    });
+  } catch (error) {
+    console.warn(`[Kerodex] Unable to track system event ${eventType}: ${error.message}`);
+    return null;
+  }
+}
+
+function estimatedUnitCost(serviceName) {
+  const costs = {
+    openai: Number(process.env.COST_OPENAI_VEHICLE_VERIFICATION || 0.01),
+    persona: Number(process.env.COST_PERSONA_VERIFICATION || 1),
+    twilio: Number(process.env.COST_TWILIO_SMS_VERIFICATION || 0.05),
+    marketcheck: Number(process.env.COST_MARKETCHECK_REQUEST || 0.01),
+    s3: Number(process.env.COST_S3_UPLOAD_ESTIMATE || 0.001)
+  };
+  return Number.isFinite(costs[serviceName]) ? costs[serviceName] : 0;
+}
+
+async function recordCost(serviceName, actionType, details = {}) {
+  if (typeof store.saveCostRecord !== "function") return null;
+  try {
+    const unitsUsed = Number(details.unitsUsed ?? 1);
+    const record = {
+      id: `cost_${Date.now().toString(36)}_${crypto.randomBytes(4).toString("hex")}`,
+      serviceName,
+      actionType,
+      userId: details.userId || "",
+      listingId: details.listingId || "",
+      requestId: details.requestId || "",
+      status: details.status || "success",
+      unitsUsed: Number.isFinite(unitsUsed) ? unitsUsed : null,
+      estimatedCost: Number(details.estimatedCost ?? (estimatedUnitCost(serviceName) * (Number.isFinite(unitsUsed) ? unitsUsed : 1))),
+      metadata: details.metadata || {},
+      createdAt: new Date().toISOString()
+    };
+    await store.saveCostRecord(record);
+    await trackSystemEvent("api_cost_recorded", {
+      userId: record.userId,
+      listingId: record.listingId,
+      serviceName,
+      actionType,
+      status: record.status,
+      estimatedCost: record.estimatedCost
+    });
+    return record;
+  } catch (error) {
+    console.warn(`[Kerodex] Unable to record ${serviceName} cost: ${error.message}`);
+    return null;
   }
 }
 
@@ -1426,22 +1594,26 @@ async function sendPasswordResetEmail({ email, code, req }) {
   });
 }
 
+function emailBrandLogo() {
+  const siteUrl = String(process.env.PUBLIC_SITE_URL || "https://kerodexofficial.com").replace(/\/+$/, "");
+  return `<img src="${siteUrl}/assets/darkmodeNonTransparent.png" width="88" height="88" alt="Kerodex" style="display:block;width:88px;height:88px;margin:0 auto 28px;border:0;border-radius:0;object-fit:cover;background:#000000;" />`;
+}
+
 async function sendCodeEmail({ email, code, subject, heading, intro, reason, fallbackText }) {
   const html = `<!doctype html>
   <html>
-    <body style="margin:0;background:#ffffff;color:#24292f;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-      <div style="max-width:640px;margin:0 auto;padding:56px 24px 40px;text-align:center;">
-        <div style="font-size:28px;font-weight:700;letter-spacing:-0.03em;margin-bottom:28px;">Kerodex</div>
-        <h1 style="font-size:24px;font-weight:400;line-height:1.35;margin:0 0 24px;">${heading}</h1>
-        <div style="border:1px solid #d0d7de;border-radius:6px;text-align:left;padding:24px 28px;margin:0 auto 24px;max-width:480px;">
-          <p style="font-size:15px;line-height:1.5;margin:0 0 24px;color:#24292f;">${intro}</p>
-          <div style="font-size:32px;letter-spacing:0.35em;text-align:center;margin:0 0 24px;color:#24292f;">${code}</div>
-          <p style="font-size:15px;line-height:1.5;margin:0 0 18px;color:#24292f;">This code is valid for <strong>15 minutes</strong> and can only be used once.</p>
-          <p style="font-size:15px;line-height:1.5;margin:0;color:#24292f;"><strong>Please don't share this code with anyone:</strong> Kerodex will never ask for it by phone or email.</p>
-          <p style="font-size:15px;line-height:1.5;margin:28px 0 0;color:#24292f;">Thanks,<br/>The Kerodex Team</p>
+    <body style="margin:0;background:#ffffff;color:#000000;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+      <div style="max-width:600px;margin:0 auto;padding:48px 24px;text-align:center;">
+        ${emailBrandLogo()}
+        <h1 style="font-size:24px;font-weight:600;letter-spacing:-0.02em;line-height:1.3;margin:0 0 24px;color:#000000;">${heading}</h1>
+        <div style="border:1px solid #e5e5e5;text-align:left;padding:28px;margin:0 auto 24px;max-width:480px;background:#ffffff;">
+          <p style="font-size:15px;line-height:1.6;margin:0 0 24px;color:#171717;">${intro}</p>
+          <div style="font-size:34px;font-weight:600;letter-spacing:0.32em;text-align:center;margin:0 0 24px;color:#000000;">${code}</div>
+          <p style="font-size:14px;line-height:1.6;margin:0 0 16px;color:#404040;">This code is valid for <strong>15 minutes</strong> and can only be used once.</p>
+          <p style="font-size:14px;line-height:1.6;margin:0;color:#404040;"><strong>Do not share this code.</strong> Kerodex will never ask for it by phone or email.</p>
+          <p style="font-size:14px;line-height:1.6;margin:28px 0 0;color:#171717;">Thanks,<br/>The Kerodex Team</p>
         </div>
-        <p style="max-width:480px;margin:0 auto 24px;text-align:left;font-size:14px;line-height:1.6;color:#57606a;">You're receiving this email because ${reason} If this wasn't you, you can ignore this email.</p>
-        <hr style="border:0;border-top:1px solid #d8dee4;margin:28px auto 0;max-width:480px;" />
+        <p style="max-width:480px;margin:0 auto;text-align:left;font-size:12px;line-height:1.6;color:#737373;">You're receiving this email because ${reason} If this wasn't you, you can ignore it.</p>
       </div>
     </body>
   </html>`;
@@ -1486,16 +1658,17 @@ async function sendTransactionalEmail({ to, subject, heading, body, actionUrl = 
   if (!isValidEmail(email) || !subject || !body) return { sent: false, skipped: true };
   if (!process.env.RESEND_API_KEY || !process.env.AUTH_EMAIL_FROM) return { sent: false, skipped: true };
   const button = actionUrl
-    ? `<p style="margin:24px 0 0;"><a href="${actionUrl}" style="display:inline-block;background:#111827;color:#fff;text-decoration:none;border-radius:6px;padding:10px 14px;font-weight:700;font-size:14px;">${actionLabel}</a></p>`
+    ? `<p style="margin:28px 0 0;"><a href="${actionUrl}" style="display:inline-block;background:#000000;color:#ffffff;text-decoration:none;padding:12px 18px;font-weight:600;font-size:14px;">${actionLabel}</a></p>`
     : "";
-  const html = `<!doctype html><html><body style="margin:0;background:#fff;color:#111827;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-    <div style="max-width:600px;margin:0 auto;padding:48px 24px;">
-      <div style="font-weight:800;letter-spacing:-.03em;font-size:26px;margin-bottom:28px;">Kerodex</div>
-      <h1 style="font-size:22px;line-height:1.35;margin:0 0 16px;">${heading}</h1>
-      <p style="font-size:15px;line-height:1.6;color:#374151;margin:0;">${body}</p>
-      ${button}
-      <hr style="border:0;border-top:1px solid #e5e7eb;margin:32px 0 0;" />
-      <p style="font-size:12px;line-height:1.5;color:#6b7280;">Kerodex marketplace notification. If this was unexpected, contact founder@kerodexofficial.com.</p>
+  const html = `<!doctype html><html><body style="margin:0;background:#ffffff;color:#000000;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+    <div style="max-width:600px;margin:0 auto;padding:48px 24px;text-align:center;">
+      ${emailBrandLogo()}
+      <div style="border:1px solid #e5e5e5;padding:28px;text-align:left;background:#ffffff;">
+        <h1 style="font-size:22px;font-weight:600;letter-spacing:-0.02em;line-height:1.35;margin:0 0 16px;color:#000000;">${heading}</h1>
+        <p style="font-size:15px;line-height:1.65;color:#262626;margin:0;">${body}</p>
+        ${button}
+      </div>
+      <p style="margin:24px 0 0;font-size:12px;line-height:1.6;color:#737373;text-align:left;">Kerodex marketplace notification. If this was unexpected, contact founder@kerodexofficial.com.</p>
     </div>
   </body></html>`;
   try {
@@ -1803,7 +1976,14 @@ async function getCachedMarketCheckDecode(vin) {
   const cleanVin = marketCheck.assertValidVin(vin);
   const cached = await store.getMarketCheckCache("vin_decode", cleanVin);
   if (cached?.payload) return { ...cached.payload, cached: true, cacheUpdatedAt: cached.updatedAt };
-  const decoded = await marketCheck.decodeVin(cleanVin);
+  let decoded;
+  try {
+    decoded = await marketCheck.decodeVin(cleanVin);
+    await recordCost("marketcheck", "vin_decode", { status: "success" });
+  } catch (error) {
+    await recordCost("marketcheck", "vin_decode", { status: "failure", metadata: { error: error.message } });
+    throw error;
+  }
   await store.setMarketCheckCache("vin_decode", cleanVin, decoded);
   return { ...decoded, cached: false };
 }
@@ -1816,14 +1996,21 @@ async function getCachedMarketCheckValuation(listing, { forceRefresh = false } =
   if (!forceRefresh && cached?.payload && cacheAgeDays(cached) <= refreshDays) {
     return { ...cached.payload, cached: true, cacheUpdatedAt: cached.updatedAt };
   }
-  const valuation = await marketCheck.getMarketValue({
-    vin: cleanVin,
-    mileage: listing.mileage,
-    zip: listing.zip,
-    location: listing.location,
-    condition: listing.condition,
-    radius: listing.marketValueRadius || 100
-  });
+  let valuation;
+  try {
+    valuation = await marketCheck.getMarketValue({
+      vin: cleanVin,
+      mileage: listing.mileage,
+      zip: listing.zip,
+      location: listing.location,
+      condition: listing.condition,
+      radius: listing.marketValueRadius || 100
+    });
+    await recordCost("marketcheck", "market_valuation", { listingId: listing.id || "", userId: listing.userId || "", status: "success" });
+  } catch (error) {
+    await recordCost("marketcheck", "market_valuation", { listingId: listing.id || "", userId: listing.userId || "", status: "failure", metadata: { error: error.message } });
+    throw error;
+  }
   await store.setMarketCheckCache("market_value", key, valuation);
   return { ...valuation, cached: false };
 }
@@ -2068,7 +2255,27 @@ async function processVehiclePresenceNow(listingId) {
     code: listing.vehiclePresence.verification_code || listing.vehiclePresence.verificationCode,
     listing
   });
+  if (vehiclePresence.openAiConfig()) {
+    await recordCost("openai", "vehicle_presence_verification", {
+      userId: listing.userId || listing.seller?.id || "",
+      listingId,
+      status: result.provider === "openai" ? "success" : "failure",
+      metadata: { provider: result.provider, verificationStatus: result.status }
+    });
+  }
   const verified = result.status === vehiclePresence.PRESENCE_STATUSES.VERIFIED;
+  await trackSystemEvent(verified ? "vehicle_presence_verification_passed" : "vehicle_presence_verification_failed", {
+    userId: listing.userId || listing.seller?.id || "",
+    listingId,
+    status: result.status,
+    reason: result.reason || ""
+  });
+  if (verified) {
+    await trackSystemEvent("listing_published", {
+      userId: listing.userId || listing.seller?.id || "",
+      listingId
+    });
+  }
   const now = new Date().toISOString();
   const next = {
     ...inProgress,
@@ -2349,7 +2556,7 @@ function createConversationRecord({ listing, buyer, message }) {
   const now = new Date().toISOString();
   const content = normalizeLimitedString(message || "Hi, is this still available?", 2000);
   const scan = scanMessageForScamRisk(content);
-  return {
+  const conversation = {
     id,
     listingId: listing.id,
     buyerId: buyer.id,
@@ -2365,6 +2572,7 @@ function createConversationRecord({ listing, buyer, message }) {
     moderationStatus: scan.moderationStatus,
     buyerLastActiveAt: buyer.lastActiveAt || buyer.lastLoginAt || now,
     sellerLastActiveAt: listing.seller?.lastActiveAt || listing.updatedAt || now,
+    isDemo: Boolean(listing.isDemo || listing.is_demo),
     updatedAt: now,
     messages: [
       {
@@ -2380,6 +2588,26 @@ function createConversationRecord({ listing, buyer, message }) {
       }
     ]
   };
+  if (conversation.isDemo) {
+    const replyAt = new Date(Date.now() + 1000).toISOString();
+    const reply = "Thanks for trying Kerodex Messages. This is an automated demo-seller reply—this vehicle is not actually for sale, and no real seller was contacted.";
+    conversation.messages.push({
+      id: `msg_demo_${Date.now()}`,
+      senderId: sellerId,
+      receiverId: buyer.id,
+      vehicleId: listing.id,
+      content: reply,
+      createdAt: replyAt,
+      scamRiskScore: 0,
+      scamFlags: [],
+      moderationStatus: "clear"
+    });
+    conversation.lastMessage = reply;
+    conversation.unread = 1;
+    conversation.unreadByUser = { [buyer.id]: 1, [sellerId]: 0 };
+    conversation.updatedAt = replyAt;
+  }
+  return conversation;
 }
 
 function runtimeUserById(id) {
@@ -2410,6 +2638,8 @@ function decorateConversation(conversation, user) {
   return {
     ...conversation,
     currentUserRole: currentIsBuyer ? "buyer" : "seller",
+    outcomes: conversation.outcomes || {},
+    currentUserOutcome: conversation.outcomes?.[currentIsBuyer ? "buyer" : "seller"] || "",
     partnerId,
     partnerName,
     partnerLastActiveAt,
@@ -2643,10 +2873,16 @@ const server = http.createServer((req, res) => {
         const allowed = new Set([
           "page_view",
           "listing_view",
+          "listing_viewed",
           "search_performed",
           "filter_used",
           "save_listing",
-          "unsave_listing"
+          "unsave_listing",
+          "listing_started",
+          "listing_photos_uploaded",
+          "seller_contact_clicked",
+          "buyer_guide_started",
+          "buyer_guide_completed"
         ]);
         const eventType = allowed.has(String(body.eventType || "")) ? String(body.eventType) : "page_view";
         await trackEvent(req, eventType, user, {
@@ -2693,7 +2929,7 @@ const server = http.createServer((req, res) => {
   if (url.pathname === "/api/admin/dashboard" && req.method === "GET") {
     const admin = requireAdmin(req, res, "dashboard:read");
     if (!admin) return;
-    store.getAdminDashboard()
+    store.getAdminDashboard({ includeDemo: url.searchParams.get("includeDemo") === "true" })
       .then((dashboard) => sendJson(res, 200, dashboard))
       .catch((error) => sendJson(res, 500, { error: "Unable to load admin dashboard.", detail: error.message }));
     return;
@@ -2702,9 +2938,60 @@ const server = http.createServer((req, res) => {
   if (url.pathname === "/api/admin/analytics" && req.method === "GET") {
     const admin = requireAdmin(req, res, "analytics:read");
     if (!admin) return;
-    store.getAdminDashboard()
+    store.getAdminDashboard({ includeDemo: url.searchParams.get("includeDemo") === "true" })
       .then((dashboard) => sendJson(res, 200, { website: dashboard.website, charts: dashboard.charts, funnel: dashboard.funnel }))
       .catch((error) => sendJson(res, 500, { error: "Unable to load analytics.", detail: error.message }));
+    return;
+  }
+
+  if (url.pathname === "/api/admin/costs" && req.method === "GET") {
+    const admin = requireAdmin(req, res, "analytics:read");
+    if (!admin) return;
+    store.getCostRecords()
+      .then((records) => {
+        const now = Date.now();
+        const sumSince = (days) => records
+          .filter((record) => Date.parse(record.createdAt) >= now - days * 86400000)
+          .reduce((sum, record) => sum + Number(record.estimatedCost || 0), 0);
+        const byService = Object.entries(records.reduce((acc, record) => {
+          acc[record.serviceName] = (acc[record.serviceName] || 0) + Number(record.estimatedCost || 0);
+          return acc;
+        }, {})).map(([service, cost]) => ({ service, cost: Number(Number(cost).toFixed(4)) }));
+        sendJson(res, 200, {
+          summary: {
+            today: Number(sumSince(1).toFixed(4)),
+            last7Days: Number(sumSince(7).toFixed(4)),
+            last30Days: Number(sumSince(30).toFixed(4)),
+            failedCalls: records.filter((record) => record.status === "failure").length,
+            totalRecords: records.length
+          },
+          byService,
+          records: records.slice(0, 250)
+        });
+      })
+      .catch((error) => sendJson(res, 500, { error: "Unable to load cost analytics.", detail: error.message }));
+    return;
+  }
+
+  if (url.pathname === "/api/admin/feedback" && req.method === "GET") {
+    const admin = requireAdmin(req, res, "analytics:read");
+    if (!admin) return;
+    store.getFeedbackRecords()
+      .then((records) => sendJson(res, 200, {
+        records,
+        summary: {
+          total: records.length,
+          averageRating: (() => {
+            const ratings = records.map((record) => Number(record.rating)).filter(Number.isFinite);
+            return ratings.length ? Number((ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length).toFixed(1)) : null;
+          })(),
+          byContext: Object.entries(records.reduce((acc, record) => {
+            acc[record.context] = (acc[record.context] || 0) + 1;
+            return acc;
+          }, {})).map(([context, count]) => ({ context, count }))
+        }
+      }))
+      .catch((error) => sendJson(res, 500, { error: "Unable to load feedback.", detail: error.message }));
     return;
   }
 
@@ -3327,6 +3614,176 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (url.pathname === "/api/me/listing-analytics" && req.method === "GET") {
+    const user = getAuthUser(req);
+    if (!user) {
+      sendJson(res, 401, { error: "Sign in to view listing analytics." });
+      return;
+    }
+    Promise.all([
+      store.getListings(),
+      store.getConversations(),
+      store.getAnalyticsEvents({ limit: 20000 }),
+      store.getReports()
+    ]).then(([listings, conversations, events, reports]) => {
+      const owned = listings.filter((listing) => listing.userId === user.id);
+      const analytics = owned.map((listing) => {
+        const listingEvents = events.filter((event) => event.listingId === listing.id);
+        const listingConversations = conversations.filter((conversation) => conversation.listingId === listing.id);
+        const messagesReceived = listingConversations.reduce((total, conversation) =>
+          total + (conversation.messages || []).filter((message) => message.receiverId === user.id).length, 0);
+        const uniqueViewers = new Set(listingEvents
+          .filter((event) => ["listing_view", "listing_viewed"].includes(event.eventType))
+          .map((event) => event.userId || event.sessionId || event.ipHash)
+          .filter(Boolean)).size;
+        const createdAt = listing.createdAt || listing.updatedAt;
+        const daysActive = createdAt ? Math.max(0, Math.ceil((Date.now() - Date.parse(createdAt)) / 86400000)) : 0;
+        return {
+          listing: listingWithReadableImages(listing),
+          metrics: {
+            views: listingEvents.filter((event) => ["listing_view", "listing_viewed"].includes(event.eventType)).length,
+            uniqueViewers,
+            saves: Number(listing.favorites || listing.saves || 0),
+            contactClicks: listingEvents.filter((event) => event.eventType === "seller_contact_clicked").length,
+            conversations: listingConversations.length,
+            messagesReceived,
+            daysActive,
+            verificationStatus: listing.verificationStatus || "not_started",
+            reportCount: reports.filter((report) => report.listingId === listing.id).length,
+            soldStatus: listing.status === "sold",
+            soldSource: listing.saleOutcome?.soldSource || "",
+            finalSalePrice: listing.saleOutcome?.finalSalePrice || null,
+            lastActivityAt: [listing.updatedAt, ...listingEvents.map((event) => event.createdAt), ...listingConversations.map((conversation) => conversation.updatedAt)]
+              .filter(Boolean).sort((a, b) => Date.parse(b) - Date.parse(a))[0] || ""
+          }
+        };
+      });
+      sendJson(res, 200, { analytics });
+    }).catch((error) => sendJson(res, 500, { error: "Unable to load listing analytics.", detail: error.message }));
+    return;
+  }
+
+  if (url.pathname === "/api/me/followups" && req.method === "GET") {
+    const user = getAuthUser(req);
+    if (!user) {
+      sendJson(res, 401, { error: "Sign in to view follow-ups." });
+      return;
+    }
+    Promise.all([store.getConversations(), store.getFollowupsByUser(user.id)])
+      .then(([conversations, answered]) => {
+        const answeredKeys = new Set(answered.map((record) => `${record.listingId}:${record.conversationId}`));
+        const prompts = conversations
+          .filter((conversation) => conversation.buyerId === user.id && (conversation.messages || []).length >= 2)
+          .filter((conversation) => !answeredKeys.has(`${conversation.listingId}:${conversation.id}`))
+          .map((conversation) => ({
+            listingId: conversation.listingId,
+            conversationId: conversation.id,
+            vehicleTitle: conversation.vehicleTitle || "this vehicle",
+            createdAt: conversation.createdAt || conversation.updatedAt
+          }));
+        sendJson(res, 200, { prompts, responses: answered });
+      })
+      .catch((error) => sendJson(res, 500, { error: "Unable to load follow-ups.", detail: error.message }));
+    return;
+  }
+
+  if (url.pathname === "/api/me/followups" && req.method === "POST") {
+    const user = getAuthUser(req);
+    if (!user) {
+      sendJson(res, 401, { error: "Sign in to answer follow-ups." });
+      return;
+    }
+    readJson(req).then(async (body) => {
+      const allowedAnswers = new Set(["bought_through_kerodex", "still_looking", "bought_elsewhere", "seller_no_response", "already_sold", "other", "dismissed"]);
+      const answer = String(body.answer || "");
+      if (!allowedAnswers.has(answer)) throw makePublicError("Choose a valid follow-up answer.", 400);
+      const conversation = await store.getConversationById(String(body.conversationId || ""));
+      if (!conversation || conversation.buyerId !== user.id || conversation.listingId !== String(body.listingId || "")) {
+        throw makePublicError("Follow-up conversation not found.", 404);
+      }
+      const record = await store.saveFollowup({
+        id: `followup_${Date.now().toString(36)}_${crypto.randomBytes(4).toString("hex")}`,
+        userId: user.id,
+        listingId: conversation.listingId,
+        conversationId: conversation.id,
+        followupType: "buyer_purchase",
+        answer: answer === "dismissed" ? "" : answer,
+        feedbackText: normalizeLimitedString(body.feedbackText || "", 1000),
+        dismissed: answer === "dismissed",
+        createdAt: new Date().toISOString()
+      });
+      await trackEvent(req, "buyer_purchase_followup_answered", user, {
+        listingId: conversation.listingId,
+        conversationId: conversation.id,
+        answer,
+        relatedEntityType: "conversation",
+        relatedEntityId: conversation.id
+      });
+      sendJson(res, 201, { followup: record });
+    }).catch((error) => sendJson(res, error.status || 400, { error: publicError(error, "Unable to save follow-up.") }));
+    return;
+  }
+
+  if (url.pathname === "/api/feedback" && req.method === "POST") {
+    const user = getAuthUser(req);
+    readJson(req).then(async (body) => {
+      const context = normalizeLimitedString(body.context, 80);
+      if (!context) throw makePublicError("Feedback context is required.", 400);
+      const rating = body.rating === undefined || body.rating === null ? null : Number(body.rating);
+      if (rating !== null && (!Number.isInteger(rating) || rating < 1 || rating > 5)) {
+        throw makePublicError("Feedback rating must be from 1 to 5.", 400);
+      }
+      const record = await store.saveFeedback({
+        id: `feedback_${Date.now().toString(36)}_${crypto.randomBytes(4).toString("hex")}`,
+        userId: user?.id || "",
+        listingId: normalizeLimitedString(body.listingId || "", 120),
+        context,
+        rating,
+        responseText: normalizeLimitedString(body.responseText || "", 1500),
+        metadata: {},
+        createdAt: new Date().toISOString()
+      });
+      sendJson(res, 201, { feedback: record });
+    }).catch((error) => sendJson(res, error.status || 400, { error: publicError(error, "Unable to save feedback.") }));
+    return;
+  }
+
+  if (url.pathname === "/api/me/saved" && req.method === "GET") {
+    const user = getAuthUser(req);
+    if (!user) {
+      sendJson(res, 401, { error: "Sign in to view saved vehicles." });
+      return;
+    }
+    store.getSavedListings(user.id)
+      .then((listings) => sendJson(res, 200, {
+        listingIds: listings.map((listing) => listing.id),
+        listings: listingsWithReadableImages(listings),
+        count: listings.length
+      }))
+      .catch((error) => sendJson(res, 500, { error: "Unable to load saved vehicles.", detail: error.message }));
+    return;
+  }
+
+  if (url.pathname === "/api/me/saved/sync" && req.method === "POST") {
+    const user = getAuthUser(req);
+    if (!user) {
+      sendJson(res, 401, { error: "Sign in to sync saved vehicles." });
+      return;
+    }
+    readJson(req)
+      .then(async (body) => {
+        const listingIds = Array.isArray(body.listingIds) ? body.listingIds.map(String).slice(0, 500) : [];
+        const listings = await store.syncSavedListings(user.id, listingIds);
+        sendJson(res, 200, {
+          listingIds: listings.map((listing) => listing.id),
+          listings: listingsWithReadableImages(listings),
+          count: listings.length
+        });
+      })
+      .catch((error) => sendJson(res, 400, { error: "Unable to sync saved vehicles.", detail: error.message }));
+    return;
+  }
+
   if (url.pathname === "/api/admin/auth/logout" && req.method === "POST") {
     const auth = req.headers.authorization || "";
     const token = auth.startsWith("Bearer ") ? auth.slice(7) : "";
@@ -3456,6 +3913,8 @@ const server = http.createServer((req, res) => {
       user.personaReferenceId = user.id;
       user.identityVerificationStatus = user.identityVerificationStatus === "approved" ? "approved" : "pending";
       const hostedUrl = buildPersonaHostedUrl(req, user);
+      trackEvent(req, "persona_verification_started", user, {}).catch(() => {});
+      recordCost("persona", "identity_verification_attempt", { userId: user.id, status: "success" }).catch(() => {});
       sendJson(res, 200, {
         url: hostedUrl,
         status: user.identityVerificationStatus,
@@ -3474,7 +3933,7 @@ const server = http.createServer((req, res) => {
       return;
     }
     readJson(req)
-      .then((body) => {
+      .then(async (body) => {
         const inquiryId = String(body.inquiryId || body.inquiry_id || "").trim();
         const returnedReferenceId = String(body.referenceId || body.reference_id || "").trim();
         const returnedStatus = String(body.status || "").trim().toLowerCase();
@@ -3490,6 +3949,14 @@ const server = http.createServer((req, res) => {
           user.identityVerified = true;
           user.identityVerifiedAt = user.identityVerifiedAt || new Date().toISOString();
         }
+        await saveRuntimeUser(user);
+        await trackEvent(req,
+          user.identityVerificationStatus === "approved" ? "persona_verification_passed" :
+            ["declined", "failed"].includes(user.identityVerificationStatus) ? "persona_verification_failed" :
+              "persona_verification_started",
+          user,
+          { inquiryId, status: user.identityVerificationStatus }
+        );
         sendJson(res, 200, createSession(user));
       })
       .catch((error) => sendJson(res, 400, { error: "Unable to save Persona return.", detail: error.message }));
@@ -3564,6 +4031,7 @@ const server = http.createServer((req, res) => {
         }
 
         const verification = await startPhoneVerificationWithProvider(phone);
+        await recordCost("twilio", "phone_verification_sms", { userId: user.id, requestId: verification.sid, status: "success" });
         console.info("[Kerodex phone verification] Twilio Verify start accepted", {
           userId: user.id,
           phoneLast4: phone.slice(-4),
@@ -3582,6 +4050,7 @@ const server = http.createServer((req, res) => {
         });
       })
       .catch((error) => {
+        recordCost("twilio", "phone_verification_sms", { userId: user.id, status: "failure", metadata: { error: error.message } }).catch(() => {});
         console.warn(`[Kerodex phone verification start failed] ${error.message}`);
         sendJson(res, error.status || 500, { success: false, error: publicError(error, "Unable to send verification code.") });
       });
@@ -3616,13 +4085,13 @@ const server = http.createServer((req, res) => {
           valid: result.valid === true
         });
         if (result.status !== "approved" || result.valid !== true) {
-          await trackEvent(req, "verification_failed", user, { type: "phone" });
+          await trackEvent(req, "phone_verification_failed", user, { type: "phone" });
           sendJson(res, 400, { error: "Invalid verification code." });
           return;
         }
 
         if (await phoneBelongsToAnotherUser(phone, user.id)) {
-          await trackEvent(req, "verification_failed", user, { type: "phone", reason: "phone_conflict" });
+          await trackEvent(req, "phone_verification_failed", user, { type: "phone", reason: "phone_conflict" });
           sendJson(res, 400, { error: "Invalid verification code." });
           return;
         }
@@ -3633,8 +4102,7 @@ const server = http.createServer((req, res) => {
         user.phoneVerified = true;
         user.phoneVerifiedAt = now;
         await saveRuntimeUser(user);
-        await trackEvent(req, "verification_passed", user, { type: "phone" });
-        await trackEvent(req, "phone_verified", user, {});
+        await trackEvent(req, "phone_verification_passed", user, { type: "phone" });
         sendJson(res, 200, { ok: true, message: "Phone verified.", user: publicUser(user) });
       })
       .catch((error) => {
@@ -3699,6 +4167,217 @@ const server = http.createServer((req, res) => {
         sendJson(res, 201, { report, message: "Report submitted for Kerodex review." });
       })
       .catch((error) => sendJson(res, 400, { error: "Unable to submit report.", detail: error.message }));
+    return;
+  }
+
+  if (url.pathname === "/api/buyer-guide/start" && req.method === "POST") {
+    const user = getAuthUser(req);
+    readJson(req)
+      .then(async () => {
+        let session = null;
+        if (user && typeof store.getActiveDiscoveryBuyerGuide === "function") {
+          session = await store.getActiveDiscoveryBuyerGuide(user.id);
+        }
+        if (!session) {
+          session = createDiscoveryBuyerGuideRecord(user);
+          session = await saveBuyerGuideSession(session);
+        }
+        await trackEvent(req, session.created_at === session.updated_at ? "buyer_guide_discovery_started" : "buyer_guide_discovery_resumed", user, {
+          guideId: session.id,
+          guest: !user
+        });
+        sendJson(res, 200, { session, guest: !user });
+      })
+      .catch((error) => sendJson(res, error.status || 400, { error: "Unable to start Buyer Guide.", detail: error.message }));
+    return;
+  }
+
+  if (url.pathname === "/api/buyer-guide/respond" && req.method === "POST") {
+    const user = getAuthUser(req);
+    readJson(req)
+      .then(async (body) => {
+        const id = normalizeLimitedString(body.sessionId, 120);
+        const session = await getBuyerGuideSession(id, user);
+        if (!session) {
+          sendJson(res, 404, { error: "Buyer Guide session not found." });
+          return;
+        }
+        const answerKey = normalizeLimitedString(body.answerKey, 80);
+        const incomingAnswers = body.answers && typeof body.answers === "object" ? body.answers : {};
+        const buyerAnswers = {
+          ...(session.buyer_answers || session.buyerAnswers || {}),
+          ...incomingAnswers
+        };
+        if (answerKey) buyerAnswers[answerKey] = body.value;
+        const saved = await saveBuyerGuideSession({
+          ...session,
+          buyer_answers: buyerAnswers,
+          buyerAnswers,
+          current_stage: normalizeLimitedString(body.currentStage || session.current_stage || "understand_buyer", 80),
+          currentStage: normalizeLimitedString(body.currentStage || session.currentStage || "understand_buyer", 80),
+          current_step: normalizeLimitedString(body.currentStep || session.current_step || "", 80),
+          currentStep: normalizeLimitedString(body.currentStep || session.currentStep || "", 80)
+        });
+        await trackEvent(req, "buyer_guide_answered", user, {
+          guideId: saved.id,
+          answerKey,
+          guest: !user
+        });
+        sendJson(res, 200, { session: saved });
+      })
+      .catch((error) => sendJson(res, error.status || 400, { error: "Unable to save Buyer Guide response.", detail: error.message }));
+    return;
+  }
+
+  if (url.pathname === "/api/buyer-guide/recommendations" && req.method === "POST") {
+    const user = getAuthUser(req);
+    readJson(req)
+      .then(async (body) => {
+        const id = normalizeLimitedString(body.sessionId, 120);
+        const session = await getBuyerGuideSession(id, user);
+        if (!session) {
+          sendJson(res, 404, { error: "Buyer Guide session not found." });
+          return;
+        }
+        const answers = body.answers && typeof body.answers === "object"
+          ? body.answers
+          : (session.buyer_answers || session.buyerAnswers || {});
+        const recommendations = await buyerGuideEngine.generateRecommendations(answers);
+        const listings = await store.getListings();
+        const listingMatches = buyerGuideEngine.matchListings(listings, recommendations).map((match) => ({
+          ...match,
+          listing: listingWithReadableImages(match.listing)
+        }));
+        const saved = await saveBuyerGuideSession({
+          ...session,
+          buyer_answers: answers,
+          buyerAnswers: answers,
+          buyer_profile: {
+            summary: recommendations.buyerProfileSummary,
+            categories: recommendations.recommendedCategories
+          },
+          buyerProfile: {
+            summary: recommendations.buyerProfileSummary,
+            categories: recommendations.recommendedCategories
+          },
+          recommendations,
+          listing_matches: listingMatches,
+          listingMatches,
+          current_stage: "listing_matches",
+          currentStage: "listing_matches",
+          current_step: "review_matches",
+          currentStep: "review_matches"
+        });
+        await trackEvent(req, "buyer_guide_recommendations_generated", user, {
+          guideId: saved.id,
+          provider: recommendations.provider || "unknown",
+          matchCount: listingMatches.length,
+          guest: !user
+        });
+        sendJson(res, 200, {
+          session: saved,
+          recommendations,
+          matches: listingMatches,
+          fallbackUsed: recommendations.provider !== "openai"
+        });
+      })
+      .catch((error) => sendJson(res, error.status || 400, { error: "Unable to generate Buyer Guide recommendations.", detail: error.message }));
+    return;
+  }
+
+  const buyerGuideSessionMatch = url.pathname.match(/^\/api\/buyer-guide\/session\/([^/]+)$/);
+  if (buyerGuideSessionMatch && req.method === "GET") {
+    const user = getAuthUser(req);
+    const id = decodeURIComponent(buyerGuideSessionMatch[1]);
+    Promise.resolve(getBuyerGuideSession(id, user))
+      .then((session) => {
+        if (!session) {
+          sendJson(res, 404, { error: "Buyer Guide session not found." });
+          return;
+        }
+        sendJson(res, 200, { session });
+      })
+      .catch((error) => sendJson(res, 500, { error: "Unable to load Buyer Guide session.", detail: error.message }));
+    return;
+  }
+
+  if (buyerGuideSessionMatch && req.method === "PATCH") {
+    const user = getAuthUser(req);
+    const id = decodeURIComponent(buyerGuideSessionMatch[1]);
+    readJson(req)
+      .then(async (body) => {
+        const session = await getBuyerGuideSession(id, user);
+        if (!session) {
+          sendJson(res, 404, { error: "Buyer Guide session not found." });
+          return;
+        }
+        const saved = await saveBuyerGuideSession({
+          ...session,
+          buyer_id: session.buyer_id || session.buyerId || user?.id || null,
+          buyerId: session.buyerId || session.buyer_id || user?.id || null,
+          status: ["active", "completed", "abandoned"].includes(String(body.status)) ? String(body.status) : session.status,
+          current_stage: normalizeLimitedString(body.currentStage || body.current_stage || session.current_stage || "", 80),
+          currentStage: normalizeLimitedString(body.currentStage || body.current_stage || session.currentStage || "", 80),
+          current_step: normalizeLimitedString(body.currentStep || body.current_step || session.current_step || "", 80),
+          currentStep: normalizeLimitedString(body.currentStep || body.current_step || session.currentStep || "", 80),
+          buyer_answers: body.buyerAnswers || body.buyer_answers || session.buyer_answers || {},
+          buyerAnswers: body.buyerAnswers || body.buyer_answers || session.buyerAnswers || {},
+          completed_steps: Array.isArray(body.completedSteps || body.completed_steps) ? (body.completedSteps || body.completed_steps).map(String) : (session.completed_steps || []),
+          completedSteps: Array.isArray(body.completedSteps || body.completed_steps) ? (body.completedSteps || body.completed_steps).map(String) : (session.completedSteps || [])
+        });
+        sendJson(res, 200, { session: saved });
+      })
+      .catch((error) => sendJson(res, error.status || 400, { error: "Unable to update Buyer Guide session.", detail: error.message }));
+    return;
+  }
+
+  const buyerGuideListingMatch = url.pathname.match(/^\/api\/buyer-guide\/session\/([^/]+)\/listing\/([^/]+)$/);
+  if (buyerGuideListingMatch && req.method === "POST") {
+    const user = getAuthUser(req);
+    const id = decodeURIComponent(buyerGuideListingMatch[1]);
+    const listingId = decodeURIComponent(buyerGuideListingMatch[2]);
+    Promise.resolve().then(async () => {
+      const session = await getBuyerGuideSession(id, user);
+      const listing = await store.getListingById(listingId);
+      if (!session || !listing) {
+        sendJson(res, 404, { error: "Buyer Guide session or listing not found." });
+        return;
+      }
+      if (user && listing.userId === user.id) {
+        sendJson(res, 400, { error: "Buyer Guide cannot be started for your own listing." });
+        return;
+      }
+      if (user && typeof store.getActiveBuyerGuide === "function") {
+        const existing = await store.getActiveBuyerGuide(user.id, listing.id);
+        if (existing && existing.id !== session.id) {
+          await saveBuyerGuideSession({ ...session, status: "abandoned" });
+          sendJson(res, 200, { session: existing, guide: await decorateBuyerGuide(existing), resumed: true });
+          return;
+        }
+      }
+      const sellerId = listing.userId || listing.seller?.id || "";
+      const saved = await saveBuyerGuideSession({
+        ...session,
+        listing_id: listing.id,
+        listingId: listing.id,
+        seller_id: sellerId,
+        sellerId,
+        selected_listing_id: listing.id,
+        selectedListingId: listing.id,
+        journey_type: "purchase",
+        journeyType: "purchase",
+        current_stage: "evaluate_listing",
+        currentStage: "evaluate_listing",
+        current_step: BUYER_GUIDE_STEP_IDS[0],
+        currentStep: BUYER_GUIDE_STEP_IDS[0]
+      });
+      await trackEvent(req, "buyer_guide_listing_selected", user, {
+        guideId: saved.id,
+        listingId: listing.id,
+        guest: !user
+      });
+      sendJson(res, 200, { session: saved, guide: await decorateBuyerGuide(saved) });
+    }).catch((error) => sendJson(res, error.status || 400, { error: "Unable to select this listing.", detail: error.message }));
     return;
   }
 
@@ -3833,13 +4512,19 @@ const server = http.createServer((req, res) => {
       return;
     }
     readJson(req)
-      .then((body) => {
+      .then(async (body) => {
         const fileName = String(body.fileName || "");
         const contentType = String(body.contentType || "");
         const fileSize = Number(body.fileSize || 0);
         const purpose = String(body.purpose || "listing-photo");
         const documentType = String(body.documentType || "");
         const upload = createS3PresignedPut({ fileName, contentType, fileSize, user, purpose, documentType });
+        await recordCost("s3", "upload_prepared", {
+          userId: user.id,
+          status: "success",
+          unitsUsed: fileSize > 0 ? fileSize / (1024 * 1024) : 1,
+          metadata: { purpose, contentType }
+        });
         sendJson(res, 201, upload);
       })
       .catch((error) => sendJson(res, error.status || 400, {
@@ -3920,6 +4605,7 @@ const server = http.createServer((req, res) => {
         }
         const created = await store.createListing(enriched);
         await trackEvent(req, "create_listing", user, { listingId: created.id, route: "/sell" });
+        await trackEvent(req, "vehicle_presence_verification_started", user, { listingId: created.id });
         await auditMarketplaceAction(req, "listing.created", "listing", created.id, user, {
           newValue: created.status,
           notes: created.reviewFlags?.length ? `Review flags: ${created.reviewFlags.join(", ")}` : "Seller submitted listing.",
@@ -3952,11 +4638,13 @@ const server = http.createServer((req, res) => {
     const vin = decodeURIComponent(url.pathname.split("/").pop() || "");
     getCachedMarketCheckDecode(vin)
       .then((decoded) => sendJson(res, 200, decoded))
-      .catch((error) => sendJson(res, error.status || 500, {
-        error: error.message || "Unable to decode VIN with MarketCheck.",
-        code: error.code,
-        detail: error.detail || error.message
-      }));
+      .catch((error) => {
+        sendJson(res, error.status || 500, {
+          error: error.message || "Unable to decode VIN with MarketCheck.",
+          code: error.code,
+          detail: error.detail || error.message
+        });
+      });
     return;
   }
 
@@ -4161,6 +4849,119 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  const listingStatusMatch = url.pathname.match(/^\/api\/listings\/([^/]+)\/status$/);
+  if (listingStatusMatch && req.method === "POST") {
+    const user = getAuthUser(req);
+    if (!user) {
+      sendJson(res, 401, { error: "Sign in to update listing status." });
+      return;
+    }
+    const id = decodeURIComponent(listingStatusMatch[1]);
+    readJson(req).then(async (body) => {
+      const listing = await store.getListingById(id);
+      if (!listing) throw makePublicError("Listing not found.", 404);
+      if (listing.userId !== user.id) throw makePublicError("You can only update your own listing.", 403);
+      if (listing.isDemo || listing.is_demo) throw makePublicError("Demo listing outcomes cannot be changed.", 403);
+      const status = String(body.status || "");
+      if (!["sold", "active"].includes(status)) throw makePublicError("Choose sold or active status.", 400);
+      const now = new Date().toISOString();
+      const soldSource = String(body.soldSource || "");
+      const wouldUseAgain = String(body.wouldUseAgain || "");
+      if (status === "sold" && !["kerodex", "elsewhere", "prefer_not_to_say"].includes(soldSource)) {
+        throw makePublicError("Choose how the vehicle was sold.", 400);
+      }
+      if (status === "sold" && !["yes", "maybe", "no"].includes(wouldUseAgain)) {
+        throw makePublicError("Choose whether you would use Kerodex again.", 400);
+      }
+      const finalSalePrice = body.finalSalePrice === "" || body.finalSalePrice === undefined ? null : Number(body.finalSalePrice);
+      if (finalSalePrice !== null && (!Number.isFinite(finalSalePrice) || finalSalePrice < 0 || finalSalePrice > 1000000)) {
+        throw makePublicError("Enter a valid final sale price.", 400);
+      }
+      const next = {
+        ...listing,
+        status,
+        soldAt: status === "sold" ? now : "",
+        saleOutcome: status === "sold" ? {
+          soldSource,
+          finalSalePrice,
+          daysToSell: listing.createdAt ? Math.max(0, Math.ceil((Date.now() - Date.parse(listing.createdAt)) / 86400000)) : null,
+          wouldUseAgain,
+          feedbackText: normalizeLimitedString(body.feedbackText || "", 1500),
+          recordedAt: now
+        } : listing.saleOutcome,
+        updatedAt: now
+      };
+      const saved = await store.createListing(next);
+      await trackEvent(req, status === "sold" ? "listing_marked_sold" : "listing_marked_available", user, {
+        listingId: id,
+        soldSource: status === "sold" ? soldSource : "",
+        finalSalePrice
+      });
+      if (status === "sold") {
+        await trackEvent(req, "seller_sale_followup_answered", user, { listingId: id, soldSource, wouldUseAgain });
+        if (body.feedbackText) {
+          await store.saveFeedback({
+            id: `feedback_${Date.now().toString(36)}_${crypto.randomBytes(4).toString("hex")}`,
+            userId: user.id,
+            listingId: id,
+            context: "seller_sale_outcome",
+            rating: null,
+            responseText: normalizeLimitedString(body.feedbackText, 1500),
+            metadata: { soldSource, wouldUseAgain },
+            createdAt: now
+          });
+        }
+      }
+      sendJson(res, 200, { listing: listingWithReadableImages(saved) });
+    }).catch((error) => sendJson(res, error.status || 400, { error: publicError(error, "Unable to update listing status.") }));
+    return;
+  }
+
+  const listingDeleteMatch = url.pathname.match(/^\/api\/listings\/([^/]+)$/);
+  if (listingDeleteMatch && req.method === "DELETE") {
+    const user = getAuthUser(req);
+    if (!user) {
+      sendJson(res, 401, { error: "Sign in to remove a listing." });
+      return;
+    }
+    const id = decodeURIComponent(listingDeleteMatch[1]);
+    Promise.resolve().then(async () => {
+      const listing = await store.getListingById(id);
+      if (!listing) throw makePublicError("Listing not found.", 404);
+      if (listing.userId !== user.id) throw makePublicError("You can only remove your own listing.", 403);
+      const saved = await store.createListing({ ...listing, status: "removed", removedAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+      await trackEvent(req, "listing_deleted", user, { listingId: id });
+      sendJson(res, 200, { listing: listingWithReadableImages(saved) });
+    }).catch((error) => sendJson(res, error.status || 400, { error: publicError(error, "Unable to remove listing.") }));
+    return;
+  }
+
+  const listingFavoriteMatch = url.pathname.match(/^\/api\/listings\/([^/]+)\/favorite$/);
+  if (listingFavoriteMatch && req.method === "POST") {
+    const user = getAuthUser(req);
+    if (!user) {
+      sendJson(res, 401, { error: "Sign in to save vehicles." });
+      return;
+    }
+    const id = decodeURIComponent(listingFavoriteMatch[1]);
+    readJson(req)
+      .then(async (body) => {
+        const saved = Boolean(body.saved);
+        const result = await store.setListingSaved(user.id, id, saved);
+        if (!result) {
+          sendJson(res, 404, { error: "Listing not found." });
+          return;
+        }
+        await trackEvent(req, saved ? "save_listing" : "unsave_listing", user, { listingId: id });
+        sendJson(res, 200, {
+          saved: result.saved,
+          listing: listingWithReadableImages(result.listing)
+        });
+      })
+      .catch((error) => sendJson(res, 400, { error: "Unable to update saved vehicle.", detail: error.message }));
+    return;
+  }
+
   const listingPresenceMatch = url.pathname.match(/^\/api\/listings\/([^/]+)\/vehicle-presence$/);
   if (listingPresenceMatch && req.method === "POST") {
     const user = getAuthUser(req);
@@ -4236,11 +5037,13 @@ const server = http.createServer((req, res) => {
     const vin = decodeURIComponent(url.pathname.split("/").pop() || "");
     decodeVin(vin)
       .then((body) => sendJson(res, body.ok ? 200 : 400, body))
-      .catch((error) => sendJson(res, 502, {
-        ok: false,
-        error: "VIN decoder is unavailable right now. Save the VIN and retry before publishing.",
-        detail: error.message
-      }));
+      .catch((error) => {
+        sendJson(res, 502, {
+          ok: false,
+          error: "VIN decoder is unavailable right now. Save the VIN and retry before publishing.",
+          detail: error.message
+        });
+      });
     return;
   }
 
@@ -4279,6 +5082,11 @@ const server = http.createServer((req, res) => {
     }
     readJson(req)
       .then(async (body) => {
+        const sellerProfile = typeof store.getSellerById === "function" ? await store.getSellerById(sellerId) : null;
+        if (sellerProfile?.isDemo || sellerProfile?.is_demo) {
+          sendJson(res, 403, { error: "Demo seller profiles cannot receive reviews.", code: "demo_seller_review_disabled" });
+          return;
+        }
         const review = normalizeSellerReviewBody(body, user, sellerId);
         const seller = await store.addSellerReview(sellerId, review);
         if (!seller) {
@@ -4336,6 +5144,10 @@ const server = http.createServer((req, res) => {
           sendJson(res, 404, { error: "Listing not found." });
           return;
         }
+        if (listing.status === "sold") {
+          sendJson(res, 409, { error: "This vehicle is marked sold and is not accepting new buyer messages.", code: "listing_sold" });
+          return;
+        }
         if (listing.userId === user.id) {
           sendJson(res, 400, { error: "You cannot message yourself about your own listing." });
           return;
@@ -4387,6 +5199,39 @@ const server = http.createServer((req, res) => {
         sendJson(res, 201, { conversation: decorateConversation(created, user) });
       })
       .catch((error) => sendJson(res, 400, { error: "Unable to start conversation.", detail: error.message }));
+    return;
+  }
+
+  const conversationOutcomeMatch = url.pathname.match(/^\/api\/conversations\/([^/]+)\/outcome$/);
+  if (conversationOutcomeMatch && req.method === "POST") {
+    const user = getAuthUser(req);
+    if (!user) {
+      sendJson(res, 401, { error: "Sign in to update conversation status." });
+      return;
+    }
+    const conversationId = decodeURIComponent(conversationOutcomeMatch[1]);
+    readJson(req).then(async (body) => {
+      const conversation = await store.getConversationById(conversationId);
+      if (!conversation) throw makePublicError("Conversation not found.", 404);
+      const role = conversation.buyerId === user.id ? "buyer" : conversation.sellerId === user.id ? "seller" : "";
+      if (!role) throw makePublicError("You cannot update this conversation.", 403);
+      const allowed = role === "buyer"
+        ? new Set(["interested", "scheduled_meetup", "passed", "bought", "seller_no_response"])
+        : new Set(["still_available", "test_drive_scheduled", "buyer_no_show", "sold", "passed"]);
+      const status = String(body.status || "");
+      if (!allowed.has(status)) throw makePublicError("Choose a valid conversation outcome.", 400);
+      const outcomes = { ...(conversation.outcomes || {}), [role]: status };
+      const saved = await store.createConversation({ ...conversation, outcomes, updatedAt: new Date().toISOString() });
+      await trackEvent(req, "conversation_outcome_updated", user, {
+        listingId: conversation.listingId,
+        conversationId,
+        role,
+        status,
+        relatedEntityType: "conversation",
+        relatedEntityId: conversationId
+      });
+      sendJson(res, 200, { conversation: decorateConversation(saved, user) });
+    }).catch((error) => sendJson(res, error.status || 400, { error: publicError(error, "Unable to update conversation status.") }));
     return;
   }
 
@@ -4447,6 +5292,11 @@ const server = http.createServer((req, res) => {
           sendJson(res, 403, { error: "You cannot send a message in this conversation." });
           return;
         }
+        const listing = await store.getListingById(conversation.listingId);
+        if (listing?.status === "sold") {
+          sendJson(res, 409, { error: "This vehicle is marked sold. New messages are disabled.", code: "listing_sold" });
+          return;
+        }
         const saved = await store.createConversation(updated);
         if (updated.moderationStatus === "high_risk") {
           await saveReport(createReportRecord({
@@ -4461,8 +5311,8 @@ const server = http.createServer((req, res) => {
           }));
         }
         await trackEvent(req, "send_message", user, { listingId: updated.listingId, conversationId: updated.id });
-        store.getListingById(updated.listingId)
-          .then((listing) => notifyMessageRecipient(saved, user, listing))
+        Promise.resolve(listing)
+          .then((currentListing) => notifyMessageRecipient(saved, user, currentListing))
           .catch(() => {});
         sendJson(res, 201, { conversation: decorateConversation(saved, user) });
       })

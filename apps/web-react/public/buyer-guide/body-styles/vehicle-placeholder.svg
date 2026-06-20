@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" role="img" aria-labelledby="title description">
+  <title id="title">Vehicle image placeholder</title>
+  <desc id="description">A neutral vehicle silhouette used while a Buyer Guide category image is unavailable.</desc>
+  <rect width="800" height="450" fill="#f1f1ed"/>
+  <path d="M185 286h430l-30-84c-9-25-29-43-54-49l-113-27c-35-8-72-1-101 20l-84 61c-20 15-35 36-42 60z" fill="#d4d4ce"/>
+  <path d="M229 253h342l-19-48c-5-13-16-23-29-26l-111-25c-25-6-51-1-72 14l-68 49c-18 13-33 25-43 36z" fill="#fafaf7"/>
+  <circle cx="268" cy="293" r="42" fill="#3f3f3b"/>
+  <circle cx="532" cy="293" r="42" fill="#3f3f3b"/>
+  <circle cx="268" cy="293" r="19" fill="#c6c6bf"/>
+  <circle cx="532" cy="293" r="19" fill="#c6c6bf"/>
+  <path d="M160 286h480v39H160z" fill="#b9b9b2"/>
+</svg>

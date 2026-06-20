@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, Outlet, useNavigate } from '@tanstack/react-router';
+import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { Button, Input } from '@blinkdotnew/ui';
-import { listConversations } from '@/lib/api';
+import { listConversations, type ConversationRecord } from '@/lib/api';
 import { defaultProfileIconForUser } from '@/lib/profile-icons';
 import { KERODEX_VERSION } from '@/version';
 import {
@@ -58,6 +58,8 @@ function useDarkMode() {
 }
 
 export function Layout() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const isSearchWorkspace = ['/search', '/cars', '/search.html'].includes(pathname);
   const { user, isLoading, logout } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -65,7 +67,7 @@ export function Layout() {
   const firstName = (user?.name || user?.email || '').trim().split(/\s|@/)[0] || 'there';
   const userInitial = firstName.charAt(0).toUpperCase() || 'U';
   const defaultAvatarUrl = defaultProfileIconForUser(user);
-  const { data: conversations = [] } = useQuery({
+  const { data: conversations = [] } = useQuery<ConversationRecord[]>({
     queryKey: ['nav-unread-conversations', user?.id],
     queryFn: async () => user ? listConversations() : [],
     enabled: !!user,
@@ -420,7 +422,7 @@ export function Layout() {
         <Outlet />
       </main>
 
-      <footer className="py-12 px-4 md:px-6 border-t border-border mt-20">
+      <footer className={`py-12 px-4 md:px-6 border-t border-border ${isSearchWorkspace ? 'mt-0' : 'mt-20'}`}>
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-10 md:gap-12">
           <div className="md:col-span-2">
             <h3 className="text-[13px] font-black uppercase tracking-tighter mb-3">Kerodex</h3>

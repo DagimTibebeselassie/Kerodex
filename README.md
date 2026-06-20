@@ -19,6 +19,8 @@ The product goal is simple: help real owners sell real cars directly to buyers w
 - S3-ready uploads through backend-generated presigned URLs for listings, verification photos, profile images, and documents.
 - MarketCheck VIN and valuation enrichment with backend-side caching.
 - OpenAI-backed vehicle presence photo challenge workflow with manual review fallback.
+- Full-screen Buyer Guide for vehicle discovery, structured recommendations, Kerodex listing matches, and the post-listing purchase checklist, with a deterministic fallback when OpenAI is unavailable.
+- Deterministic nationwide demo marketplace inventory with 75 clearly labeled listings, app-owned realistic vehicle photos, and sandboxed contact actions.
 - Optional Persona hosted identity verification hook for sellers.
 - Smoke test coverage for the local prototype.
 - GitHub Actions CI for API syntax, smoke tests, web build, repository health, dependency review, and CodeQL.
@@ -139,11 +141,35 @@ VEHICLE_PRESENCE_CODE_HOURS
 
 The listing is saved immediately as `pending_verification`, then a backend background job sends the uploaded proof photo to OpenAI vision to check whether the photo shows the windshield VIN visible through the windshield and the exact listing-specific code held next to it. Verification only passes when the extracted VIN matches the listing VIN, the extracted code matches the generated code, and the image appears to be an original vehicle/VIN photo. If OpenAI is not configured or confidence is low, the listing stays hidden and enters the admin verification queue. Public wording is limited to "Vehicle Presence Verified" and does not claim ownership, title validity, condition, authenticity, or legal guarantees.
 
+Buyer Guide recommendations run only through backend routes:
+
+```text
+OPENAI_API_KEY
+BUYER_GUIDE_MODEL
+BUYER_GUIDE_OPENAI_API_KEY
+```
+
+`BUYER_GUIDE_OPENAI_API_KEY` is optional; the shared `OPENAI_API_KEY` is used by default. If the provider is unavailable or structured output fails validation, Kerodex returns deterministic recommendations and inventory filters so the guided flow remains usable.
+
 Run tests:
 
 ```powershell
 npm.cmd test
+npm.cmd run test:buyer-guide
+npm.cmd run test:demo-listings
 ```
+
+Manage the public-testing demo inventory without touching real listings:
+
+```powershell
+npm.cmd run seed:demo-listings
+npm.cmd run clear:demo-listings
+```
+
+The seed command safely replaces only records marked with `is_demo`/`isDemo`,
+uses stable `demoSeedId` values to avoid duplicates, and preserves real
+user-created listings. Demo listings use app-owned realistic vehicle photos
+and are explicitly marked as testing-only throughout the marketplace.
 
 Run the full local CI-style check:
 

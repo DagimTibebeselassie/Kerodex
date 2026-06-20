@@ -78,6 +78,10 @@ export function BuyerGuidePage() {
       login();
       return;
     }
+    if (listing.isDemo) {
+      toast.success('Demo listings are for testing only. Seller contact is disabled.');
+      return;
+    }
     try {
       await startConversation(listing.id);
       navigate({ to: '/messages' });
@@ -139,12 +143,17 @@ export function BuyerGuidePage() {
             <Button variant="outline" className="h-10 px-4 text-[11px] font-bold uppercase tracking-widest">Back to Listing</Button>
           </Link>
           <Button onClick={messageSeller} className="h-10 px-4 text-[11px] font-bold uppercase tracking-widest">
-            <MessageSquare className="h-4 w-4 mr-2" /> Message Seller
+            <MessageSquare className="h-4 w-4 mr-2" /> {listing.isDemo ? 'Try Demo Messages' : 'Message Seller'}
           </Button>
         </div>
       </div>
 
       <section className="border border-border bg-background p-4 md:p-5">
+        {listing.isDemo && (
+          <div className="mb-4 border border-amber-300 bg-amber-50/70 p-3 text-[11px] leading-relaxed text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-200">
+            <strong>Demo Listing:</strong> this vehicle is not actually for sale. Messaging opens a sandboxed conversation with an automated demo seller.
+          </div>
+        )}
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="h-36 sm:h-28 sm:w-44 bg-muted overflow-hidden shrink-0">
             {vehicleImage ? <img src={vehicleImage} alt="" className="h-full w-full object-cover" /> : null}
