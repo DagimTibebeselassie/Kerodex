@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { currentUser, listSavedVehicles, setVehicleSaved } from '@/lib/api';
+import { listSavedVehicles, setVehicleSaved } from '@/lib/api';
 
-export function useSavedVehicles(userId = currentUser()?.id) {
+export function useSavedVehicles(userId?: string) {
   const queryClient = useQueryClient();
   const queryKey = ['saved-vehicles', userId];
   const query = useQuery({
@@ -9,6 +9,7 @@ export function useSavedVehicles(userId = currentUser()?.id) {
     queryFn: () => listSavedVehicles(),
     enabled: Boolean(userId),
     initialData: userId ? undefined : { listingIds: [], vehicles: [], count: 0 },
+    staleTime: 60_000,
   });
   const mutation = useMutation({
     mutationFn: ({ vehicleId, saved }: { vehicleId: string; saved: boolean }) => setVehicleSaved(vehicleId, saved),

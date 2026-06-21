@@ -8,6 +8,7 @@ import {
   MessageSquare, Send, Car, ArrowLeft, Search, User, Circle, AlertTriangle, Flag, X, Copy,
 } from 'lucide-react';
 import { Message } from '@/types';
+import { useAccessibleDialog } from '@/hooks/useAccessibleDialog';
 
 interface ThreadPreview {
   conversationId: string;
@@ -81,6 +82,8 @@ function ThreadItem({
   return (
     <button
       onClick={onSelect}
+      aria-label={`Open conversation with ${thread.partnerName}`}
+      aria-pressed={selected}
       className={`w-full text-left flex items-start gap-3 p-4 border-b border-border transition-colors hover:bg-muted/40 ${
         selected ? 'bg-primary/5 border-l-2 border-l-primary' : ''
       }`}
@@ -158,6 +161,7 @@ export function MessagesPage() {
   const [mobileView, setMobileView] = useState<'list' | 'thread'>('list');
   const [search, setSearch] = useState('');
   const [reportOpen, setReportOpen] = useState(false);
+  const reportDialogRef = useAccessibleDialog<HTMLFormElement>(reportOpen, () => setReportOpen(false));
   const [reportText, setReportText] = useState('');
   const [reportCategory, setReportCategory] = useState('suspected_scam');
   const [safetyDismissed, setSafetyDismissed] = useState(Boolean(user?.safetyNoticeSeenAt || localStorage.getItem('kerodex_safety_notice_seen')));
@@ -362,7 +366,7 @@ export function MessagesPage() {
     return (
       <div className="flex flex-col items-center justify-center py-32 px-6 text-center">
         <MessageSquare className="h-12 w-12 text-muted-foreground mb-6" />
-        <h2 className="text-xl font-bold mb-2">Your Messages</h2>
+        <h1 className="text-xl font-bold mb-2">Your Messages</h1>
         <p className="text-muted-foreground text-[13px] mb-8 max-w-xs">
           Sign in to view and send messages to buyers and sellers.
         </p>
@@ -381,12 +385,17 @@ export function MessagesPage() {
       {reportOpen && selectedThread && (
         <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-background/80 backdrop-blur-sm px-4">
           <form
+            ref={reportDialogRef}
             onSubmit={handleSubmitReport}
             className="w-full max-w-md border border-border bg-background shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="report-conversation-title"
+            tabIndex={-1}
           >
             <div className="flex items-center justify-between border-b border-border px-5 py-4">
               <div>
-                <h2 className="text-[14px] font-black tracking-tight">Report conversation</h2>
+                <h2 id="report-conversation-title" className="text-[14px] font-black tracking-tight">Report conversation</h2>
                 <p className="text-[12px] text-muted-foreground mt-1">
                   Kerodex will review this thread for safety concerns.
                 </p>
@@ -405,7 +414,9 @@ export function MessagesPage() {
                 Reporting <span className="text-foreground font-semibold">{selectedThread.partnerName}</span> about{' '}
                 <span className="text-foreground font-semibold">{selectedThread.vehicleTitle}</span>.
               </div>
+              <label htmlFor="report-conversation-category" className="text-[11px] font-bold uppercase tracking-wider">Reason</label>
               <select
+                id="report-conversation-category"
                 value={reportCategory}
                 onChange={(event) => setReportCategory(event.target.value)}
                 className="w-full h-10 border border-border bg-background px-3 text-[13px] text-foreground outline-none focus:border-primary"
@@ -414,7 +425,9 @@ export function MessagesPage() {
                   <option key={value} value={value}>{label}</option>
                 ))}
               </select>
+              <label htmlFor="report-conversation-description" className="text-[11px] font-bold uppercase tracking-wider">Description</label>
               <textarea
+                id="report-conversation-description"
                 value={reportText}
                 onChange={(event) => setReportText(event.target.value)}
                 rows={5}
@@ -454,6 +467,7 @@ export function MessagesPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <input
                 type="text"
+                aria-label="Search conversations"
                 placeholder="Search conversations..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -643,6 +657,7 @@ export function MessagesPage() {
               >
                 <input
                   type="text"
+                  aria-label="Message"
                   value={messageText}
                   onChange={(e) => setMessageText(e.target.value)}
                   placeholder="Type a message..."

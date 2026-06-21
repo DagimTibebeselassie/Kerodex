@@ -2,6 +2,7 @@ const fs = require("fs");
 const path = require("path");
 const { execFileSync } = require("child_process");
 const { buildDemoListings, LOCATIONS } = require("./demo-listings-data");
+const { DEMO_VEHICLE_IMAGES, demoVehicleImageFor } = require("./demo-vehicle-images");
 
 function loadEnv(filePath) {
   if (!fs.existsSync(filePath)) return;
@@ -34,11 +35,9 @@ async function main() {
   if (new Set(generated.map((listing) => listing.id)).size !== 75) throw new Error("Demo listing IDs must be unique.");
   if (generated.some((listing) => !listing.isDemo || !listing.demoSeedId)) throw new Error("Every demo listing must be marked.");
   if (generated.some((listing) => listing.images.some((image) => /^https?:\/\//.test(image)))) throw new Error("Demo listings must not use remote images.");
-  if (generated.some((listing) => listing.images.some((image) => image.endsWith(".svg") || !/\.(?:jpe?g|png|webp)$/i.test(image)))) {
-    throw new Error("Demo listings must use realistic local raster photos instead of illustrated placeholders.");
-  }
-  if (generated.some((listing) => listing.images.some((image) => !image.startsWith("/demo-assets/vehicles/models/")))) {
-    throw new Error("Every demo listing must use its exact per-listing model photo.");
+  const approvedImages = new Set(Object.values(DEMO_VEHICLE_IMAGES));
+  if (generated.some((listing) => listing.images.length !== 1 || !approvedImages.has(listing.images[0]))) {
+    throw new Error("Every demo listing must use exactly one approved Midjourney vehicle asset.");
   }
   const expectedLocations = new Map(LOCATIONS.map(([city, state, zip, lat, lng]) => [`${city}, ${state}`, { zip, lat, lng }]));
   if (new Set(generated.map((listing) => listing.location)).size !== LOCATIONS.length) {
@@ -53,11 +52,10 @@ async function main() {
       const localImage = path.join(root, "apps", "web-react", "public", image.replace(/^\//, ""));
       if (!fs.existsSync(localImage)) throw new Error(`Missing local demo vehicle photo: ${image}`);
     }
-  }
-  const attribution = JSON.parse(fs.readFileSync(path.join(root, "apps", "web-react", "public", "demo-assets", "vehicles", "ATTRIBUTION.json"), "utf8"));
-  if (Object.keys(attribution.listings || {}).length !== 75) throw new Error("Every demo photo must have an attribution record.");
-  if (generated.some((listing) => !attribution.listings?.[listing.id]?.sourcePage || !attribution.listings?.[listing.id]?.license)) {
-    throw new Error("Every demo photo must retain its Commons source page and license.");
+    const mapped = demoVehicleImageFor(listing, { logUnknown: false });
+    if (listing.images[0] !== mapped.image || listing.imageAlt !== mapped.alt) {
+      throw new Error(`Demo image mapping or alt text is incorrect for ${listing.id}.`);
+    }
   }
 
   const sentinel = {

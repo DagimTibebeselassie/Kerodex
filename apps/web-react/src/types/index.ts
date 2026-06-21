@@ -10,6 +10,8 @@ export interface Vehicle {
   location: string;
   description: string;
   images: string[];
+  imageAlt?: string;
+  demoImageCategory?: string;
   status: 'available' | 'active' | 'sold' | 'pending_verification' | 'verification_in_progress' | 'draft' | string;
   createdAt: string;
   vin?: string;

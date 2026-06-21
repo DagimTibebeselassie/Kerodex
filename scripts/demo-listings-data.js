@@ -1,8 +1,6 @@
-const fs = require("fs");
-const path = require("path");
+const { demoVehicleImageFor } = require("./demo-vehicle-images");
 
-const DEMO_SEED_VERSION = "kerodex-us-demo-v3";
-const PHOTO_MANIFEST_PATH = path.resolve(__dirname, "../apps/web-react/public/demo-assets/vehicles/ATTRIBUTION.json");
+const DEMO_SEED_VERSION = "kerodex-us-demo-v4";
 
 const LOCATIONS = [
   ["Atlanta", "GA", "30303", 33.7490, -84.3880],
@@ -84,16 +82,6 @@ function makeDemoVin(index, make, model) {
   return `KDX${letters.slice(0, 3).padEnd(3, "X")}${String(10000000000 + index).slice(-11)}`;
 }
 
-function exactPhotoFor(listingId) {
-  if (!fs.existsSync(PHOTO_MANIFEST_PATH)) {
-    throw new Error("Demo photo attribution manifest is missing. Run npm run refresh:demo-listing-images.");
-  }
-  const manifest = JSON.parse(fs.readFileSync(PHOTO_MANIFEST_PATH, "utf8"));
-  const photo = manifest.listings?.[listingId]?.localPath;
-  if (!photo) throw new Error(`Exact demo vehicle photo is missing for ${listingId}.`);
-  return [photo];
-}
-
 function priceFor(base2020, year, mileage, profileIndex, variantIndex) {
   const premiumStep = base2020 >= 27000 ? 3000 : base2020 >= 22000 ? 2400 : 1900;
   const yearAdjusted = base2020 + (year - 2020) * premiumStep;
@@ -107,7 +95,7 @@ function descriptionFor({ year, make, model, trim, mileage, condition, accidentH
   const use = mileage > 100000
     ? "It has been used mainly for commuting and highway trips"
     : "It has been used as a daily driver with a mix of city and highway miles";
-  return `${year} ${make} ${model} ${trim} offered as a Kerodex demonstration listing in ${city}. ${use}. The demo record shows ${condition.toLowerCase()} condition, routine maintenance notes, and ${accidentHistory.toLowerCase()}. This listing is for demonstration/testing only and the vehicle is not actually for sale.`;
+  return `${year} ${make} ${model} ${trim} shown as a Kerodex sample listing in ${city}. ${use}. The sample record shows ${condition.toLowerCase()} condition, routine maintenance notes, and ${accidentHistory.toLowerCase()}. This vehicle is not available for purchase.`;
 }
 
 function buildDemoSellers() {
@@ -161,13 +149,14 @@ function buildDemoListings() {
       const presenceVerified = (profileIndex + variantIndex) % 3 === 0;
       const createdAt = new Date(Date.UTC(2026, 5, 1 + (sequence % 18), 13 + (sequence % 7), sequence % 60)).toISOString();
       const listingId = `demo_ga_${String(sequence).padStart(3, "0")}`;
+      const demoImage = demoVehicleImageFor({ id: listingId, bodyType, fuelType });
       listings.push({
         id: listingId,
         demoSeedId: `${DEMO_SEED_VERSION}:listing:${sequence}`,
         externalDemoId: `us-${make}-${model}-${year}-${variantIndex}`.toLowerCase().replace(/[^a-z0-9-]/g, "-"),
         isDemo: true,
         is_demo: true,
-        demoNotice: "This listing is for demonstration/testing only.",
+        demoNotice: "This is a sample listing and is not available for purchase.",
         userId: seller.id,
         sellerType: "demo_private_party",
         title: `${year} ${make} ${model} ${trim}`,
@@ -210,7 +199,9 @@ function buildDemoListings() {
           : fuelType === "Electric"
             ? ["Navigation", "Heated seats", "Backup camera", "Driver assistance"]
             : ["Backup camera", "Bluetooth", "Cruise control", "USB audio"],
-        images: exactPhotoFor(listingId),
+        images: [demoImage.image],
+        imageAlt: demoImage.alt,
+        demoImageCategory: demoImage.category,
         imageUploads: [],
         description: descriptionFor({ year, make, model, trim, mileage, condition, accidentHistory, city }),
         maintenanceNames: ["Oil and filter service", "Tire rotation"],

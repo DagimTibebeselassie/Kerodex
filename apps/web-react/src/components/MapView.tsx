@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useSavedVehicles } from '@/hooks/useSavedVehicles';
 import { toast } from '@blinkdotnew/ui';
 import { VerifiedSellerBadge } from './VerifiedSellerTrust';
+import { vehicleImageAlt } from '@/lib/vehicleImage';
 
 interface MapViewProps {
   vehicles?: Vehicle[];
@@ -88,7 +89,7 @@ function PopupCard({
         {img ? (
           <img
             src={img}
-            alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+            alt={vehicleImageAlt(vehicle)}
             className="w-full h-full object-cover"
           />
         ) : (
@@ -206,7 +207,7 @@ export function MapView({
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
-    import('leaflet').then((L) => {
+    Promise.all([import('leaflet'), import('leaflet/dist/leaflet.css')]).then(([L]) => {
       if (!containerRef.current) return;
 
       delete (L.Icon.Default.prototype as any)._getIconUrl;

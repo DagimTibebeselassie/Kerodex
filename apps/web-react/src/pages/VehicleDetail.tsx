@@ -6,6 +6,7 @@ import { useSavedVehicles } from '@/hooks/useSavedVehicles';
 import { Vehicle } from '@/types';
 import { VehicleCard } from '@/components/VehicleCard';
 import { defaultProfileIconForUser } from '@/lib/profile-icons';
+import { vehicleImageAlt } from '@/lib/vehicleImage';
 import {
   Button,
   Input,
@@ -23,6 +24,7 @@ import {
   toast,
 } from '@blinkdotnew/ui';
 import { VERIFIED_SELLER_EXPLANATION } from '@/components/VerifiedSellerTrust';
+import { useAccessibleDialog } from '@/hooks/useAccessibleDialog';
 import {
   MapPin, Gauge, Calendar, Shield, MessageSquare, Heart, Share2, ArrowLeft,
   CheckCircle2, ChevronDown, ChevronUp, ZoomIn, Car, User, AlertTriangle, X,
@@ -42,21 +44,24 @@ function calcMonthly(price: number, down: number, months: number, aprPct: number
 }
 
 
-function Gallery({ images, activeIdx, setActiveIdx, setLightboxOpen, make, model, year }: {
+function Gallery({ images, activeIdx, setActiveIdx, setLightboxOpen, make, model, year, imageAlt }: {
   images: string[]; activeIdx: number; setActiveIdx: (i: number) => void;
-  setLightboxOpen: (v: boolean) => void; make: string; model: string; year: number;
+  setLightboxOpen: (v: boolean) => void; make: string; model: string; year: number; imageAlt?: string;
 }) {
   const mainImage = images[activeIdx] || images[0];
   const thumbs = images.slice(0, 6);
   const hasImages = Boolean(mainImage);
   return (
     <div className="space-y-3">
-      <div
-        className="relative aspect-video bg-muted border border-border overflow-hidden cursor-zoom-in group"
+      <button
+        type="button"
+        className="relative block w-full aspect-video bg-muted border border-border overflow-hidden cursor-zoom-in group disabled:cursor-default"
         onClick={() => hasImages && setLightboxOpen(true)}
+        disabled={!hasImages}
+        aria-label={hasImages ? `Open photo ${activeIdx + 1} of ${images.length} for ${year} ${make} ${model}` : 'No vehicle photos available'}
       >
         {hasImages ? (
-          <img src={mainImage} alt={`${year} ${make} ${model}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]" />
+          <img src={mainImage} alt={imageAlt || `${year} ${make} ${model}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]" />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground gap-3">
             <Camera className="h-8 w-8" />
@@ -74,12 +79,14 @@ function Gallery({ images, activeIdx, setActiveIdx, setLightboxOpen, make, model
             </div>
           </>
         )}
-      </div>
+      </button>
       <div className="grid grid-cols-4 gap-3">
         {thumbs.map((img, i) => (
-          <button key={i} onClick={() => setActiveIdx(i)}
+          <button key={i} type="button" onClick={() => setActiveIdx(i)}
+            aria-label={`Show ${year} ${make} ${model} photo ${i + 1}`}
+            aria-pressed={activeIdx === i}
             className={`aspect-video bg-muted border overflow-hidden transition-all ${activeIdx === i ? 'border-foreground' : 'border-border hover:border-muted-foreground'}`}>
-            <img src={img} alt="" className="w-full h-full object-cover" />
+            <img src={img} alt={`${imageAlt || `${year} ${make} ${model}`} view ${i + 1}`} className="w-full h-full object-cover" />
           </button>
         ))}
       </div>
@@ -852,7 +859,7 @@ function PaymentEstimator({ price }: { price: number }) {
           <span className="text-[12px] text-muted-foreground">Cash Down</span>
           <span className="text-[12px] font-bold">${cashDown.toLocaleString()} down</span>
         </div>
-        <input type="range" min={0} max={20000} step={500} value={cashDown}
+        <input type="range" aria-label="Cash down payment" min={0} max={20000} step={500} value={cashDown}
           onChange={(e) => setCashDown(Number(e.target.value))}
           className="w-full h-1.5 bg-muted appearance-none cursor-pointer accent-foreground" />
         <div className="flex justify-between text-[10px] text-muted-foreground"><span>$0</span><span>$20k</span></div>
@@ -1016,6 +1023,7 @@ export function VehicleDetailPage() {
   const [isSaved, setIsSaved] = useState(false);
   const [challengeSubmitting, setChallengeSubmitting] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const reportDialogRef = useAccessibleDialog<HTMLFormElement>(reportOpen, () => setReportOpen(false));
   const [reportText, setReportText] = useState('');
   const [reportCategory, setReportCategory] = useState('fake_listing');
   const [reportSubmitting, setReportSubmitting] = useState(false);
@@ -1198,12 +1206,17 @@ export function VehicleDetailPage() {
       {reportOpen && (
         <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-background/80 backdrop-blur-sm px-4">
           <form
+            ref={reportDialogRef}
             onSubmit={handleSubmitReport}
             className="w-full max-w-md border border-border bg-background shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="report-listing-title"
+            tabIndex={-1}
           >
             <div className="flex items-center justify-between border-b border-border px-5 py-4">
               <div>
-                <h2 className="text-[14px] font-black tracking-tight">Report listing</h2>
+                <h2 id="report-listing-title" className="text-[14px] font-black tracking-tight">Report listing</h2>
                 <p className="text-[12px] text-muted-foreground mt-1">
                   Tell Kerodex what should be reviewed.
                 </p>
@@ -1221,7 +1234,9 @@ export function VehicleDetailPage() {
               <div className="text-[12px] text-muted-foreground">
                 Reporting <span className="text-foreground font-semibold">{vehicle.year} {vehicle.make} {vehicle.model}</span>.
               </div>
+              <label htmlFor="report-listing-category" className="text-[11px] font-bold uppercase tracking-wider">Reason</label>
               <select
+                id="report-listing-category"
                 value={reportCategory}
                 onChange={(event) => setReportCategory(event.target.value)}
                 className="w-full h-10 border border-border bg-background px-3 text-[13px] text-foreground outline-none focus:border-primary"
@@ -1230,14 +1245,18 @@ export function VehicleDetailPage() {
                   <option key={value} value={value}>{label}</option>
                 ))}
               </select>
+              <label htmlFor="report-listing-description" className="text-[11px] font-bold uppercase tracking-wider">Description</label>
               <textarea
+                id="report-listing-description"
                 value={reportText}
                 onChange={(event) => setReportText(event.target.value)}
                 rows={5}
                 autoFocus
                 placeholder="Describe the issue with this listing..."
+                aria-describedby="report-listing-help"
                 className="w-full resize-none border border-border bg-background px-3 py-3 text-[13px] text-foreground placeholder:text-muted-foreground outline-none focus:border-primary"
               />
+              <p id="report-listing-help" className="text-[10px] text-muted-foreground">Include at least 10 characters and avoid passwords or payment information.</p>
             </div>
             <div className="flex items-center justify-end gap-2 border-t border-border px-5 py-4">
               <Button
@@ -1273,19 +1292,27 @@ export function VehicleDetailPage() {
             <div>
               <p className="text-[11px] font-black uppercase tracking-[0.16em]">Demo Listing</p>
               <p className="mt-1 text-[12px] leading-relaxed">
-                This listing is for demonstration/testing only and the vehicle is not actually for sale. Messages open a sandboxed demo conversation with an automated demo seller so you can test the experience.
+                This is a sample listing and the vehicle is not available for purchase. Messages open a simulated conversation so you can explore how Kerodex works.
               </p>
             </div>
           </div>
         </div>
       )}
 
+      <aside className="mb-8 border border-border bg-muted/25 p-4" aria-label="Vehicle information and transaction disclaimer">
+        <p className="text-[11px] font-black uppercase tracking-[0.16em]">Buyer safety reminder</p>
+        <p className="mt-2 text-[12px] leading-relaxed text-muted-foreground">
+          Vehicle information is provided by the seller and may not be independently verified by Kerodex. Inspect the vehicle, confirm the title and VIN, review relevant history, and use safe, traceable payment methods. Verification signals may reduce risk, but they are not guarantees.
+        </p>
+      </aside>
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 xl:gap-16">
 
         <div className="lg:col-span-8 space-y-10">
 
           <Gallery images={images} activeIdx={activeIdx} setActiveIdx={setActiveIdx}
-            setLightboxOpen={setLightboxOpen} make={vehicle.make} model={vehicle.model} year={vehicle.year} />
+            setLightboxOpen={setLightboxOpen} make={vehicle.make} model={vehicle.model} year={vehicle.year}
+            imageAlt={vehicleImageAlt(vehicle)} />
 
           {/* Tabs */}
           <div className="space-y-0">
@@ -1422,18 +1449,20 @@ export function VehicleDetailPage() {
             <DialogTitle {...({} as any)} className="text-[12px] font-bold uppercase tracking-widest">
               Photo {activeIdx + 1} of {images.length}
             </DialogTitle>
-            <button onClick={() => setLightboxOpen(false)} className="p-2 hover:bg-muted transition-colors">
+            <button onClick={() => setLightboxOpen(false)} aria-label="Close photo viewer" className="p-2 hover:bg-muted transition-colors">
               <X className="h-4 w-4" />
             </button>
           </DialogHeader>
           <div className="relative">
-            <img src={mainImage} alt="" className="w-full max-h-[80vh] object-contain bg-muted" />
+            <img src={mainImage} alt={vehicleImageAlt(vehicle, `photo ${activeIdx + 1}`)} className="w-full max-h-[80vh] object-contain bg-muted" />
             {images.length > 1 && (
               <div className="flex gap-2 p-4 border-t border-border overflow-x-auto">
                 {images.map((img, i) => (
-                  <button key={i} onClick={() => setActiveIdx(i)}
+                  <button key={i} type="button" onClick={() => setActiveIdx(i)}
+                    aria-label={`Show photo ${i + 1}`}
+                    aria-pressed={activeIdx === i}
                     className={`h-14 w-20 shrink-0 border overflow-hidden transition-all ${activeIdx === i ? 'border-foreground' : 'border-border'}`}>
-                    <img src={img} alt="" className="w-full h-full object-cover" />
+                    <img src={img} alt={vehicleImageAlt(vehicle, `thumbnail ${i + 1}`)} className="w-full h-full object-cover" />
                   </button>
                 ))}
               </div>

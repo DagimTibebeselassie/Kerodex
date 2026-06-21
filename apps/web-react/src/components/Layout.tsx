@@ -111,6 +111,14 @@ export function Layout() {
     return () => window.removeEventListener('kerodex:auth-required', handler);
   }, []);
 
+  useEffect(() => {
+    setMobileMenuOpen(false);
+    setUserMenuOpen(false);
+    window.requestAnimationFrame(() => {
+      document.getElementById('main-content')?.focus({ preventScroll: true });
+    });
+  }, [pathname]);
+
   const handleHeaderSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (headerSearch.trim()) {
@@ -131,6 +139,12 @@ export function Layout() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <a
+        href="#main-content"
+        className="fixed left-3 top-3 z-[1000] -translate-y-20 bg-foreground px-4 py-2 text-[12px] font-bold text-background transition-transform focus:translate-y-0"
+      >
+        Skip to main content
+      </a>
       <header
         id="main-header"
         data-auth-state={user ? 'signed-in' : 'signed-out'}
@@ -148,11 +162,14 @@ export function Layout() {
         <form
           onSubmit={handleHeaderSearch}
           className="hidden md:flex flex-1 max-w-md mx-auto relative"
+          role="search"
+          aria-label="Search Kerodex listings"
         >
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
           <Input
             id="header-search-bar"
             type="search"
+            aria-label="Search by make, model, or city"
             placeholder="Search make, model, city..."
             value={headerSearch}
             onChange={(e) => setHeaderSearch(e.target.value)}
@@ -179,20 +196,16 @@ export function Layout() {
             <>
               {user ? (
                 <>
-                  <Link to="/saved" aria-label="Saved cars">
-                    <button className="hidden md:flex h-9 w-9 items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-                      <Heart className="h-4 w-4" />
-                    </button>
+                  <Link to="/saved" aria-label="Saved cars" className="hidden md:flex h-9 w-9 items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                    <Heart className="h-4 w-4" aria-hidden="true" />
                   </Link>
-                  <Link to="/messages" aria-label="Messages">
-                    <button className="relative hidden md:flex h-9 w-9 items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
-                      <MessageSquare className="h-4 w-4" />
-                      {unreadCount > 0 && (
-                        <span className="absolute right-1 top-1 min-w-[16px] h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold leading-4 text-center">
-                          {unreadCount > 9 ? '9+' : unreadCount}
-                        </span>
-                      )}
-                    </button>
+                  <Link to="/messages" aria-label={unreadCount > 0 ? `Messages, ${unreadCount} unread` : 'Messages'} className="relative hidden md:flex h-9 w-9 items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                    <MessageSquare className="h-4 w-4" aria-hidden="true" />
+                    {unreadCount > 0 && (
+                      <span aria-hidden="true" className="absolute right-1 top-1 min-w-[16px] h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold leading-4 text-center">
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </span>
+                    )}
                   </Link>
 
                   {/* User menu */}
@@ -201,6 +214,8 @@ export function Layout() {
                       id="user-menu"
                       onClick={() => setUserMenuOpen((v) => !v)}
                       aria-expanded={userMenuOpen}
+                      aria-haspopup="menu"
+                      aria-controls="user-account-menu"
                       className="flex items-center gap-1.5 h-9 px-2 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors text-[12px] font-medium"
                     >
                       <span className="h-5 w-5 rounded-full bg-foreground text-background inline-flex items-center justify-center overflow-hidden text-[10px] font-bold">
@@ -221,7 +236,7 @@ export function Layout() {
                     </button>
 
                     {userMenuOpen && (
-                      <div className="absolute right-0 top-full mt-1 w-52 bg-background border border-border shadow-lg z-50 py-1">
+                      <div id="user-account-menu" role="menu" className="absolute right-0 top-full mt-1 w-52 bg-background border border-border shadow-lg z-50 py-1">
                         <div className="px-3 py-2 border-b border-border">
                           <p className="text-[11px] text-muted-foreground truncate">{user.email}</p>
                         </div>
@@ -323,10 +338,11 @@ export function Layout() {
         aria-label="Mobile navigation"
       >
         {/* Mobile search */}
-        <form onSubmit={handleHeaderSearch} className="p-4 border-b border-border relative">
+        <form onSubmit={handleHeaderSearch} className="p-4 border-b border-border relative" role="search" aria-label="Search Kerodex listings">
           <Search className="absolute left-7 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
           <Input
             type="search"
+            aria-label="Search by make, model, or city"
             placeholder="Search make, model, city..."
             value={headerSearch}
             onChange={(e) => setHeaderSearch(e.target.value)}
@@ -418,21 +434,21 @@ export function Layout() {
         </nav>
       </div>
 
-      <main className="flex-1">
+      <main id="main-content" tabIndex={-1} className="flex-1 outline-none">
         <Outlet />
       </main>
 
       <footer className={`py-12 px-4 md:px-6 border-t border-border ${isSearchWorkspace ? 'mt-0' : 'mt-20'}`}>
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-10 md:gap-12">
           <div className="md:col-span-2">
-            <h3 className="text-[13px] font-black uppercase tracking-tighter mb-3">Kerodex</h3>
+            <p className="text-[13px] font-black uppercase tracking-tighter mb-3">Kerodex</p>
             <p className="text-[12px] text-muted-foreground max-w-xs leading-relaxed">
               A minimalist, private-party car marketplace. Verified listings. Fair prices. No dealer markup.
             </p>
           </div>
 
           <div>
-            <h4 className="text-[10px] font-bold uppercase tracking-[0.18em] mb-4 text-muted-foreground">Marketplace</h4>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] mb-4 text-muted-foreground">Marketplace</p>
             <ul className="space-y-2.5">
               <li>
                 <Link to="/cars" className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">
@@ -463,7 +479,7 @@ export function Layout() {
           </div>
 
           <div>
-            <h4 className="text-[10px] font-bold uppercase tracking-[0.18em] mb-4 text-muted-foreground">Platform</h4>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em] mb-4 text-muted-foreground">Platform</p>
             <ul className="space-y-2.5">
               <li>
                 <Link to="/cockpit" className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">
@@ -482,7 +498,12 @@ export function Layout() {
               </li>
               <li>
                 <Link to="/safety" className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">
-                  Safety Center
+                  Safety Guidelines
+                </Link>
+              </li>
+              <li>
+                <Link to="/accessibility" className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">
+                  Accessibility
                 </Link>
               </li>
               <li>
@@ -507,17 +528,22 @@ export function Layout() {
               </li>
               <li>
                 <Link to="/terms" className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">
-                  Terms
+                  Terms of Service
                 </Link>
               </li>
               <li>
                 <Link to="/privacy" className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">
-                  Privacy
+                  Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link to="/report" className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">
+                  Report a Problem
                 </Link>
               </li>
               <li>
                 <a href="mailto:founder@kerodexofficial.com" className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">
-                  founder@kerodexofficial.com
+                  Email Kerodex Support
                 </a>
               </li>
             </ul>

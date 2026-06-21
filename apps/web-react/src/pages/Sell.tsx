@@ -216,10 +216,11 @@ function NativeSelect({ value, onChange, options, placeholder, disabled, id }: {
 function ImageItem({ url, onRemove }: { url: string; onRemove: () => void }) {
   return (
     <div className="relative aspect-square bg-muted border border-border rounded-md overflow-hidden group">
-      <img src={url} alt="" className="w-full h-full object-cover" />
+      <img src={url} alt="Vehicle listing upload preview" className="w-full h-full object-cover" />
       <button
         type="button"
         onClick={onRemove}
+        aria-label="Remove vehicle photo"
         className="absolute top-1.5 right-1.5 h-6 w-6 rounded-full bg-background/90 border border-border flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground"
       >
         <X className="h-3 w-3" />
@@ -876,6 +877,7 @@ export function SellPage() {
         <div className="flex gap-2">
           <input
             type="text"
+            aria-label="Vehicle identification number"
             value={vin}
             onChange={(e) => { setVin(e.target.value.toUpperCase()); setVinVerified(false); setVinError(''); }}
             placeholder="e.g. 1HGBH41JX8C200001"
@@ -950,6 +952,7 @@ export function SellPage() {
                 <input
                   ref={fileInputRef}
                   type="file"
+                  aria-label="Upload vehicle listing photos"
                   className="hidden"
                   accept="image/*"
                   multiple
@@ -1007,6 +1010,7 @@ export function SellPage() {
               </span>
               <input
                 type="file"
+                aria-label="Upload vehicle presence verification photo"
                 accept="image/*"
                 className="hidden"
                 disabled={!presenceCode || presenceLoading}
@@ -1098,6 +1102,7 @@ export function SellPage() {
               <FieldLabel>Trim</FieldLabel>
               <input
                 {...register('trim')}
+                aria-label="Vehicle trim"
                 placeholder="e.g. EX-L, Sport, Premium"
                 className="w-full h-10 px-3 text-[13px] border border-input bg-background text-foreground placeholder:text-muted-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring transition-colors rounded-md"
               />
@@ -1108,6 +1113,7 @@ export function SellPage() {
               <FieldLabel required>Mileage</FieldLabel>
               <input
                 {...register('mileage')}
+                aria-label="Vehicle mileage"
                 type="number"
                 min={0}
                 placeholder="e.g. 45000"
@@ -1123,6 +1129,7 @@ export function SellPage() {
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-muted-foreground">$</span>
                 <input
                   {...register('price')}
+                  aria-label="Vehicle price"
                   type="number"
                   min={0}
                   placeholder="e.g. 18500"
@@ -1161,6 +1168,7 @@ export function SellPage() {
                   render={({ field }) => (
                     <input
                       {...field}
+                      aria-label="Vehicle location"
                       value={field.value || ''}
                       onChange={(e) => {
                         setListingCoords(null);
@@ -1330,6 +1338,7 @@ export function SellPage() {
                   Upload Title
                   <input
                     type="file"
+                    aria-label="Upload vehicle title document"
                     accept=".pdf,.png,.jpg,.jpeg,.webp,image/*,application/pdf"
                     className="hidden"
                     onChange={(e) => {
@@ -1350,6 +1359,7 @@ export function SellPage() {
           </div>
           <div className="relative">
             <input
+              aria-label="Add a vehicle feature"
               value={featureInput}
               onChange={(e) => setFeatureInput(e.target.value)}
               onFocus={() => setFeatureFocused(true)}
@@ -1414,6 +1424,7 @@ export function SellPage() {
             <span className="text-[11px] text-muted-foreground">PDF or image files up to 15 MB each</span>
             <input
               type="file"
+              aria-label="Upload maintenance records"
               multiple
               accept=".pdf,.png,.jpg,.jpeg,.webp,image/*,application/pdf"
               className="hidden"
@@ -1444,11 +1455,13 @@ export function SellPage() {
                     />
                     <input
                       type="month"
+                      aria-label={`Maintenance date for ${record.name || 'record'}`}
                       value={record.date}
                       onChange={(e) => updateMaintenanceRecord(record.id, { date: e.target.value })}
                       className="h-10 px-3 text-[13px] border border-input bg-background text-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring transition-colors rounded-md"
                     />
                     <input
+                      aria-label={`Maintenance notes for ${record.name || 'record'}`}
                       value={record.notes}
                       onChange={(e) => updateMaintenanceRecord(record.id, { notes: e.target.value })}
                       placeholder="Optional note"
@@ -1478,17 +1491,20 @@ export function SellPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <input
                     type="month"
+                    aria-label={`Timeline date for ${event.title || 'event'}`}
                     value={event.date}
                     onChange={(e) => updateTimelineEvent(event.id, { date: e.target.value })}
                     className="h-10 px-3 text-[13px] border border-input bg-background text-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring transition-colors rounded-md"
                   />
                   <input
+                    aria-label="Timeline event title"
                     value={event.title}
                     onChange={(e) => updateTimelineEvent(event.id, { title: e.target.value })}
                     placeholder="Event title"
                     className="h-10 px-3 text-[13px] border border-input bg-background text-foreground placeholder:text-muted-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring transition-colors rounded-md"
                   />
                   <input
+                    aria-label={`Timeline notes for ${event.title || 'event'}`}
                     value={event.notes}
                     onChange={(e) => updateTimelineEvent(event.id, { notes: e.target.value })}
                     placeholder="Optional detail"
@@ -1510,6 +1526,7 @@ export function SellPage() {
           </p>
           <textarea
             {...register('description')}
+            aria-label="Vehicle description"
             rows={6}
             placeholder="e.g. One owner vehicle, always garaged. New tires in 2024, clean title, no accidents. Full service history available. Selling due to upgrade..."
             className="w-full px-4 py-3 text-[13px] leading-relaxed border border-input bg-background text-foreground placeholder:text-muted-foreground outline-none focus:border-ring focus:ring-1 focus:ring-ring transition-colors resize-y rounded-md"
@@ -1538,6 +1555,9 @@ export function SellPage() {
                 <span>{label}</span>
               </label>
             ))}
+            <p className="border-t border-border pt-2 text-[11px] leading-relaxed text-muted-foreground">
+              Kerodex may remove listings, restrict messaging, or suspend accounts for false, misleading, prohibited, or unauthorized information.
+            </p>
           </div>
           <Button
             type="submit"

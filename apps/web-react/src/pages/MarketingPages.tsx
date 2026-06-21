@@ -112,10 +112,10 @@ export function ContactPage() {
           </div>
           <div>
             <h2 className="text-[13px] font-bold uppercase tracking-widest">Email</h2>
-            <p className="text-[13px] text-muted-foreground">founder@kerodexofficial.com</p>
+            <p className="text-[13px] text-muted-foreground">Kerodex Support</p>
           </div>
         </div>
-        <a href="mailto:founder@kerodexofficial.com">
+        <a href="mailto:founder@kerodexofficial.com" aria-label="Email Kerodex Support">
           <Button className="h-10 px-5 text-[12px] font-bold uppercase tracking-wider">Email Kerodex</Button>
         </a>
       </div>
@@ -151,7 +151,7 @@ export function SupportPage() {
           </section>
         ))}
       </div>
-      <a href="mailto:founder@kerodexofficial.com">
+      <a href="mailto:founder@kerodexofficial.com" aria-label="Email Kerodex Support">
         <Button className="h-11 px-6 text-[12px] font-bold uppercase tracking-wider">Email Support</Button>
       </a>
     </div>

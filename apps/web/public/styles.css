@@ -260,7 +260,7 @@ button:hover {
 .hero-media {
   background:
     linear-gradient(90deg, rgba(4, 9, 16, 0.72), rgba(4, 9, 16, 0.18)),
-    url("https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=2200&q=85") center/cover;
+    url("/assets/sedan1.webp") center/cover;
   border-radius: 0 0 42px 42px;
   inset: 0;
   min-height: 640px;
@@ -2023,7 +2023,7 @@ body.dark #resultsMap .leaflet-tile {
 .hero-media {
   background:
     linear-gradient(90deg, rgba(4, 9, 16, 0.42), rgba(4, 9, 16, 0.04)),
-    url("https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=2200&q=85") center/cover !important;
+    url("/assets/sedan1.webp") center/cover !important;
   filter: none !important;
   opacity: 1 !important;
 }
@@ -2031,7 +2031,7 @@ body.dark #resultsMap .leaflet-tile {
 body.dark .hero-media {
   background:
     linear-gradient(90deg, rgba(0, 0, 0, 0.36), rgba(0, 0, 0, 0.06)),
-    url("https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=2200&q=85") center/cover !important;
+    url("/assets/sedan1.webp") center/cover !important;
   filter: brightness(1.08) saturate(1.04) !important;
   opacity: 1 !important;
 }
@@ -2558,7 +2558,7 @@ body.dark .profile-tab span:not(.profile-tab-avatar) {
 body.dark .hero-media {
   background:
     linear-gradient(90deg, rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0)),
-    url("https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=2200&q=85") center/cover !important;
+    url("/assets/sedan1.webp") center/cover !important;
   filter: brightness(1.18) saturate(1.08) !important;
 }
 
@@ -2869,14 +2869,14 @@ body.nav-scrolled .nav {
 .hero-media {
   background:
     linear-gradient(90deg, rgba(4, 9, 16, 0.52), rgba(4, 9, 16, 0.08)),
-    url("https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=2200&q=85") center/cover !important;
+    url("/assets/sedan1.webp") center/cover !important;
   opacity: 1 !important;
 }
 
 body.dark .hero-media {
   background:
     linear-gradient(90deg, rgba(2, 4, 8, 0.7), rgba(2, 4, 8, 0.22)),
-    url("https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=2200&q=85") center/cover !important;
+    url("/assets/sedan1.webp") center/cover !important;
   opacity: 1 !important;
 }
 
@@ -4286,14 +4286,14 @@ body.dark .search-categories button:hover {
 .hero-media {
   background:
     linear-gradient(90deg, rgba(4, 9, 16, 0.52), rgba(4, 9, 16, 0.08)),
-    url("https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=2200&q=85") center/cover !important;
+    url("/assets/sedan1.webp") center/cover !important;
   opacity: 1 !important;
 }
 
 body.dark .hero-media {
   background:
     linear-gradient(90deg, rgba(2, 4, 8, 0.7), rgba(2, 4, 8, 0.22)),
-    url("https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=2200&q=85") center/cover !important;
+    url("/assets/sedan1.webp") center/cover !important;
   opacity: 1 !important;
 }
 
@@ -4443,7 +4443,7 @@ body.dark .search-categories button:hover {
 .hero-media {
   background:
     linear-gradient(90deg, rgba(4, 9, 16, 0.42), rgba(4, 9, 16, 0.04)),
-    url("https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=2200&q=85") center/cover !important;
+    url("/assets/sedan1.webp") center/cover !important;
   filter: none !important;
   opacity: 1 !important;
 }
@@ -4451,7 +4451,7 @@ body.dark .search-categories button:hover {
 body.dark .hero-media {
   background:
     linear-gradient(90deg, rgba(0, 0, 0, 0.36), rgba(0, 0, 0, 0.06)),
-    url("https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=2200&q=85") center/cover !important;
+    url("/assets/sedan1.webp") center/cover !important;
   filter: brightness(1.08) saturate(1.04) !important;
   opacity: 1 !important;
 }
@@ -4812,7 +4812,7 @@ body.dark .search-categories {
 .hero-media {
   background:
     linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.54)),
-    url("https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=2400&q=85") center 47%/cover !important;
+    url("/assets/suv1.webp") center 47%/cover !important;
   border-radius: 0 !important;
   box-shadow: none !important;
   filter: saturate(1.02) contrast(1.04) !important;
@@ -4823,7 +4823,7 @@ body.dark .search-categories {
 body.dark .hero-media {
   background:
     linear-gradient(180deg, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.62)),
-    url("https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=2400&q=85") center 47%/cover !important;
+    url("/assets/suv1.webp") center 47%/cover !important;
   filter: saturate(1.02) contrast(1.06) brightness(0.92) !important;
 }
 
@@ -5150,14 +5150,14 @@ body.dark .view-toggle button.active {
 .hero-media {
   background:
     linear-gradient(180deg, rgba(0, 0, 0, 0.06), rgba(0, 0, 0, 0.56)),
-    url("https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=2400&q=85") center 58%/cover !important;
+    url("/assets/sedan1.webp") center 58%/cover !important;
   min-height: 392px !important;
 }
 
 body.dark .hero-media {
   background:
     linear-gradient(180deg, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.64)),
-    url("https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=2400&q=85") center 58%/cover !important;
+    url("/assets/sedan1.webp") center 58%/cover !important;
 }
 
 .hero-content {
@@ -6063,13 +6063,13 @@ body.dark .choice-select-option {
 .hero-media {
   background:
     linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.56)),
-    url("https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=2400&q=85") center 62%/cover !important;
+    url("/assets/sedan1.webp") center 62%/cover !important;
 }
 
 body.dark .hero-media {
   background:
     linear-gradient(180deg, rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0.7)),
-    url("https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=2400&q=85") center 62%/cover !important;
+    url("/assets/sedan1.webp") center 62%/cover !important;
 }
 
 .choice-select,
@@ -9629,13 +9629,13 @@ body.dark .explore-card .result-card-body {
 .hero-media {
   background:
     linear-gradient(180deg, rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.56)),
-    url("https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=2400&q=85") center 62%/cover !important;
+    url("/assets/sedan1.webp") center 62%/cover !important;
 }
 
 body.dark .hero-media {
   background:
     linear-gradient(180deg, rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0.7)),
-    url("https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=2400&q=85") center 62%/cover !important;
+    url("/assets/sedan1.webp") center 62%/cover !important;
 }
 
 .choice-select,

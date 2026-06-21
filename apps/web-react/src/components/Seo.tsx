@@ -102,6 +102,16 @@ const seoByPath: Record<string, SeoEntry> = {
     description: 'Contact Kerodex for marketplace support, seller questions, safety concerns, or general feedback.',
     canonicalPath: '/contact',
   },
+  '/accessibility': {
+    title: 'Accessibility Statement | Kerodex',
+    description: 'Read the Kerodex accessibility statement and report barriers using the protected support form.',
+    canonicalPath: '/accessibility',
+  },
+  '/report': {
+    title: 'Report a Problem | Kerodex',
+    description: 'Report suspicious listings, unsafe messages, account issues, accessibility barriers, privacy concerns, or other Kerodex problems.',
+    canonicalPath: '/report',
+  },
   '/support': {
     title: 'Support | Kerodex',
     description: 'Get Kerodex support for account access, listings, verification, messaging, and marketplace safety.',
@@ -257,6 +267,12 @@ export function RouteSeo() {
       meta.setAttribute('name', 'twitter:image');
       return meta;
     }, DEFAULT_IMAGE);
+
+    upsertMeta('meta[name="robots"]', () => {
+      const meta = document.createElement('meta');
+      meta.setAttribute('name', 'robots');
+      return meta;
+    }, pathname.startsWith('/admin') ? 'noindex,nofollow' : 'index,follow');
 
     let schema = document.getElementById('kerodex-home-schema') as HTMLScriptElement | null;
     if (pathname === '/') {

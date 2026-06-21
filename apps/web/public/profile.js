@@ -305,7 +305,7 @@ function sellerPricingEstimate(draft = loadSellerDraft(), comparableListings = [
       high: 0,
       midpoint: 0,
       needsVehicle: true,
-      source: "Add make and model to start the beta pricing guide."
+      source: "Add the make and model to view an estimated price range."
     };
   }
   const exact = comparableListings.filter((listing) => {
@@ -345,8 +345,8 @@ function sellerPricingEstimate(draft = loadSellerDraft(), comparableListings = [
     high,
     midpoint: Math.round((low + high) / 500) * 250,
     source: mileage
-      ? "Conservative beta guide; not a live KBB, CarMax, or dealer offer"
-      : "Add mileage to tighten this beta range; not a live KBB, CarMax, or dealer offer"
+      ? "General estimate; not a live KBB, CarMax, or dealer offer"
+      : "Add mileage to refine this estimate; not a live KBB, CarMax, or dealer offer"
   };
 }
 
@@ -472,7 +472,7 @@ function renderSellerHub() {
   document.querySelector("#sellerListingsGrid").innerHTML = cars.length
     ? cars.map((car) => `
       <article data-seller-car-id="${car.id}">
-        <img class="seller-car-thumb" src="${car.image || "https://images.unsplash.com/photo-1549924231-f129b911e442?auto=format&fit=crop&w=800&q=80"}" alt="${car.title}">
+        <img class="seller-car-thumb" src="${car.image || "/assets/sedan1.webp"}" alt="${car.title}">
         <div class="seller-car-main">
           <strong>${car.title}</strong>
           <span>${profileCurrency.format(Number(car.price || 0))} | ${Number(car.mileage || 0).toLocaleString()} mi</span>

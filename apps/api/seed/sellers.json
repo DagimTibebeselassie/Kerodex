@@ -14,7 +14,7 @@
     "reviewCount": 0,
     "isDemo": true,
     "is_demo": true,
-    "demoSeedId": "kerodex-us-demo-v3:seller:1",
+    "demoSeedId": "kerodex-us-demo-v4:seller:1",
     "verification": {
       "email": true,
       "phone": false,
@@ -37,7 +37,7 @@
     "reviewCount": 2,
     "isDemo": true,
     "is_demo": true,
-    "demoSeedId": "kerodex-us-demo-v3:seller:2",
+    "demoSeedId": "kerodex-us-demo-v4:seller:2",
     "verification": {
       "email": true,
       "phone": true,
@@ -60,7 +60,7 @@
     "reviewCount": 3,
     "isDemo": true,
     "is_demo": true,
-    "demoSeedId": "kerodex-us-demo-v3:seller:3",
+    "demoSeedId": "kerodex-us-demo-v4:seller:3",
     "verification": {
       "email": true,
       "phone": true,
@@ -83,7 +83,7 @@
     "reviewCount": 4,
     "isDemo": true,
     "is_demo": true,
-    "demoSeedId": "kerodex-us-demo-v3:seller:4",
+    "demoSeedId": "kerodex-us-demo-v4:seller:4",
     "verification": {
       "email": true,
       "phone": true,
@@ -106,7 +106,7 @@
     "reviewCount": 0,
     "isDemo": true,
     "is_demo": true,
-    "demoSeedId": "kerodex-us-demo-v3:seller:5",
+    "demoSeedId": "kerodex-us-demo-v4:seller:5",
     "verification": {
       "email": true,
       "phone": true,
@@ -129,7 +129,7 @@
     "reviewCount": 1,
     "isDemo": true,
     "is_demo": true,
-    "demoSeedId": "kerodex-us-demo-v3:seller:6",
+    "demoSeedId": "kerodex-us-demo-v4:seller:6",
     "verification": {
       "email": true,
       "phone": false,
@@ -152,7 +152,7 @@
     "reviewCount": 2,
     "isDemo": true,
     "is_demo": true,
-    "demoSeedId": "kerodex-us-demo-v3:seller:7",
+    "demoSeedId": "kerodex-us-demo-v4:seller:7",
     "verification": {
       "email": true,
       "phone": true,
@@ -175,7 +175,7 @@
     "reviewCount": 3,
     "isDemo": true,
     "is_demo": true,
-    "demoSeedId": "kerodex-us-demo-v3:seller:8",
+    "demoSeedId": "kerodex-us-demo-v4:seller:8",
     "verification": {
       "email": true,
       "phone": true,
@@ -198,7 +198,7 @@
     "reviewCount": 0,
     "isDemo": true,
     "is_demo": true,
-    "demoSeedId": "kerodex-us-demo-v3:seller:9",
+    "demoSeedId": "kerodex-us-demo-v4:seller:9",
     "verification": {
       "email": true,
       "phone": true,
@@ -221,7 +221,7 @@
     "reviewCount": 5,
     "isDemo": true,
     "is_demo": true,
-    "demoSeedId": "kerodex-us-demo-v3:seller:10",
+    "demoSeedId": "kerodex-us-demo-v4:seller:10",
     "verification": {
       "email": true,
       "phone": true,
@@ -244,7 +244,7 @@
     "reviewCount": 1,
     "isDemo": true,
     "is_demo": true,
-    "demoSeedId": "kerodex-us-demo-v3:seller:11",
+    "demoSeedId": "kerodex-us-demo-v4:seller:11",
     "verification": {
       "email": true,
       "phone": false,
@@ -267,7 +267,7 @@
     "reviewCount": 2,
     "isDemo": true,
     "is_demo": true,
-    "demoSeedId": "kerodex-us-demo-v3:seller:12",
+    "demoSeedId": "kerodex-us-demo-v4:seller:12",
     "verification": {
       "email": true,
       "phone": true,
@@ -290,7 +290,7 @@
     "reviewCount": 0,
     "isDemo": true,
     "is_demo": true,
-    "demoSeedId": "kerodex-us-demo-v3:seller:13",
+    "demoSeedId": "kerodex-us-demo-v4:seller:13",
     "verification": {
       "email": true,
       "phone": true,
@@ -313,7 +313,7 @@
     "reviewCount": 4,
     "isDemo": true,
     "is_demo": true,
-    "demoSeedId": "kerodex-us-demo-v3:seller:14",
+    "demoSeedId": "kerodex-us-demo-v4:seller:14",
     "verification": {
       "email": true,
       "phone": true,
@@ -336,7 +336,7 @@
     "reviewCount": 5,
     "isDemo": true,
     "is_demo": true,
-    "demoSeedId": "kerodex-us-demo-v3:seller:15",
+    "demoSeedId": "kerodex-us-demo-v4:seller:15",
     "verification": {
       "email": true,
       "phone": true,

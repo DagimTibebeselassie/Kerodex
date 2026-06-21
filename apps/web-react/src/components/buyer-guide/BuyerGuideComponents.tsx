@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { Link } from '@tanstack/react-router';
+import { vehicleImageAlt } from '@/lib/vehicleImage';
 import { Button } from '@blinkdotnew/ui';
 import {
   AlertTriangle,
@@ -155,6 +156,7 @@ export function BuyerGuideBudgetSlider({
       </div>
       <input
         type="range"
+        aria-label={label}
         min={min}
         max={max}
         step={step}
@@ -312,7 +314,7 @@ export function BuyerGuideListingMatches({
         return (
           <article key={listing.id} className="border border-border bg-background overflow-hidden">
             <div className="aspect-[16/9] bg-muted overflow-hidden">
-              {image && <img src={image} alt={`${listing.year} ${listing.make} ${listing.model}`} className="w-full h-full object-cover" />}
+              {image && <img src={image} alt={vehicleImageAlt(listing)} className="w-full h-full object-cover" />}
             </div>
             <div className="p-5">
               <div className="flex items-start justify-between gap-4">
@@ -334,7 +336,7 @@ export function BuyerGuideListingMatches({
               </div>
               <p className="text-[12px] leading-relaxed mt-4">{matchReason}</p>
               {(listing.isDemo || listing.is_demo) && (
-                <p className="mt-3 text-[11px] font-medium text-muted-foreground">This listing is for demonstration/testing only.</p>
+                <p className="mt-3 text-[11px] font-medium text-muted-foreground">This is a sample listing and is not available for purchase.</p>
               )}
               {concerns.length > 0 && (
                 <div className="mt-4 space-y-1.5 border-t border-border pt-3">

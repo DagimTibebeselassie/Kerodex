@@ -112,7 +112,7 @@ export function SellerProfilePage() {
         <div className="space-y-8">
           {(seller.isDemo || seller.is_demo) && (
             <div className="border border-amber-300 bg-amber-50/70 p-4 text-[12px] leading-relaxed text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-200">
-              <strong>Demo Seller Profile:</strong> this profile and its listings exist only for demonstration/testing. Contact and reviews are not real marketplace activity.
+              <strong>Demo Seller Profile:</strong> this sample profile is provided to demonstrate Kerodex features. Its listings, contact activity, and reviews are not real marketplace activity.
             </div>
           )}
           <div className="flex items-start gap-5">

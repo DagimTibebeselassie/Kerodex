@@ -1,9 +1,11 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { lazy, Suspense, useState, useEffect, useRef, useMemo } from 'react';
 import { Vehicle } from '@/types';
+import { vehicleImageAlt } from '@/lib/vehicleImage';
 import { MAKES, getModelsForMake } from '@/data/makes-models';
 import { VehicleCard } from '@/components/VehicleCard';
-import { MapView } from '@/components/MapView';
 import { listVehicles } from '@/lib/api';
+
+const MapView = lazy(() => import('@/components/MapView').then((module) => ({ default: module.MapView })));
 import {
   SlidersHorizontal,
   LayoutGrid,
@@ -377,9 +379,10 @@ function CheckboxItem({ id, label, checked, onChange }: { id: string; label: str
 }
 
 function FilterSidebarContent({
-  filters, setFilters, onClear,
-}: { filters: FilterState; setFilters: (f: FilterState) => void; onClear: () => void }) {
+  filters, setFilters, onClear, idPrefix,
+}: { filters: FilterState; setFilters: (f: FilterState) => void; onClear: () => void; idPrefix: string }) {
   const modelOptions = filters.make ? getModelsForMake(filters.make) : [];
+  const prefixedId = (id: string) => `${idPrefix}-${id}`;
 
   const toggleSet = (key: 'vehicleTypes' | 'fuelTypes' | 'driveTypes', value: string) => {
     const current = filters[key] as string[];
@@ -407,19 +410,19 @@ function FilterSidebarContent({
           <div className="grid grid-cols-2 gap-2">
             <div className="relative">
               <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] text-muted-foreground pointer-events-none">$</span>
-              <input type="number" placeholder="Min" min={0} value={filters.priceMin}
+              <input type="number" aria-label="Minimum price" placeholder="Min" min={0} value={filters.priceMin}
                 onChange={(e) => setFilters({ ...filters, priceMin: e.target.value })}
                 className={`${INPUT_CLS} pl-5`} />
             </div>
             <div className="relative">
               <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[11px] text-muted-foreground pointer-events-none">$</span>
-              <input type="number" placeholder="Max" min={0} value={filters.priceMax}
+              <input type="number" aria-label="Maximum price" placeholder="Max" min={0} value={filters.priceMax}
                 onChange={(e) => setFilters({ ...filters, priceMax: e.target.value })}
                 className={`${INPUT_CLS} pl-5`} />
             </div>
           </div>
           <div className="mt-2">
-            <CheckboxItem id="f-below-market" label="Below market only" checked={filters.belowMarket} onChange={(v) => setFilters({ ...filters, belowMarket: v })} />
+            <CheckboxItem id={prefixedId('f-below-market')} label="Below market only" checked={filters.belowMarket} onChange={(v) => setFilters({ ...filters, belowMarket: v })} />
           </div>
         </div>
 
@@ -427,7 +430,7 @@ function FilterSidebarContent({
         <div>
           <p className={SECTION_LBL}>Make</p>
           <div className="relative">
-            <select value={filters.make} onChange={(e) => setFilters({ ...filters, make: e.target.value, model: '' })} className={SELECT_CLS}>
+            <select aria-label="Vehicle make" value={filters.make} onChange={(e) => setFilters({ ...filters, make: e.target.value, model: '' })} className={SELECT_CLS}>
               <option value="">Any Make</option>
               {MAKES.map((m) => <option key={m} value={m}>{m.replace(/_/g, ' ')}</option>)}
             </select>
@@ -439,7 +442,7 @@ function FilterSidebarContent({
         <div>
           <p className={SECTION_LBL}>Model</p>
           <div className="relative">
-            <select value={filters.model} onChange={(e) => setFilters({ ...filters, model: e.target.value })} className={SELECT_CLS} disabled={!filters.make}>
+            <select aria-label="Vehicle model" value={filters.model} onChange={(e) => setFilters({ ...filters, model: e.target.value })} className={SELECT_CLS} disabled={!filters.make}>
               <option value="">{filters.make ? 'Any Model' : 'Select make first'}</option>
               {modelOptions.map((m) => <option key={m} value={m}>{m}</option>)}
             </select>
@@ -452,14 +455,14 @@ function FilterSidebarContent({
           <p className={SECTION_LBL}>Year Range</p>
           <div className="grid grid-cols-2 gap-2">
             <div className="relative">
-              <select value={filters.yearMin} onChange={(e) => setFilters({ ...filters, yearMin: e.target.value })} className={SELECT_CLS}>
+              <select aria-label="Minimum model year" value={filters.yearMin} onChange={(e) => setFilters({ ...filters, yearMin: e.target.value })} className={SELECT_CLS}>
                 <option value="">From</option>
                 {YEARS.map((y) => <option key={y} value={String(y)}>{y}</option>)}
               </select>
               <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
             </div>
             <div className="relative">
-              <select value={filters.yearMax} onChange={(e) => setFilters({ ...filters, yearMax: e.target.value })} className={SELECT_CLS}>
+              <select aria-label="Maximum model year" value={filters.yearMax} onChange={(e) => setFilters({ ...filters, yearMax: e.target.value })} className={SELECT_CLS}>
                 <option value="">To</option>
                 {YEARS.map((y) => <option key={y} value={String(y)}>{y}</option>)}
               </select>
@@ -472,7 +475,7 @@ function FilterSidebarContent({
         <div>
           <p className={SECTION_LBL}>Mileage</p>
           <div className="relative">
-            <select value={filters.mileageMax} onChange={(e) => setFilters({ ...filters, mileageMax: e.target.value })} className={SELECT_CLS}>
+            <select aria-label="Maximum mileage" value={filters.mileageMax} onChange={(e) => setFilters({ ...filters, mileageMax: e.target.value })} className={SELECT_CLS}>
               {MILEAGE_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
             <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -483,7 +486,7 @@ function FilterSidebarContent({
         <div>
           <p className={SECTION_LBL}>Distance Radius</p>
           <div className="relative">
-            <select value={filters.radius} onChange={(e) => setFilters({ ...filters, radius: e.target.value })} className={SELECT_CLS}>
+            <select aria-label="Distance radius" value={filters.radius} onChange={(e) => setFilters({ ...filters, radius: e.target.value })} className={SELECT_CLS}>
               {RADIUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
             <ChevronDown className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
@@ -495,7 +498,7 @@ function FilterSidebarContent({
           <p className={SECTION_LBL}>Vehicle Type</p>
           <div className="space-y-2">
             {VEHICLE_TYPES.map((t) => (
-              <CheckboxItem key={t} id={`ft-${t}`} label={t}
+              <CheckboxItem key={t} id={prefixedId(`ft-${t}`)} label={t}
                 checked={filters.vehicleTypes.includes(t)}
                 onChange={() => toggleSet('vehicleTypes', t)} />
             ))}
@@ -507,7 +510,7 @@ function FilterSidebarContent({
           <p className={SECTION_LBL}>Fuel Type</p>
           <div className="space-y-2">
             {FUEL_TYPES.map((f) => (
-              <CheckboxItem key={f} id={`ff-${f}`} label={f}
+              <CheckboxItem key={f} id={prefixedId(`ff-${f}`)} label={f}
                 checked={filters.fuelTypes.includes(f)}
                 onChange={() => toggleSet('fuelTypes', f)} />
             ))}
@@ -519,7 +522,7 @@ function FilterSidebarContent({
           <p className={SECTION_LBL}>Drivetrain</p>
           <div className="space-y-2">
             {DRIVE_TYPES.map((d) => (
-              <CheckboxItem key={d} id={`fd-${d}`} label={d}
+              <CheckboxItem key={d} id={prefixedId(`fd-${d}`)} label={d}
                 checked={filters.driveTypes.includes(d)}
                 onChange={() => toggleSet('driveTypes', d)} />
             ))}
@@ -530,7 +533,7 @@ function FilterSidebarContent({
         <div>
           <p className={SECTION_LBL}>Transmission</p>
           <div className="relative">
-            <select value={filters.transmission} onChange={(e) => setFilters({ ...filters, transmission: e.target.value })} className={SELECT_CLS}>
+            <select aria-label="Transmission" value={filters.transmission} onChange={(e) => setFilters({ ...filters, transmission: e.target.value })} className={SELECT_CLS}>
               <option value="">Any</option>
               <option value="automatic">Automatic</option>
               <option value="manual">Manual</option>
@@ -544,7 +547,7 @@ function FilterSidebarContent({
         <div>
           <p className={SECTION_LBL}>Exterior Color</p>
           <div className="relative">
-            <select value={filters.exteriorColor} onChange={(e) => setFilters({ ...filters, exteriorColor: e.target.value })} className={SELECT_CLS}>
+            <select aria-label="Exterior color" value={filters.exteriorColor} onChange={(e) => setFilters({ ...filters, exteriorColor: e.target.value })} className={SELECT_CLS}>
               <option value="">Any color</option>
               {EXTERIOR_COLORS.map((color) => <option key={color} value={color}>{color}</option>)}
             </select>
@@ -556,9 +559,9 @@ function FilterSidebarContent({
         <div>
           <p className={SECTION_LBL}>Trust Filters</p>
           <div className="space-y-2">
-            <CheckboxItem id="f-ownership" label="Ownership documents reviewed" checked={filters.ownershipVerified} onChange={(v) => setFilters({ ...filters, ownershipVerified: v })} />
-            <CheckboxItem id="f-vehicle-ver" label="Vehicle Verified" checked={filters.vehicleVerified} onChange={(v) => setFilters({ ...filters, vehicleVerified: v })} />
-            <CheckboxItem id="f-inspection" label="Inspection Verified" checked={filters.inspectionVerified} onChange={(v) => setFilters({ ...filters, inspectionVerified: v })} />
+            <CheckboxItem id={prefixedId('f-ownership')} label="Ownership documents reviewed" checked={filters.ownershipVerified} onChange={(v) => setFilters({ ...filters, ownershipVerified: v })} />
+            <CheckboxItem id={prefixedId('f-vehicle-ver')} label="Vehicle Verified" checked={filters.vehicleVerified} onChange={(v) => setFilters({ ...filters, vehicleVerified: v })} />
+            <CheckboxItem id={prefixedId('f-inspection')} label="Inspection Verified" checked={filters.inspectionVerified} onChange={(v) => setFilters({ ...filters, inspectionVerified: v })} />
           </div>
         </div>
 
@@ -566,9 +569,9 @@ function FilterSidebarContent({
         <div>
           <p className={SECTION_LBL}>History</p>
           <div className="space-y-2">
-            <CheckboxItem id="f-clean-title" label="Clean title only" checked={filters.cleanTitle} onChange={(v) => setFilters({ ...filters, cleanTitle: v })} />
-            <CheckboxItem id="f-no-accidents" label="No accidents" checked={filters.noAccidents} onChange={(v) => setFilters({ ...filters, noAccidents: v })} />
-            <CheckboxItem id="f-maint-records" label="Has maintenance records" checked={filters.hasMaintenanceRecords} onChange={(v) => setFilters({ ...filters, hasMaintenanceRecords: v })} />
+            <CheckboxItem id={prefixedId('f-clean-title')} label="Clean title only" checked={filters.cleanTitle} onChange={(v) => setFilters({ ...filters, cleanTitle: v })} />
+            <CheckboxItem id={prefixedId('f-no-accidents')} label="No accidents" checked={filters.noAccidents} onChange={(v) => setFilters({ ...filters, noAccidents: v })} />
+            <CheckboxItem id={prefixedId('f-maint-records')} label="Has maintenance records" checked={filters.hasMaintenanceRecords} onChange={(v) => setFilters({ ...filters, hasMaintenanceRecords: v })} />
           </div>
         </div>
 
@@ -576,7 +579,7 @@ function FilterSidebarContent({
         <div>
           <p className={SECTION_LBL}>Owners</p>
           <div className="relative">
-            <select value={filters.numOwners} onChange={(e) => setFilters({ ...filters, numOwners: e.target.value })} className={SELECT_CLS}>
+            <select aria-label="Number of previous owners" value={filters.numOwners} onChange={(e) => setFilters({ ...filters, numOwners: e.target.value })} className={SELECT_CLS}>
               <option value="">Any</option>
               <option value="1">1</option>
               <option value="2">2</option>
@@ -596,12 +599,14 @@ function MapListCard({ vehicle, isSelected, onClick }: { vehicle: Vehicle; isSel
   return (
     <button
       onClick={onClick}
+      aria-label={`Show ${vehicle.year} ${vehicle.make} ${vehicle.model} on map`}
+      aria-pressed={isSelected}
       data-map-card={vehicle.id}
       className={`w-full text-left p-3 border-b border-border flex gap-3 transition-colors ${isSelected ? 'bg-foreground/[0.05]' : 'hover:bg-muted'}`}
     >
       <div className={`w-1 shrink-0 self-stretch ${isSelected ? 'bg-primary' : 'bg-transparent'}`} />
       <div className="w-20 h-14 bg-muted shrink-0 overflow-hidden">
-        <img src={img} alt="" className="w-full h-full object-cover" />
+        <img src={img} alt={vehicleImageAlt(vehicle)} className="w-full h-full object-cover" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-[12px] font-bold truncate">{vehicle.year} {vehicle.make} {vehicle.model}</p>
@@ -791,6 +796,7 @@ export function SearchPage() {
 
   return (
     <div className="flex flex-col min-h-[calc(100vh-3.5rem)]">
+      <h1 className="sr-only">Search private-party vehicles</h1>
 
       <div className="sticky top-14 z-30 bg-background border-b border-border px-4 md:px-6 py-2.5 flex items-center gap-2.5">
 
@@ -819,6 +825,9 @@ export function SearchPage() {
         <div className="relative shrink-0">
           <button
             onClick={() => setSortOpen((v) => !v)}
+            aria-haspopup="menu"
+            aria-expanded={sortOpen}
+            aria-controls="vehicle-sort-menu"
             className="flex items-center gap-2 h-9 px-3 border border-border text-[12px] font-medium hover:bg-muted transition-colors whitespace-nowrap"
           >
             <span className="hidden sm:inline">{sortLabel}</span>
@@ -828,7 +837,7 @@ export function SearchPage() {
           {sortOpen && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setSortOpen(false)} aria-hidden />
-              <div className="absolute right-0 top-full mt-1 z-50 bg-background border border-border shadow-md min-w-[180px] py-1">
+              <div id="vehicle-sort-menu" role="menu" className="absolute right-0 top-full mt-1 z-50 bg-background border border-border shadow-md min-w-[180px] py-1">
                 {SORT_OPTIONS.map((o) => (
                   <button
                     key={o.value}
@@ -851,6 +860,7 @@ export function SearchPage() {
         <div className="flex border border-border shrink-0">
           <button
             onClick={() => setViewMode('grid')}
+            aria-label="Grid view"
             aria-pressed={viewMode === 'grid'}
             title="Grid view"
             className={`h-9 w-9 flex items-center justify-center transition-colors ${
@@ -861,6 +871,7 @@ export function SearchPage() {
           </button>
           <button
             onClick={() => setViewMode('map')}
+            aria-label="Map view"
             aria-pressed={viewMode === 'map'}
             title="Map view"
             className={`h-9 w-9 flex items-center justify-center border-l border-border transition-colors ${
@@ -885,7 +896,7 @@ export function SearchPage() {
               : 'sticky top-[7rem] h-[calc(100dvh-8rem)] self-start'
           }`}
         >
-          <FilterSidebarContent filters={filters} setFilters={setFilters} onClear={clearFilters} />
+          <FilterSidebarContent idPrefix="desktop" filters={filters} setFilters={setFilters} onClear={clearFilters} />
         </aside>
 
         {mobileFiltersOpen && (
@@ -908,14 +919,14 @@ export function SearchPage() {
             </div>
             <div className="flex items-center justify-between px-5 py-3 border-b border-border">
               <h2 className="text-[12px] font-bold uppercase tracking-[0.18em]">Filters</h2>
-              <button onClick={() => setMobileFiltersOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors p-1">
+              <button onClick={() => setMobileFiltersOpen(false)} aria-label="Close filters" className="text-muted-foreground hover:text-foreground transition-colors p-1">
                 <X className="h-4 w-4" />
               </button>
             </div>
           </div>
           {/* Scrollable content */}
           <div className="min-h-0 flex-1 overflow-hidden px-5 py-5">
-            <FilterSidebarContent filters={filters} setFilters={setFilters} onClear={clearFilters} />
+            <FilterSidebarContent idPrefix="mobile" filters={filters} setFilters={setFilters} onClear={clearFilters} />
           </div>
           {/* Apply button */}
           <div className="shrink-0 px-5 py-4 border-t border-border pb-[max(1rem,env(safe-area-inset-bottom))]">
@@ -971,6 +982,7 @@ export function SearchPage() {
                   </p>
                   <button
                     onClick={enableLocation}
+                    aria-label={userLocation ? 'Center map on my location' : 'Use my location on the map'}
                     disabled={locationLoading}
                     className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-foreground underline underline-offset-2 disabled:cursor-wait disabled:opacity-60"
                   >
@@ -1003,15 +1015,17 @@ export function SearchPage() {
 
               {/* Right: map */}
               <div className="flex-1 min-w-0">
-                <MapView
-                  vehicles={vehicles}
-                  selectedId={selectedMapId}
-                  onSelectPin={setSelectedMapId}
-                  isDark={isDark}
-                  userLocation={userLocation}
-                  locationFocusRequest={locationFocusRequest}
-                  className="w-full h-full"
-                />
+                <Suspense fallback={<div className="h-full w-full bg-muted animate-pulse" aria-label="Loading vehicle map" />}>
+                  <MapView
+                    vehicles={vehicles}
+                    selectedId={selectedMapId}
+                    onSelectPin={setSelectedMapId}
+                    isDark={isDark}
+                    userLocation={userLocation}
+                    locationFocusRequest={locationFocusRequest}
+                    className="w-full h-full"
+                  />
+                </Suspense>
               </div>
             </div>
 

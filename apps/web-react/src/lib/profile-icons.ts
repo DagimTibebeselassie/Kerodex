@@ -1,6 +1,6 @@
 import type { KerodexUser } from './api';
 
-export const DEFAULT_PROFILE_ICONS = Array.from({ length: 10 }, (_, index) => `/pfpicon${index}.png`);
+export const DEFAULT_PROFILE_ICONS = Array.from({ length: 10 }, (_, index) => `/pfpicon${index}.webp`);
 
 function stableHash(value: string) {
   let hash = 0;

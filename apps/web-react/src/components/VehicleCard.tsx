@@ -6,6 +6,7 @@ import { useSavedVehicles } from '@/hooks/useSavedVehicles';
 import { Heart, MapPin, Gauge, Star } from 'lucide-react';
 import { toast } from '@blinkdotnew/ui';
 import { VerifiedSellerBadge, VERIFIED_SELLER_ENABLED } from './VerifiedSellerTrust';
+import { LOCAL_VEHICLE_FALLBACK, vehicleImageAlt } from '@/lib/vehicleImage';
 
 interface VehicleCardProps {
   vehicle: Vehicle;
@@ -40,7 +41,7 @@ export function VehicleCard({
     } catch {
       return vehicle.images as unknown as string;
     }
-  })() || 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=800';
+  })() || LOCAL_VEHICLE_FALLBACK;
 
   const handleSave = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -78,7 +79,7 @@ export function VehicleCard({
       <div className="relative aspect-[4/3] overflow-hidden bg-muted">
         <img
           src={imageUrl}
-          alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+          alt={vehicleImageAlt(vehicle)}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
           loading="lazy"
         />

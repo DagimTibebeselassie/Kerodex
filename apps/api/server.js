@@ -77,6 +77,12 @@ const REPORT_CATEGORIES = new Set([
   "spam",
   "payment_request",
   "harassment",
+  "account_issue",
+  "listing_issue",
+  "message_issue",
+  "accessibility_issue",
+  "privacy_issue",
+  "general_support",
   "other"
 ]);
 const REQUIRED_TITLE_STATUSES = new Set(["Clean Title", "Lienholder / Loan", "Rebuilt Title", "Salvage Title", "Lien Reported", "Not Sure"]);
@@ -397,15 +403,16 @@ async function phoneBelongsToAnotherUser(phone, userId) {
   );
 }
 
-function createReportRecord({ reporter, reportedUserId = "", listingId = "", messageId = "", conversationId = "", category = "other", description = "", source = "user_report", metadata = {} }) {
+function createReportRecord({ reporter, reporterEmail = "", reportedUserId = "", listingId = "", messageId = "", conversationId = "", category = "other", description = "", source = "user_report", metadata = {} }) {
   const now = new Date().toISOString();
   const safeCategory = REPORT_CATEGORIES.has(String(category || "")) ? String(category) : "other";
   return {
     id: `rep_${Date.now().toString(36)}_${crypto.randomBytes(3).toString("hex")}`,
     type: safeCategory,
     category: safeCategory,
-    reporterId: reporter?.id || "system",
-    reporter: reporter?.name || reporter?.email || "Kerodex system",
+    reporterId: reporter?.id || "guest",
+    reporter: reporter?.name || reporter?.email || normalizeLimitedString(reporterEmail, 160) || "Anonymous reporter",
+    reporterEmail: normalizeLimitedString(reporter?.email || reporterEmail, 160),
     reportedUserId: normalizeLimitedString(reportedUserId, 80),
     reportedUser: normalizeLimitedString(reportedUserId, 80),
     listingId: normalizeLimitedString(listingId, 80),
@@ -1012,7 +1019,7 @@ function defaultProfileIconUrl(seed) {
     hash = ((hash << 5) - hash) + value.charCodeAt(index);
     hash |= 0;
   }
-  return `/pfpicon${Math.abs(hash) % 10}.png`;
+  return `/pfpicon${Math.abs(hash) % 10}.webp`;
 }
 
 async function invalidateUserSessions(userId) {
@@ -2483,7 +2490,7 @@ function createSellerListing(body = {}, user = null) {
         size: 0,
         uploadedAt: new Date().toISOString()
       }));
-  const image = String(body.image || images[0] || "").trim() || "https://images.unsplash.com/photo-1549924231-f129b911e442?auto=format&fit=crop&w=1600&q=80";
+  const image = String(body.image || images[0] || "").trim() || "/assets/sedan1.webp";
   const submittedFeatures = Array.isArray(body.features)
     ? body.features.filter(Boolean).map(String)
     : [];
@@ -2853,7 +2860,10 @@ function serveStatic(req, res, pathname) {
           sendJson(res, 404, { error: "Not found" });
           return;
         }
-        res.writeHead(200, responseHeaders(res, { "content-type": mimeTypes[".html"] }));
+        res.writeHead(200, responseHeaders(res, {
+          "content-type": mimeTypes[".html"],
+          "cache-control": "no-store, max-age=0"
+        }));
         res.end(fallback);
       });
       return;
@@ -2861,7 +2871,16 @@ function serveStatic(req, res, pathname) {
 
     const ext = path.extname(filePath);
     const isHtml = ext === ".html";
-    const cacheControl = isHtml ? "no-store" : "public, max-age=31536000, immutable";
+    const isHashedBuildAsset = requestedPath.startsWith("/assets/") && /-[A-Za-z0-9_-]{8,}\.(?:js|css)$/.test(requestedPath);
+    const isLongLivedCode = [".js", ".css", ".woff", ".woff2"].includes(ext);
+    const isImage = [".png", ".jpg", ".jpeg", ".webp", ".svg", ".gif", ".ico"].includes(ext);
+    const cacheControl = isHtml
+      ? "no-store, max-age=0"
+      : isHashedBuildAsset || isLongLivedCode
+        ? "public, max-age=31536000, immutable"
+        : isImage
+          ? "public, max-age=2592000, stale-while-revalidate=86400"
+          : "public, max-age=3600";
     res.writeHead(200, responseHeaders(res, {
       "content-type": mimeTypes[ext] || "application/octet-stream",
       "cache-control": cacheControl
@@ -3967,7 +3986,7 @@ const server = http.createServer((req, res) => {
         const avatarUrl = String(body.avatarUrl || "").trim();
         const avatarS3Key = String(body.avatarS3Key || "").trim();
         const isUploadedProfilePhoto = Boolean(avatarS3Key && avatarS3Key.startsWith("profile-pictures/"));
-        const isDefaultProfileIcon = /^\/pfpicon[0-9]\.png$/.test(avatarUrl);
+        const isDefaultProfileIcon = /^\/pfpicon[0-9]\.(?:png|webp)$/.test(avatarUrl);
         if (!avatarUrl || (!isUploadedProfilePhoto && !isDefaultProfileIcon)) {
           sendJson(res, 400, { error: "Upload a valid profile picture before saving it." });
           return;
@@ -4170,16 +4189,18 @@ const server = http.createServer((req, res) => {
 
   if (url.pathname === "/api/reports" && req.method === "POST") {
     const user = getAuthUser(req);
-    if (!user) {
-      sendJson(res, 401, { error: "Sign in to report a concern." });
-      return;
-    }
     readJson(req)
       .then(async (body) => {
         const description = normalizeLimitedString(body.description, 1500);
         const category = String(body.category || "other");
+        const reporterEmail = normalizeLimitedString(body.email || user?.email || "", 160).toLowerCase();
+        const relatedUrl = normalizeLimitedString(body.url || "", 500);
         if (!REPORT_CATEGORIES.has(category)) {
           sendJson(res, 400, { error: "Choose a valid report category." });
+          return;
+        }
+        if (!user && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(reporterEmail)) {
+          sendJson(res, 400, { error: "Enter a valid email so Kerodex can follow up on this report." });
           return;
         }
         if (description.length < 10) {
@@ -4188,13 +4209,15 @@ const server = http.createServer((req, res) => {
         }
         const report = createReportRecord({
           reporter: user,
+          reporterEmail,
           reportedUserId: String(body.reportedUserId || ""),
           listingId: String(body.listingId || ""),
           messageId: String(body.messageId || ""),
           conversationId: String(body.conversationId || ""),
           category,
           description,
-          source: "user_report"
+          source: user ? "user_report" : "guest_support_report",
+          metadata: { relatedUrl }
         });
         await saveReport(report);
         await trackEvent(req, report.listingId ? "report_listing" : "report_user", user, {
@@ -4207,7 +4230,12 @@ const server = http.createServer((req, res) => {
           notes: `Report category: ${report.category}`,
           metadata: { reportId: report.id, conversationId: report.conversationId, messageId: report.messageId }
         });
-        sendJson(res, 201, { report, message: "Report submitted for Kerodex review." });
+        sendJson(res, 201, {
+          report,
+          message: "Your report was saved to the Kerodex admin review queue. Email delivery is not guaranteed; keep the report ID for reference.",
+          reportId: report.id,
+          emailNotificationSent: false
+        });
       })
       .catch((error) => sendJson(res, 400, { error: "Unable to submit report.", detail: error.message }));
     return;

@@ -1,31 +1,45 @@
 import { createRouter, createRoute, createRootRoute, Outlet, RouterProvider, useRouterState } from '@tanstack/react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster, BlinkUIProvider, toast } from '@blinkdotnew/ui';
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { Layout } from './components/Layout';
 import { HomePage } from './pages/Home';
-import { SearchPage } from './pages/Search';
-import { VehicleDetailPage } from './pages/VehicleDetail';
-import { DashboardPage } from './pages/Dashboard';
-import { SellPage } from './pages/Sell';
-import { SavedVehiclesPage } from './pages/Saved';
-import { ProfilePage } from './pages/Profile';
-import { SellerCockpitPage } from './pages/SellerCockpit';
-import { SellerProfilePage } from './pages/SellerProfile';
-import { VerificationPage } from './pages/Verification';
-import { MessagesPage } from './pages/Messages';
-import { BuyerGuidePage } from './pages/BuyerGuide';
-import { BuyerGuideFlowPage } from './pages/BuyerGuideFlow';
-import { PrivacyPage, TermsPage } from './pages/LegalPage';
-import { SafetyCenterPage } from './pages/SafetyCenter';
-import { AboutPage } from './pages/About';
-import { ContactPage, DealerPolicyPage, HowItWorksPage, ProhibitedListingsPage, SignInPage, SupportPage } from './pages/MarketingPages';
-import { OnboardingPage } from './pages/Onboarding';
-import { FeatureTourPage } from './pages/FeatureTour';
-import { AdminPage } from './pages/Admin';
 import { NotFoundPage } from './pages/NotFound';
 import { RouteSeo } from './components/Seo';
 import { consumeAuthRedirect, currentUser, trackAnalyticsEvent } from './lib/api';
+import { AuthProvider } from './hooks/useAuth';
+
+function lazyNamed<T extends Record<string, any>, K extends keyof T>(loader: () => Promise<T>, name: K) {
+  return lazy(async () => ({ default: (await loader())[name] as React.ComponentType<any> }));
+}
+
+const SearchPage = lazyNamed(() => import('./pages/Search'), 'SearchPage');
+const VehicleDetailPage = lazyNamed(() => import('./pages/VehicleDetail'), 'VehicleDetailPage');
+const DashboardPage = lazyNamed(() => import('./pages/Dashboard'), 'DashboardPage');
+const SellPage = lazyNamed(() => import('./pages/Sell'), 'SellPage');
+const SavedVehiclesPage = lazyNamed(() => import('./pages/Saved'), 'SavedVehiclesPage');
+const ProfilePage = lazyNamed(() => import('./pages/Profile'), 'ProfilePage');
+const SellerCockpitPage = lazyNamed(() => import('./pages/SellerCockpit'), 'SellerCockpitPage');
+const SellerProfilePage = lazyNamed(() => import('./pages/SellerProfile'), 'SellerProfilePage');
+const VerificationPage = lazyNamed(() => import('./pages/Verification'), 'VerificationPage');
+const MessagesPage = lazyNamed(() => import('./pages/Messages'), 'MessagesPage');
+const BuyerGuidePage = lazyNamed(() => import('./pages/BuyerGuide'), 'BuyerGuidePage');
+const BuyerGuideFlowPage = lazyNamed(() => import('./pages/BuyerGuideFlow'), 'BuyerGuideFlowPage');
+const PrivacyPage = lazyNamed(() => import('./pages/LegalPage'), 'PrivacyPage');
+const TermsPage = lazyNamed(() => import('./pages/LegalPage'), 'TermsPage');
+const SafetyCenterPage = lazyNamed(() => import('./pages/SafetyCenter'), 'SafetyCenterPage');
+const AboutPage = lazyNamed(() => import('./pages/About'), 'AboutPage');
+const DealerPolicyPage = lazyNamed(() => import('./pages/MarketingPages'), 'DealerPolicyPage');
+const HowItWorksPage = lazyNamed(() => import('./pages/MarketingPages'), 'HowItWorksPage');
+const ProhibitedListingsPage = lazyNamed(() => import('./pages/MarketingPages'), 'ProhibitedListingsPage');
+const SignInPage = lazyNamed(() => import('./pages/MarketingPages'), 'SignInPage');
+const SupportPage = lazyNamed(() => import('./pages/MarketingPages'), 'SupportPage');
+const AccessibilityStatementPage = lazyNamed(() => import('./pages/CompliancePages'), 'AccessibilityStatementPage');
+const ContactSupportPage = lazyNamed(() => import('./pages/CompliancePages'), 'ContactSupportPage');
+const ReportProblemPage = lazyNamed(() => import('./pages/CompliancePages'), 'ReportProblemPage');
+const OnboardingPage = lazyNamed(() => import('./pages/Onboarding'), 'OnboardingPage');
+const FeatureTourPage = lazyNamed(() => import('./pages/FeatureTour'), 'FeatureTourPage');
+const AdminPage = lazyNamed(() => import('./pages/Admin'), 'AdminPage');
 
 const queryClient = new QueryClient();
 
@@ -44,9 +58,10 @@ function RouteAnalytics() {
 
 function AppShell() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  return pathname === '/admin' || pathname.startsWith('/admin/')
+  const content = pathname === '/admin' || pathname.startsWith('/admin/')
     ? <Outlet />
     : <Layout />;
+  return <Suspense fallback={<div className="min-h-[40vh]" aria-live="polite" aria-label="Loading page" />}>{content}</Suspense>;
 }
 
 const rootRoute = createRootRoute({
@@ -237,7 +252,19 @@ const howItWorksRoute = createRoute({
 const contactRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/contact',
-  component: ContactPage,
+  component: ContactSupportPage,
+});
+
+const accessibilityRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/accessibility',
+  component: AccessibilityStatementPage,
+});
+
+const reportRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/report',
+  component: ReportProblemPage,
 });
 
 const supportRoute = createRoute({
@@ -291,6 +318,8 @@ const routeTree = rootRoute.addChildren([
   safetyRoute,
   howItWorksRoute,
   contactRoute,
+  accessibilityRoute,
+  reportRoute,
   supportRoute,
   prohibitedListingsRoute,
   dealerPolicyRoute,
@@ -334,8 +363,10 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BlinkUIProvider theme="minimal">
-        <AuthRedirectHandler />
-        <RouterProvider router={router} />
+        <AuthProvider>
+          <AuthRedirectHandler />
+          <RouterProvider router={router} />
+        </AuthProvider>
       </BlinkUIProvider>
     </QueryClientProvider>
   );

@@ -372,6 +372,12 @@ export function BuyerGuideFlowPage() {
         </div>
       )}
 
+      <div className="border-b border-border bg-amber-50/60 dark:bg-amber-950/15">
+        <div className="max-w-6xl mx-auto px-4 md:px-6 py-3 text-[11px] leading-relaxed text-amber-950 dark:text-amber-200">
+          <strong>Safety reminder:</strong> verify the VIN and title, consider an independent inspection, meet in a safe public place, and avoid gift cards, cryptocurrency, or suspicious wire-transfer requests.
+        </div>
+      </div>
+
       <main className="max-w-6xl mx-auto px-4 md:px-6 py-8 md:py-12">
         {stage === 'welcome' && (
           <div className="max-w-4xl mx-auto py-8 md:py-16">
@@ -478,7 +484,7 @@ export function BuyerGuideFlowPage() {
               <h1 className="text-2xl md:text-4xl font-black mt-2">{selectedListing.year} {selectedListing.make} {selectedListing.model}</h1>
               <p className="text-[13px] text-muted-foreground mt-2">${Number(selectedListing.price || 0).toLocaleString()} · {selectedListing.location}</p>
               {(selectedListing.isDemo || selectedListing.is_demo) && (
-                <p className="mt-3 text-[11px] text-muted-foreground">This listing is for demonstration/testing only. It is not available for purchase.</p>
+                <p className="mt-3 text-[11px] text-muted-foreground">This is a sample listing and is not available for purchase.</p>
               )}
             </div>
             <div className="grid lg:grid-cols-[320px_1fr] gap-6">

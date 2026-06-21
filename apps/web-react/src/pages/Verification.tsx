@@ -6,6 +6,7 @@ import {
   Shield, BadgeCheck, Phone, Mail, FileText, Camera,
   CheckCircle2, Clock, ChevronRight, Lock, AlertTriangle, Loader2, X,
 } from 'lucide-react';
+import { useAccessibleDialog } from '@/hooks/useAccessibleDialog';
 
 type VerifStatus = 'not_started' | 'in_progress' | 'pending' | 'verified';
 
@@ -29,6 +30,7 @@ function PhoneModal({
   const [step, setStep] = useState<'phone' | 'code'>('phone');
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
+  const dialogRef = useAccessibleDialog<HTMLDivElement>(true, onClose);
 
   const sendCode = async () => {
     const clean = phone.replace(/\D/g, '');
@@ -62,10 +64,10 @@ function PhoneModal({
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="bg-background border border-border w-full max-w-sm p-6 space-y-5 rounded-lg shadow-xl">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="phone-verification-title" tabIndex={-1} className="bg-background border border-border w-full max-w-sm p-6 space-y-5 rounded-lg shadow-xl">
         <div className="flex items-center justify-between">
-          <h2 className="text-[15px] font-bold">Phone Verification</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
+          <h2 id="phone-verification-title" className="text-[15px] font-bold">Phone Verification</h2>
+          <button type="button" onClick={onClose} aria-label="Close phone verification" className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" aria-hidden="true" /></button>
         </div>
 
         {step === 'phone' ? (
@@ -73,6 +75,7 @@ function PhoneModal({
             <p className="text-[13px] text-muted-foreground">Enter your US mobile number to receive a verification code. Phone verification expires after six months and can be renewed here.</p>
             <Input
               type="tel"
+              aria-label="US mobile phone number"
               placeholder="+1 (555) 000-0000"
               value={phone}
               onChange={(e) => { setPhone(e.target.value); setErr(''); }}
@@ -90,6 +93,7 @@ function PhoneModal({
             <p className="text-[13px] text-muted-foreground">Enter the 6-digit code sent to <strong>{phone}</strong>.</p>
             <Input
               type="text" inputMode="numeric" maxLength={6}
+              aria-label="Six-digit phone verification code"
               placeholder="123456"
               value={code}
               onChange={(e) => { setCode(e.target.value.replace(/\D/g, '')); setErr(''); }}
@@ -120,6 +124,7 @@ function SelfieModal({
   const [preview, setPreview] = useState('');
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useAccessibleDialog<HTMLDivElement>(true, onClose);
 
   const handleFile = (f: File) => {
     if (!f.type.startsWith('image/')) { toast.error('Please upload an image'); return; }
@@ -141,10 +146,10 @@ function SelfieModal({
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="bg-background border border-border w-full max-w-sm p-6 space-y-5 rounded-lg shadow-xl">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="selfie-verification-title" tabIndex={-1} className="bg-background border border-border w-full max-w-sm p-6 space-y-5 rounded-lg shadow-xl">
         <div className="flex items-center justify-between">
-          <h2 className="text-[15px] font-bold">Selfie Verification</h2>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
+          <h2 id="selfie-verification-title" className="text-[15px] font-bold">Selfie Verification</h2>
+          <button type="button" onClick={onClose} aria-label="Close selfie verification" className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" aria-hidden="true" /></button>
         </div>
         <p className="text-[13px] text-muted-foreground">
           Take a clear selfie showing your face. We'll match it to your ID to complete verification.
@@ -159,7 +164,7 @@ function SelfieModal({
         {preview ? (
           <div className="relative">
             <img src={preview} alt="Selfie" className="w-full h-40 object-cover rounded-md border border-border" />
-            <button onClick={() => { setFile(null); setPreview(''); }}
+            <button type="button" aria-label="Remove selected selfie" onClick={() => { setFile(null); setPreview(''); }}
               className="absolute top-2 right-2 h-6 w-6 rounded-full bg-background/90 border border-border flex items-center justify-center hover:bg-destructive hover:text-white">
               <X className="h-3 w-3" />
             </button>
@@ -171,7 +176,7 @@ function SelfieModal({
             <p className="text-[12px] text-muted-foreground font-medium">Upload selfie or take photo</p>
           </button>
         )}
-        <input ref={inputRef} type="file" className="hidden" accept="image/*" capture="user"
+        <input ref={inputRef} type="file" className="hidden" accept="image/*" capture="user" aria-label="Upload selfie image"
           onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }} />
 
         <Button onClick={submit} disabled={!file || loading} className="w-full h-11 text-[12px] font-bold uppercase tracking-widest">
@@ -357,7 +362,7 @@ export function VerificationPage() {
         <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-primary mb-2">Trust & Safety</p>
         <h1 className="text-3xl font-black tracking-tight">Verification Center</h1>
         <p className="text-[13px] text-muted-foreground mt-2">
-          Complete available verification steps to strengthen your beta profile.
+          Complete available verification steps to strengthen your Kerodex profile.
         </p>
       </div>
 

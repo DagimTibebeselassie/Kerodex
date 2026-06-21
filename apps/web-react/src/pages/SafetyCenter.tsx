@@ -15,7 +15,7 @@ const safetySections = [
   {
     icon: <FileText className="h-4 w-4" />,
     title: 'Document checks',
-    body: 'Verify the title, VIN, seller identity, vehicle condition, and maintenance records before completing a purchase.'
+    body: 'Confirm the VIN matches the vehicle and title, review vehicle history, and consider an independent mechanic inspection before purchasing.'
   },
   {
     icon: <Flag className="h-4 w-4" />,
@@ -50,6 +50,18 @@ export function SafetyCenterPage() {
         ))}
       </div>
 
+      <section className="mb-10 border border-border p-6">
+        <h2 className="text-[13px] font-bold uppercase tracking-widest mb-4">Payment and scam warnings</h2>
+        <ul className="grid gap-3 text-[13px] leading-relaxed text-muted-foreground sm:grid-cols-2">
+          {[
+            'Do not pay with gift cards, cryptocurrency, or wire transfers to unknown people.',
+            'Be cautious of overpayment checks, refund requests, fake escrow services, and shipping agents.',
+            'Slow down when someone creates urgency, refuses an inspection, or pressures you to leave Kerodex messages.',
+            'Verification badges and vehicle checks are safety signals—not guarantees of identity, ownership, condition, or transaction outcome.',
+          ].map((item) => <li key={item} className="border-l-2 border-border pl-3">{item}</li>)}
+        </ul>
+      </section>
+
       <div className="border border-border bg-muted/30 p-5 flex gap-3">
         <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0 mt-0.5" />
         <div>
@@ -57,8 +69,8 @@ export function SafetyCenterPage() {
           <p className="text-[13px] text-muted-foreground leading-relaxed mb-4">
             Stop the conversation, do not send money, and report the user or listing so Kerodex can review it.
           </p>
-          <Link to="/search" className="text-[12px] font-bold uppercase tracking-widest underline underline-offset-4">
-            Browse listings
+          <Link to="/report" className="text-[12px] font-bold uppercase tracking-widest underline underline-offset-4">
+            Report a Problem
           </Link>
         </div>
       </div>

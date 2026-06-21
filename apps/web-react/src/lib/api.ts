@@ -482,8 +482,10 @@ export async function createReport(payload: {
   conversationId?: string;
   category?: string;
   description?: string;
+  email?: string;
+  url?: string;
 }) {
-  return request<{ message: string; report: Record<string, any> }>('/api/reports', {
+  return request<{ message: string; report: Record<string, any>; reportId?: string; emailNotificationSent?: boolean }>('/api/reports', {
     method: 'POST',
     headers: authHeaders(),
     body: JSON.stringify(payload),

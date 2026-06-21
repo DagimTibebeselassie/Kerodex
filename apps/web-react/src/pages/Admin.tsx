@@ -38,6 +38,7 @@ import {
   Star,
   X,
 } from 'lucide-react';
+import { useAccessibleDialog } from '@/hooks/useAccessibleDialog';
 
 type AdminTab = 'overview' | 'activity' | 'users' | 'listings' | 'verifications' | 'reports' | 'analytics' | 'costs' | 'feedback' | 'logs';
 type PendingAction = { id: string; action: string; label: string; record: string } | null;
@@ -193,6 +194,7 @@ function AdminLogin({ onLogin }: { onLogin: (admin: AdminAccount) => void }) {
         </div>
         <div className="space-y-4">
           <Input
+            aria-label="Admin password"
             value={accessCode}
             onChange={(event) => setAccessCode(event.target.value)}
             onKeyDown={(event) => {
@@ -462,8 +464,9 @@ function ActionDialog({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const dialogRef = useAccessibleDialog<HTMLDivElement>(true, onCancel);
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-4" role="dialog" aria-modal="true" aria-labelledby="admin-action-title">
+    <div ref={dialogRef} tabIndex={-1} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-4" role="dialog" aria-modal="true" aria-labelledby="admin-action-title">
       <section className="w-full max-w-lg border border-border bg-background p-6 shadow-2xl">
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -637,18 +640,18 @@ function ActivityView({
   return (
     <div className="space-y-5">
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <select value={eventType} onChange={(event) => onEventType(event.target.value)} className="h-10 border border-input bg-background px-3 text-sm">
+        <select aria-label="Filter activity by event type" value={eventType} onChange={(event) => onEventType(event.target.value)} className="h-10 border border-input bg-background px-3 text-sm">
           <option value="">All event types</option>
           {(data?.eventTypes || []).map((item: string) => <option key={item} value={item}>{item.replace(/_/g, ' ')}</option>)}
         </select>
-        <select value={source} onChange={(event) => onSource(event.target.value)} className="h-10 border border-input bg-background px-3 text-sm">
+        <select aria-label="Filter activity by source" value={source} onChange={(event) => onSource(event.target.value)} className="h-10 border border-input bg-background px-3 text-sm">
           <option value="">All sources</option>
           <option value="platform">User/platform</option>
           <option value="admin">Admin</option>
           <option value="system">System</option>
         </select>
-        <Input type="date" value={dateFrom} onChange={(event) => onDateFrom(event.target.value)} />
-        <Input type="date" value={dateTo} onChange={(event) => onDateTo(event.target.value)} />
+        <Input type="date" aria-label="Activity start date" value={dateFrom} onChange={(event) => onDateFrom(event.target.value)} />
+        <Input type="date" aria-label="Activity end date" value={dateTo} onChange={(event) => onDateTo(event.target.value)} />
       </div>
       {loading ? <div className="flex h-64 items-center justify-center"><Loader2 className="h-5 w-5 animate-spin" /></div> : (
         <div className="border border-border bg-card">
@@ -678,6 +681,7 @@ function ActivityView({
 }
 
 function DetailDialog({ detail, data, loading, onClose }: { detail: Exclude<DetailRecord, null>; data?: any; loading: boolean; onClose: () => void }) {
+  const dialogRef = useAccessibleDialog<HTMLDivElement>(true, onClose);
   const sections = data ? [
     ['Account / record', Object.fromEntries(Object.entries(data).filter(([key, value]) => !Array.isArray(value) && typeof value !== 'object' && !['rawListing'].includes(key)))],
     ['Listings', data.listings],
@@ -687,12 +691,12 @@ function DetailDialog({ detail, data, loading, onClose }: { detail: Exclude<Deta
     ['Admin actions', data.adminActions],
   ] : [];
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-4 py-8" role="dialog" aria-modal="true">
+    <div ref={dialogRef} tabIndex={-1} className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-4 py-8" role="dialog" aria-modal="true" aria-labelledby="admin-detail-title">
       <section className="max-h-full w-full max-w-4xl overflow-y-auto border border-border bg-background p-6 shadow-2xl">
         <div className="flex items-start justify-between gap-4 border-b border-border pb-5">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-muted-foreground">{detail.collection} record</p>
-            <h3 className="mt-2 text-2xl font-semibold">{detail.title}</h3>
+            <h3 id="admin-detail-title" className="mt-2 text-2xl font-semibold">{detail.title}</h3>
             <p className="mt-1 text-xs text-muted-foreground">{detail.id}</p>
           </div>
           <button onClick={onClose} aria-label="Close"><X className="h-5 w-5" /></button>
@@ -955,7 +959,7 @@ export function AdminPage() {
             ) : <FeedbackView data={feedbackQuery.data || {}} />
           ) : tab === 'activity' ? (
             <div className="space-y-5">
-              <Input value={q} onChange={(event) => setQ(event.target.value)} placeholder="Search platform activity..." />
+              <Input aria-label="Search platform activity" value={q} onChange={(event) => setQ(event.target.value)} placeholder="Search platform activity..." />
               <ActivityView
                 data={activityQuery.data}
                 loading={activityQuery.isLoading}
@@ -972,8 +976,8 @@ export function AdminPage() {
           ) : (
             <div className="space-y-5">
               <div className="grid gap-3 lg:grid-cols-[1fr_220px]">
-                <Input value={q} onChange={(event) => setQ(event.target.value)} placeholder={`Search ${tab}...`} />
-                <select value={status} onChange={(event) => setStatus(event.target.value)} className="h-10 border border-input bg-background px-3 text-sm">
+                <Input aria-label={`Search ${tab}`} value={q} onChange={(event) => setQ(event.target.value)} placeholder={`Search ${tab}...`} />
+                <select aria-label={`Filter ${tab} by status`} value={status} onChange={(event) => setStatus(event.target.value)} className="h-10 border border-input bg-background px-3 text-sm">
                   <option value="">All statuses</option>
                   {activeStatusOptions.map((item) => <option key={item} value={item}>{item.replace(/_/g, ' ')}</option>)}
                 </select>

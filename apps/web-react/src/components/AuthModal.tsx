@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { currentUser, emailAuth, requestPasswordReset, resetPassword, socialAuth, startPhoneVerification, verifyEmail, verifyPhoneCode } from '@/lib/api';
 import { Button, Input } from '@blinkdotnew/ui';
 import { X, Loader2, Mail, Lock, User, Phone } from 'lucide-react';
+import { useAccessibleDialog } from '@/hooks/useAccessibleDialog';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -52,6 +53,7 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
   const [signupPhone, setSignupPhone] = useState('');
   const [signupPhoneCode, setSignupPhoneCode] = useState('');
   const [signupPhoneMessage, setSignupPhoneMessage] = useState('');
+  const dialogRef = useAccessibleDialog<HTMLDivElement>(isOpen, onClose);
 
   useEffect(() => {
     if (isOpen) {
@@ -179,11 +181,13 @@ export function AuthModal({ isOpen, onClose, defaultTab = 'login' }: AuthModalPr
       onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
     >
       <div
+        ref={dialogRef}
         id="auth-modal"
         className="bg-background border border-border w-full max-w-md mx-4 p-8 relative"
         role="dialog"
         aria-modal="true"
         aria-label="Sign in or create account"
+        tabIndex={-1}
       >
         <button
           id="auth-modal-close"

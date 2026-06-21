@@ -41,7 +41,13 @@ function serveStatic(res, pathname) {
     const ext = path.extname(filePath);
     res.writeHead(200, {
       "content-type": mimeTypes[ext] || "application/octet-stream",
-      "cache-control": ext === ".html" ? "no-store" : "public, max-age=3600"
+      "cache-control": ext === ".html"
+        ? "no-store, max-age=0"
+        : [".js", ".css", ".woff", ".woff2"].includes(ext)
+          ? "public, max-age=31536000, immutable"
+          : [".png", ".jpg", ".jpeg", ".webp", ".svg", ".gif", ".ico"].includes(ext)
+            ? "public, max-age=2592000, stale-while-revalidate=86400"
+            : "public, max-age=3600"
     });
     res.end(file);
   });

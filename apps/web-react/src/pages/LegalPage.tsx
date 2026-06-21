@@ -1,7 +1,7 @@
 import { Link } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 
-const updated = 'June 18, 2026';
+const updated = 'June 21, 2026';
 const contactEmail = 'founder@kerodexofficial.com';
 
 const termsSections = [
@@ -28,6 +28,7 @@ const termsSections = [
     title: '4. Vehicle Listings',
     body: [
       'Sellers are solely responsible for the accuracy of vehicle descriptions, mileage, condition, maintenance records, ownership claims, pricing, images, and documents.',
+      'Sellers must accurately disclose the VIN, asking price, title status, known accident history, vehicle condition, and whether they own the vehicle or are authorized by its owner to list it.',
       'By creating a listing, you certify that the information provided is accurate to the best of your knowledge.',
     ],
   },
@@ -47,19 +48,19 @@ const termsSections = [
   {
     title: '7. Buyer Responsibilities',
     body: [
-      'Buyers are responsible for inspecting vehicles, verifying ownership, reviewing maintenance records, obtaining vehicle history reports, confirming title status, and confirming vehicle condition before completing any transaction.',
+      'Buyers are responsible for independent inspections, VIN and title checks, vehicle-history review, registration, taxes, payment decisions, insurance, and their final purchase judgment.',
     ],
   },
   {
     title: '8. Seller Responsibilities',
     body: [
-      'Sellers agree not to post misleading information, misrepresent vehicle condition, misrepresent ownership, upload fraudulent documents, advertise stolen vehicles, or violate applicable laws.',
+      'Sellers agree not to post misleading information, misrepresent vehicle condition, mileage, pricing, title status or accident history, misrepresent ownership, upload fraudulent documents, advertise stolen vehicles, or violate applicable laws.',
     ],
   },
   {
     title: '9. Prohibited Activities',
     body: [
-      'Users may not commit fraud, impersonate others, use stolen identities, upload malicious software, scrape platform data, interfere with platform operations, harass users, circumvent platform fees, or violate laws.',
+      'Users may not create fake listings, post dealership or broker inventory as private-party inventory, commit scams or off-platform fraud, impersonate others, use stolen identities, advertise stolen vehicles, make misleading claims, harass users, send spam, upload malicious software, scrape platform data, interfere with platform operations, or violate laws.',
     ],
   },
   {
@@ -71,7 +72,7 @@ const termsSections = [
   {
     title: '11. No Warranty',
     body: [
-      'The platform is provided as is and as available. Kerodex makes no warranties regarding vehicle condition, ownership, legality, safety, user identity, user conduct, or listing accuracy.',
+      'The platform is provided as is and as available. Kerodex does not guarantee vehicle condition, seller identity, buyer identity, ownership, title status, pricing accuracy, transaction completion, legality, safety, user conduct, or listing accuracy.',
     ],
   },
   {
@@ -89,7 +90,7 @@ const termsSections = [
   {
     title: '14. Account Suspension',
     body: [
-      'Kerodex may suspend, restrict, or terminate any account at any time for violations of these Terms or conduct that may harm users or the platform.',
+      'Kerodex may remove listings, restrict messaging, block users, or suspend or terminate accounts for fraud, suspicious behavior, abuse, spam, prohibited inventory, or other policy violations.',
     ],
   },
   {
@@ -112,6 +113,7 @@ const privacySections = [
     body: [
       'Kerodex may collect account information such as name, email address, phone status, authentication provider, and account activity.',
       'Kerodex may also collect listing information, vehicle details, VIN data, uploaded images, maintenance records, messages, verification submissions, device information, IP address, and usage activity.',
+      'Verification submissions may include vehicle-presence photos and verification status. Persona identity-document submission is disabled during the current beta.',
     ],
   },
   {
@@ -142,7 +144,7 @@ const privacySections = [
   {
     title: '6. Sharing Information',
     body: [
-      'We may share information with service providers that help us operate Kerodex, including hosting, email, analytics, storage, verification, security, and database providers.',
+      'We may share information with service providers that help us operate Kerodex, including hosting and database providers, object storage, email and SMS providers, analytics and security tools, Persona when identity verification is enabled, and VIN or vehicle-data providers.',
       'We may also disclose information when required by law, to protect users, to prevent fraud, or to enforce our Terms.',
     ],
   },
@@ -161,7 +163,7 @@ const privacySections = [
   {
     title: '9. Your Choices',
     body: [
-      'You may update account details, remove saved vehicles, edit your listings, or request account assistance by contacting Kerodex.',
+      'You may update account details, remove saved vehicles, edit your listings, delete your account, or request access, correction, deletion, or account assistance by contacting Kerodex.',
     ],
   },
   {
@@ -209,6 +211,9 @@ export function TermsPage() {
       intro="These terms explain the rules for using Kerodex as a private-party vehicle marketplace."
     >
       {termsSections.map((section) => <LegalSection key={section.title} {...section} />)}
+      <section className="border border-amber-300 bg-amber-50/60 p-5 text-[12px] leading-relaxed text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-200">
+        These Terms govern your use of the Kerodex beta. If you do not agree to them, please do not use the platform.
+      </section>
     </LegalShell>
   );
 }

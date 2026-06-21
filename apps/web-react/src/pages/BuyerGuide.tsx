@@ -7,6 +7,7 @@ import { BUYER_GUIDE_DISCLAIMER, BUYER_GUIDE_STEPS } from '@/data/buyer-guide-st
 import { getBuyerGuide, startConversation, toVehicle, updateBuyerGuide } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 import { Vehicle } from '@/types';
+import { vehicleImageAlt } from '@/lib/vehicleImage';
 
 function formatMoney(value?: number) {
   return Number(value || 0).toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
@@ -79,7 +80,7 @@ export function BuyerGuidePage() {
       return;
     }
     if (listing.isDemo) {
-      toast.success('Demo listings are for testing only. Seller contact is disabled.');
+      toast.success('This sample listing is not available for purchase.');
       return;
     }
     try {
@@ -151,12 +152,12 @@ export function BuyerGuidePage() {
       <section className="border border-border bg-background p-4 md:p-5">
         {listing.isDemo && (
           <div className="mb-4 border border-amber-300 bg-amber-50/70 p-3 text-[11px] leading-relaxed text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-200">
-            <strong>Demo Listing:</strong> this vehicle is not actually for sale. Messaging opens a sandboxed conversation with an automated demo seller.
+            <strong>Demo Listing:</strong> this sample vehicle is not available for purchase. Messaging opens a simulated conversation so you can explore how Kerodex works.
           </div>
         )}
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="h-36 sm:h-28 sm:w-44 bg-muted overflow-hidden shrink-0">
-            {vehicleImage ? <img src={vehicleImage} alt="" className="h-full w-full object-cover" /> : null}
+            {vehicleImage ? <img src={vehicleImage} alt={vehicleImageAlt(listing)} className="h-full w-full object-cover" /> : null}
           </div>
           <div className="flex-1 min-w-0">
             <h2 className="text-xl font-black tracking-tight">{listing.year} {listing.make} {listing.model}</h2>
@@ -236,8 +237,9 @@ export function BuyerGuidePage() {
           )}
 
           <div className="space-y-3">
-            <label className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Private note for this step</label>
+            <label htmlFor="buyer-guide-private-note" className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">Private note for this step</label>
             <textarea
+              id="buyer-guide-private-note"
               value={noteDraft}
               onChange={(event) => setNoteDraft(event.target.value)}
               rows={4}

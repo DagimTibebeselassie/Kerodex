@@ -5,6 +5,7 @@ import { listBuyerGuides, listConversations, listMyVehicles, toVehicle } from '@
 import { Button, Stat, StatGroup, DataTable, EmptyState } from '@blinkdotnew/ui';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { Plus, BarChart3, MessageSquare, Car, ExternalLink, BookOpenCheck } from 'lucide-react';
+import { vehicleImageAlt } from '@/lib/vehicleImage';
 
 export function DashboardPage() {
   const { user, isLoading: authLoading } = useAuth();
@@ -43,7 +44,7 @@ export function DashboardPage() {
       cell: ({ row }: any) => (
         <div className="flex items-center gap-3">
           <div className="h-10 w-14 bg-muted overflow-hidden shrink-0">
-            <img src={row.original.images[0]} alt="" className="w-full h-full object-cover" />
+            <img src={row.original.images[0]} alt={vehicleImageAlt(row.original)} className="w-full h-full object-cover" />
           </div>
           <div className="text-[13px] font-bold">
             {row.original.year} {row.original.make} {row.original.model}
@@ -150,7 +151,7 @@ export function DashboardPage() {
               return (
                 <div key={guide.id} className="border border-border bg-background p-4 flex gap-4">
                   <div className="h-20 w-28 bg-muted overflow-hidden shrink-0">
-                    {listing?.images?.[0] ? <img src={listing.images[0]} alt="" className="h-full w-full object-cover" /> : null}
+                    {listing?.images?.[0] ? <img src={listing.images[0]} alt={vehicleImageAlt(listing)} className="h-full w-full object-cover" /> : null}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-3">

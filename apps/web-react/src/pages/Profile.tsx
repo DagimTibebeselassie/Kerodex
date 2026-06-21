@@ -233,6 +233,7 @@ export function ProfilePage() {
             <input
               ref={avatarInputRef}
               type="file"
+              aria-label="Upload profile image"
               accept="image/jpeg,image/png,image/webp,image/gif"
               className="hidden"
               onChange={(event) => handleAvatarFile(event.target.files?.[0])}
@@ -523,7 +524,7 @@ export function ProfilePage() {
       <section>
         <SectionHeader
           title="Danger Zone"
-          description="For testing, account deletion happens immediately. Later this can become a 60-day pending deletion flow."
+          description="Account deletion takes effect immediately and permanently removes access to your Kerodex account."
         />
         <div className="border border-destructive/30 bg-destructive/5 p-4 md:p-5">
           {!deleteOpen ? (

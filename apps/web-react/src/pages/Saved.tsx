@@ -4,6 +4,7 @@ import { Link } from '@tanstack/react-router';
 import { useNavigate } from '@tanstack/react-router';
 import { Button, EmptyState } from '@blinkdotnew/ui';
 import { Heart, MapPin, Gauge, ArrowRight } from 'lucide-react';
+import { vehicleImageAlt } from '@/lib/vehicleImage';
 
 export function SavedVehiclesPage() {
   const { user, login, isLoading: authLoading } = useAuth();
@@ -16,7 +17,7 @@ export function SavedVehiclesPage() {
     return (
       <div className="flex flex-col items-center justify-center py-32 px-6 text-center">
         <Heart className="h-12 w-12 text-muted-foreground mb-6" />
-        <h2 className="text-xl font-bold mb-2">Save your favorites</h2>
+        <h1 className="text-xl font-bold mb-2">Save your favorites</h1>
         <p className="text-muted-foreground text-[13px] mb-8 max-w-xs">
           Sign in to keep track of the vehicles you're interested in.
         </p>
@@ -60,15 +61,15 @@ export function SavedVehiclesPage() {
               <div className="aspect-video overflow-hidden bg-muted">
                 <img 
                   src={vehicle.images[0]} 
-                  alt="" 
+                  alt={vehicleImageAlt(vehicle)}
                   className="w-full h-full object-cover transition-transform group-hover:scale-105"
                 />
               </div>
               <div className="p-6 space-y-4">
                 <div className="flex justify-between items-start">
-                  <h4 className="text-[15px] font-bold tracking-tight">
+                  <h2 className="text-[15px] font-bold tracking-tight">
                     {vehicle.year} {vehicle.make} {vehicle.model}
-                  </h4>
+                  </h2>
                   <div className="text-[14px] font-bold">${vehicle.price.toLocaleString()}</div>
                 </div>
                 <div className="flex items-center gap-4 text-muted-foreground text-[12px]">

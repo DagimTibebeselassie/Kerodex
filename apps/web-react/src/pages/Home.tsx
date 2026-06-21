@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react';
+import { lazy, Suspense, useRef, useState, useEffect } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { Vehicle } from '@/types';
 import { MAKES, getModelsForMake } from '@/data/makes-models';
 import { VehicleCard } from '@/components/VehicleCard';
-import { MapView } from '@/components/MapView';
 import { BuyerGuideEntryCard } from '@/components/buyer-guide/BuyerGuideComponents';
 import { currentUser, listVehicles } from '@/lib/api';
 import { Button } from '@blinkdotnew/ui';
@@ -19,6 +18,52 @@ import {
   Navigation,
   MessageCircle,
 } from 'lucide-react';
+
+const MapView = lazy(() => import('@/components/MapView').then((module) => ({ default: module.MapView })));
+
+function DeferredMarketplaceMap({
+  vehicles,
+  isDark,
+  userLocation,
+}: {
+  vehicles: Vehicle[];
+  isDark: boolean;
+  userLocation: { lat: number; lng: number } | null;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [shouldLoad, setShouldLoad] = useState(false);
+
+  useEffect(() => {
+    if (shouldLoad || !containerRef.current) return;
+    if (!('IntersectionObserver' in window)) {
+      setShouldLoad(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setShouldLoad(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '400px 0px' }
+    );
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, [shouldLoad]);
+
+  return (
+    <div ref={containerRef} className="h-full w-full">
+      {shouldLoad ? (
+        <Suspense fallback={<div className="h-full w-full bg-muted animate-pulse" aria-label="Loading marketplace map" />}>
+          <MapView vehicles={vehicles} isDark={isDark} userLocation={userLocation} className="w-full h-full" />
+        </Suspense>
+      ) : (
+        <div className="h-full w-full bg-muted/40" aria-label="Marketplace map loads when scrolled into view" />
+      )}
+    </div>
+  );
+}
 
 function BetaBanner() {
   const [dismissed, setDismissed] = useState(() =>
@@ -40,7 +85,7 @@ function BetaBanner() {
       role="alert"
     >
       <p className="text-[12px] text-amber-800 dark:text-amber-300 font-medium flex-1 text-center">
-        <span className="font-bold">Kerodex is in beta</span> - demonstration listings are clearly labeled and are not actually for sale.
+        <span className="font-bold">Kerodex is currently in beta.</span> Some vehicles are sample listings marked “Demo Listing” and are not available for purchase.
       </p>
       <button
         onClick={dismiss}
@@ -78,7 +123,7 @@ function TrustPillar({ icon, title, description }: TrustPillarProps) {
       <div className="w-10 h-10 border border-border flex items-center justify-center">
         {icon}
       </div>
-      <h4 className="text-[12px] font-bold uppercase tracking-[0.15em]">{title}</h4>
+      <h3 className="text-[12px] font-bold uppercase tracking-[0.15em]">{title}</h3>
       <p className="text-[13px] text-muted-foreground leading-relaxed">{description}</p>
     </div>
   );
@@ -150,6 +195,7 @@ function FeatureAd({ label, headline, copy, cta, href, image, imageAlt, reverse 
               alt={imageAlt}
               className="w-full aspect-[4/3] md:aspect-[16/11] object-cover"
               loading="lazy"
+              decoding="async"
             />
           </div>
           <div className={`${reverse ? 'lg:order-1' : 'lg:order-2'} max-w-xl ${reverse ? '' : 'lg:ml-auto'}`}>
@@ -550,6 +596,7 @@ export function HomePage() {
             <div className="border-b md:border-b-0 md:border-r border-border min-w-[140px]">
               <select
                 id="hero-make-select"
+                aria-label="Vehicle make"
                 value={heroMake}
                 onChange={(e) => setHeroMake(e.target.value)}
                 className="w-full h-12 px-3 text-[13px] bg-background text-foreground outline-none border-none appearance-none cursor-pointer"
@@ -565,6 +612,7 @@ export function HomePage() {
             <div className="border-b md:border-b-0 md:border-r border-border min-w-[140px]">
               <select
                 id="hero-model-select"
+                aria-label="Vehicle model"
                 value={heroModel}
                 onChange={(e) => setHeroModel(e.target.value)}
                 disabled={!heroMake}
@@ -659,7 +707,7 @@ export function HomePage() {
         copy="Use Kerodex's buyer guide to understand what to inspect, what documents to collect, and how to complete a safer private-party purchase."
         cta="View Buyer Guide"
         href="/feature-tour"
-        image="/assets/buyerflow.png"
+        image="/assets/buyerflow.webp"
         imageAlt="Illustration of the Kerodex buyer guide flow"
       />
 
@@ -679,7 +727,7 @@ export function HomePage() {
         copy="Kerodex helps sellers prove vehicle presence before buyers waste time on questionable listings."
         cta="See how verification works"
         href="/verify"
-        image="/assets/verifiedseller.png"
+        image="/assets/verifiedseller.webp"
         imageAlt="Illustration of Kerodex vehicle presence verification"
         reverse
       />
@@ -700,7 +748,7 @@ export function HomePage() {
         copy="Persona identity verification is coming soon. During beta, buyers and sellers can use phone verification, vehicle-presence checks, messaging, and marketplace safety tools."
         cta="Learn about verification"
         href="/verify"
-        image="/Dagim_editorial_vector_illustration_vehicle_verification_conc_466c222c-fe96-4e55-80ec-9d17c19483a1_1.png"
+        image="/assets/identity-verification.webp"
         imageAlt="Illustration of optional Kerodex identity verification for marketplace trust and safety"
       />
 
@@ -763,12 +811,7 @@ export function HomePage() {
 
             {/* Real Leaflet map */}
             <div className="relative h-64 md:h-80 lg:h-96 border border-border overflow-hidden">
-              <MapView
-                vehicles={marketVehicles}
-                isDark={isDark}
-                userLocation={userLocation}
-                className="w-full h-full"
-              />
+              <DeferredMarketplaceMap vehicles={marketVehicles} isDark={isDark} userLocation={userLocation} />
             </div>
           </div>
         </div>
@@ -799,7 +842,7 @@ export function HomePage() {
             <TrustPillar
               icon={<ShieldCheck className="h-4 w-4" />}
               title="Scam Screening"
-              description="Automated screening can flag suspicious activity for review, while reporting tools help testers surface anything we miss."
+              description="Automated screening can flag suspicious activity for review, while reporting tools help the Kerodex community report concerns."
             />
             <TrustPillar
               icon={<Lock className="h-4 w-4" />}

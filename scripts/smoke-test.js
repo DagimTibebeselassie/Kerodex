@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const store = require("../apps/api/store");
+const { DEMO_VEHICLE_IMAGES, demoVehicleImageFor } = require("./demo-vehicle-images");
 const buyerGuideEngine = require("../apps/api/buyer-guide");
 
 function assert(condition, message) {
@@ -25,7 +26,9 @@ const requiredFiles = [
   "apps/web/public/app.js",
   "apps/web/public/styles.css",
   "apps/web-react/src/pages/BuyerGuideFlow.tsx",
-  "apps/web-react/src/components/buyer-guide/BuyerGuideComponents.tsx"
+  "apps/web-react/src/components/buyer-guide/BuyerGuideComponents.tsx",
+  "apps/web-react/src/pages/CompliancePages.tsx",
+  "apps/web-react/src/hooks/useAccessibleDialog.ts"
 ];
 
 requiredFiles.forEach((file) => {
@@ -40,12 +43,14 @@ requiredFiles.forEach((file) => {
   assert(demoListings.length === 75, "Expected exactly 75 clearly marked demo listings.");
   assert(new Set(demoListings.map((listing) => listing.demoSeedId)).size === 75, "Demo seed IDs must be unique.");
   assert(demoListings.every((listing) => listing.images.every((image) => !/^https?:\/\//.test(image))), "Demo listings must use local app-owned vehicle photos.");
-  assert(demoListings.every((listing) => listing.images.every((image) => image.startsWith("/demo-assets/vehicles/models/") && /\.(?:jpe?g|png|webp)$/i.test(image))), "Demo listings must use exact-model local vehicle photos.");
-  assert(demoListings.every((listing) => listing.images.every((image) => !image.includes("demo-vehicles") && !image.endsWith(".svg"))), "Illustrated demo vehicle placeholders must not be used.");
+  const approvedDemoImages = new Set(Object.values(DEMO_VEHICLE_IMAGES));
+  assert(demoListings.every((listing) => listing.images.length === 1 && approvedDemoImages.has(listing.images[0])), "Demo listings must use an approved Midjourney vehicle asset.");
+  assert(demoListings.every((listing) => {
+    const mapped = demoVehicleImageFor(listing, { logUnknown: false });
+    return listing.images[0] === mapped.image && listing.imageAlt === mapped.alt;
+  }), "Demo listing images and alt text must match the centralized body-type mapping.");
   assert(new Set(demoListings.map((listing) => listing.location)).size >= 23, "Demo listings must cover the configured nationwide city set.");
-  const demoPhotoAttribution = JSON.parse(fs.readFileSync(path.join(root, "apps/web-react/public/demo-assets/vehicles/ATTRIBUTION.json"), "utf8"));
-  assert(Object.keys(demoPhotoAttribution.listings || {}).length === 75, "Every exact-model demo photo must have attribution metadata.");
-  assert(demoListings.every((listing) => String(listing.description || "").includes("demonstration/testing only")), "Every demo description must disclose testing-only status.");
+  assert(demoListings.every((listing) => String(listing.description || "").includes("not available for purchase")), "Every demo description must clearly disclose that the sample vehicle cannot be purchased.");
 
   const sellers = await store.getSellers();
   assert(Array.isArray(sellers), "Seller store must return an array.");
@@ -104,17 +109,24 @@ requiredFiles.forEach((file) => {
   assert(adminHtml.includes("Audit Logs"), "Admin app must include audit logs section.");
 
   const appSource = fs.readFileSync(path.join(root, "apps/web-react/src/App.tsx"), "utf8");
+  const authHookSource = fs.readFileSync(path.join(root, "apps/web-react/src/hooks/useAuth.tsx"), "utf8");
+  const savedHookSource = fs.readFileSync(path.join(root, "apps/web-react/src/hooks/useSavedVehicles.ts"), "utf8");
   ["/support", "/prohibited-listings", "/dealer-policy", "/admin", "/buyer-guide"].forEach((route) => {
     assert(appSource.includes(route), `React app must expose crawlable ${route} route.`);
   });
   assert(appSource.includes("notFoundComponent"), "React app must render the styled not-found page for unknown routes.");
+  assert(appSource.includes("<AuthProvider>"), "The app must expose one centralized authentication provider.");
+  assert(appSource.includes("lazyNamed") && appSource.includes("import('./pages/Admin')"), "Heavy routes must be code split.");
+  assert(authHookSource.includes("initialUserRefresh") && authHookSource.includes("refreshInitialUserOnce"), "Initial /api/me refresh must be deduplicated across consumers.");
+  assert(!savedHookSource.includes("currentUser()"), "Saved-vehicle hooks must consume the centralized user id instead of reading auth independently.");
   assert(fs.existsSync(path.join(root, "apps/web-react/src/pages/Admin.tsx")), "React admin page must exist.");
   assert(fs.existsSync(path.join(root, "apps/web-react/src/pages/NotFound.tsx")), "Styled not-found page must exist.");
 
   const homeSource = fs.readFileSync(path.join(root, "apps/web-react/src/pages/Home.tsx"), "utf8");
   assert(homeSource.includes("Verify who you're dealing with"), "Homepage must include the identity verification feature section.");
   assert(homeSource.includes("Persona identity verification is coming soon"), "Homepage must disclose that identity verification is unavailable during beta.");
-  assert(fs.existsSync(path.join(root, "apps/web-react/public/Dagim_editorial_vector_illustration_vehicle_verification_conc_466c222c-fe96-4e55-80ec-9d17c19483a1_1.png")), "Homepage identity verification image must exist.");
+  assert(fs.existsSync(path.join(root, "apps/web-react/public/assets/identity-verification.webp")), "Optimized homepage identity verification image must exist.");
+  assert(homeSource.includes("DeferredMarketplaceMap"), "The below-the-fold homepage map must be deferred until it approaches the viewport.");
 
   const serverSource = fs.readFileSync(path.join(root, "apps/api/server.js"), "utf8");
   const storeSource = fs.readFileSync(path.join(root, "apps/api/store.js"), "utf8");
@@ -136,6 +148,19 @@ requiredFiles.forEach((file) => {
 
   const legalSource = fs.readFileSync(path.join(root, "apps/web-react/src/pages/LegalPage.tsx"), "utf8");
   assert(legalSource.includes("Kerodex plans to use Persona to provide identity verification services."), "Privacy policy must identify Persona and disclose beta availability.");
+  assert(legalSource.includes("These Terms govern your use of the Kerodex beta"), "Terms must address users directly without internal launch notes.");
+  assert(legalSource.includes("request access, correction, deletion"), "Privacy policy must describe user data rights.");
+
+  const complianceSource = fs.readFileSync(path.join(root, "apps/web-react/src/pages/CompliancePages.tsx"), "utf8");
+  const layoutSource = fs.readFileSync(path.join(root, "apps/web-react/src/components/Layout.tsx"), "utf8");
+  assert(appSource.includes("path: '/accessibility'") && appSource.includes("path: '/report'"), "Accessibility and report routes must exist.");
+  ["/terms", "/privacy", "/accessibility", "/safety", "/contact", "/report"].forEach((route) => {
+    assert(layoutSource.includes(`to="${route}"`), `Footer must link to ${route}.`);
+  });
+  assert(layoutSource.includes("Skip to main content") && layoutSource.includes('id="main-content"'), "Public layout must provide skip navigation.");
+  assert(complianceSource.includes("WCAG 2.1 Level AA"), "Accessibility statement must identify the WCAG target.");
+  assert(complianceSource.includes("protected admin review queue"), "Support forms must accurately describe backend delivery.");
+  assert(complianceSource.includes('aria-live="polite"'), "Support forms must announce validation and submission status.");
 
   const seoSource = fs.readFileSync(path.join(root, "apps/web-react/src/components/Seo.tsx"), "utf8");
   assert(seoSource.includes("Prohibited Listings"), "SEO metadata must include prohibited listings page.");
@@ -177,6 +202,8 @@ requiredFiles.forEach((file) => {
   assert(serverSource.includes("automated demo-seller reply"), "Demo listings must support a clearly sandboxed messaging experience.");
   assert(!serverSource.includes("demo_listing_contact_disabled"), "Demo listings must no longer block the messaging demo.");
   assert(serverSource.includes("/api/me/saved"), "API must expose authenticated saved-vehicle records.");
+  assert(serverSource.includes('"accessibility_issue"') && serverSource.includes('"privacy_issue"'), "Report API must support compliance requests.");
+  assert(serverSource.includes("guest_support_report"), "Report API must support accountable guest support submissions.");
   assert(
     serverSource.includes("transferVerifiedPhoneOwnership"),
     "A valid Twilio code must be able to transfer a recycled phone number from an older account."
@@ -217,7 +244,7 @@ requiredFiles.forEach((file) => {
   assert(!profileSource.includes('label="Views" value="-"'), "Profile listing views must be dynamic.");
   assert(!profileSource.includes('label="Messages" value={0}'), "Profile message count must be dynamic.");
   const vehicleDetailSource = fs.readFileSync(path.join(root, "apps/web-react/src/pages/VehicleDetail.tsx"), "utf8");
-  assert(vehicleDetailSource.includes("This listing is for demonstration/testing only"), "Listing detail must display the demo-only notice.");
+  assert(vehicleDetailSource.includes("This is a sample listing"), "Listing detail must display a customer-facing sample-listing notice.");
   assert(!searchSource.includes('placeholder="Search make, model..."'), "Search results page must not duplicate the global header search bar.");
   assert(searchSource.includes("kerodex-scrollbar-hidden hidden md:flex"), "Map listing rail must hide its visible scrollbar.");
   assert(searchSource.includes("style={{ height: 'calc(100vh - 7rem)' }}"), "Map search workspace must retain its stable fixed-height layout.");
@@ -225,6 +252,9 @@ requiredFiles.forEach((file) => {
   assert(!searchSource.includes("radius: current.radius || '100'"), "Enabling map location must not activate a radius filter.");
   assert(searchSource.includes("locationFocusRequest"), "Map location control must support reliable repeated recentering.");
   assert(serverSource.includes("darkmodeNonTransparent.png"), "Email templates must use the non-transparent black Kerodex logo.");
+  assert(vehicleDetailSource.includes("Vehicle information is provided by the seller"), "Listing detail must include the buyer legal and safety disclaimer.");
+  const buyerGuideFlowSource = fs.readFileSync(path.join(root, "apps/web-react/src/pages/BuyerGuideFlow.tsx"), "utf8");
+  assert(buyerGuideFlowSource.includes("consider an independent inspection"), "Buyer Guide must show the safety reminder.");
   assert(serverSource.includes("background:#ffffff;color:#000000"), "Email templates must use a minimal white and black visual style.");
   const buyerGuideComponentsSource = fs.readFileSync(path.join(root, "apps/web-react/src/components/buyer-guide/BuyerGuideComponents.tsx"), "utf8");
   ["Sedan", "SUV", "Truck", "Hatchback", "Coupe", "Minivan", "EV"].forEach((bodyStyle) => {
@@ -235,9 +265,9 @@ requiredFiles.forEach((file) => {
   assert(buyerGuideComponentsSource.includes("imagePosition: 'center 56%'"), "Buyer Guide truck image must use its subtle crop adjustment.");
   assert(buyerGuideComponentsSource.includes("if (item.value === 'open')"), "Buyer Guide open-options choice must render as a standalone button without an image frame.");
   const buyerGuideImageMapSource = fs.readFileSync(path.join(root, "apps/web-react/src/components/buyer-guide/buyerGuideBodyStyleImages.ts"), "utf8");
-  ["sedan1.png", "suv2.png", "coupe1.png", "truck1.png", "minivan1.png", "hatchback1.png", "ev1.png"].forEach((image) => {
+  ["sedan1.webp", "suv2.webp", "coupe1.webp", "truck1.webp", "minivan1.webp", "hatchback1.webp", "ev1.webp"].forEach((image) => {
     assert(buyerGuideImageMapSource.includes(image), `Buyer Guide image map must include ${image}.`);
-    assert(fs.existsSync(path.join(root, "apps/web-react/public/buyer-guide/body-styles", image)), `Buyer Guide asset must exist: ${image}.`);
+    assert(fs.existsSync(path.join(root, "apps/web-react/public/assets", image)), `Buyer Guide asset must exist: ${image}.`);
   });
   assert(buyerGuideImageMapSource.includes("vehicle-placeholder.svg"), "Buyer Guide image map must include a neutral missing-image fallback.");
 

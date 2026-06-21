@@ -1,11 +1,11 @@
 [
   {
     "id": "demo_ga_001",
-    "demoSeedId": "kerodex-us-demo-v3:listing:1",
+    "demoSeedId": "kerodex-us-demo-v4:listing:1",
     "externalDemoId": "us-toyota-corolla-2015-0",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_01",
     "sellerType": "demo_private_party",
     "title": "2015 Toyota Corolla LE",
@@ -50,10 +50,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-001-toyota-corolla-2015.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2015 Toyota Corolla LE offered as a Kerodex demonstration listing in Atlanta. It has been used mainly for commuting and highway trips. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2015 Toyota Corolla LE shown as a Kerodex sample listing in Atlanta. It has been used mainly for commuting and highway trips. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -82,11 +84,11 @@
   },
   {
     "id": "demo_ga_002",
-    "demoSeedId": "kerodex-us-demo-v3:listing:2",
+    "demoSeedId": "kerodex-us-demo-v4:listing:2",
     "externalDemoId": "us-toyota-corolla-2018-1",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_02",
     "sellerType": "demo_private_party",
     "title": "2018 Toyota Corolla SE",
@@ -131,10 +133,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-002-toyota-corolla-2018.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2018 Toyota Corolla SE offered as a Kerodex demonstration listing in Miami. It has been used as a daily driver with a mix of city and highway miles. The demo record shows very good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2018 Toyota Corolla SE shown as a Kerodex sample listing in Miami. It has been used as a daily driver with a mix of city and highway miles. The sample record shows very good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -163,11 +167,11 @@
   },
   {
     "id": "demo_ga_003",
-    "demoSeedId": "kerodex-us-demo-v3:listing:3",
+    "demoSeedId": "kerodex-us-demo-v4:listing:3",
     "externalDemoId": "us-toyota-corolla-2020-2",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_03",
     "sellerType": "demo_private_party",
     "title": "2020 Toyota Corolla XLE",
@@ -212,10 +216,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-003-toyota-corolla-2020.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2020 Toyota Corolla XLE offered as a Kerodex demonstration listing in Orlando. It has been used as a daily driver with a mix of city and highway miles. The demo record shows excellent condition, routine maintenance notes, and minor accident disclosed. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2020 Toyota Corolla XLE shown as a Kerodex sample listing in Orlando. It has been used as a daily driver with a mix of city and highway miles. The sample record shows excellent condition, routine maintenance notes, and minor accident disclosed. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -244,11 +250,11 @@
   },
   {
     "id": "demo_ga_004",
-    "demoSeedId": "kerodex-us-demo-v3:listing:4",
+    "demoSeedId": "kerodex-us-demo-v4:listing:4",
     "externalDemoId": "us-toyota-corolla-2022-3",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_04",
     "sellerType": "demo_private_party",
     "title": "2022 Toyota Corolla LE",
@@ -293,10 +299,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-004-toyota-corolla-2022.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2022 Toyota Corolla LE offered as a Kerodex demonstration listing in Charlotte. It has been used as a daily driver with a mix of city and highway miles. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2022 Toyota Corolla LE shown as a Kerodex sample listing in Charlotte. It has been used as a daily driver with a mix of city and highway miles. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -325,11 +333,11 @@
   },
   {
     "id": "demo_ga_005",
-    "demoSeedId": "kerodex-us-demo-v3:listing:5",
+    "demoSeedId": "kerodex-us-demo-v4:listing:5",
     "externalDemoId": "us-toyota-camry-2016-0",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_02",
     "sellerType": "demo_private_party",
     "title": "2016 Toyota Camry LE",
@@ -374,10 +382,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-005-toyota-camry-2016.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2016 Toyota Camry LE offered as a Kerodex demonstration listing in Nashville. It has been used mainly for commuting and highway trips. The demo record shows very good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2016 Toyota Camry LE shown as a Kerodex sample listing in Nashville. It has been used mainly for commuting and highway trips. The sample record shows very good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -406,11 +416,11 @@
   },
   {
     "id": "demo_ga_006",
-    "demoSeedId": "kerodex-us-demo-v3:listing:6",
+    "demoSeedId": "kerodex-us-demo-v4:listing:6",
     "externalDemoId": "us-toyota-camry-2018-1",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_03",
     "sellerType": "demo_private_party",
     "title": "2018 Toyota Camry SE",
@@ -455,10 +465,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-006-toyota-camry-2018.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2018 Toyota Camry SE offered as a Kerodex demonstration listing in Dallas. It has been used as a daily driver with a mix of city and highway miles. The demo record shows excellent condition, routine maintenance notes, and minor accident disclosed. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2018 Toyota Camry SE shown as a Kerodex sample listing in Dallas. It has been used as a daily driver with a mix of city and highway miles. The sample record shows excellent condition, routine maintenance notes, and minor accident disclosed. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -487,11 +499,11 @@
   },
   {
     "id": "demo_ga_007",
-    "demoSeedId": "kerodex-us-demo-v3:listing:7",
+    "demoSeedId": "kerodex-us-demo-v4:listing:7",
     "externalDemoId": "us-toyota-camry-2020-2",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_04",
     "sellerType": "demo_private_party",
     "title": "2020 Toyota Camry XSE",
@@ -536,10 +548,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-007-toyota-camry-2020.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2020 Toyota Camry XSE offered as a Kerodex demonstration listing in Houston. It has been used as a daily driver with a mix of city and highway miles. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2020 Toyota Camry XSE shown as a Kerodex sample listing in Houston. It has been used as a daily driver with a mix of city and highway miles. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -568,11 +582,11 @@
   },
   {
     "id": "demo_ga_008",
-    "demoSeedId": "kerodex-us-demo-v3:listing:8",
+    "demoSeedId": "kerodex-us-demo-v4:listing:8",
     "externalDemoId": "us-toyota-camry-2022-3",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_05",
     "sellerType": "demo_private_party",
     "title": "2022 Toyota Camry LE",
@@ -617,10 +631,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-008-toyota-camry-2022.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2022 Toyota Camry LE offered as a Kerodex demonstration listing in Austin. It has been used as a daily driver with a mix of city and highway miles. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2022 Toyota Camry LE shown as a Kerodex sample listing in Austin. It has been used as a daily driver with a mix of city and highway miles. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -649,11 +665,11 @@
   },
   {
     "id": "demo_ga_009",
-    "demoSeedId": "kerodex-us-demo-v3:listing:9",
+    "demoSeedId": "kerodex-us-demo-v4:listing:9",
     "externalDemoId": "us-toyota-rav4-2016-0",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_03",
     "sellerType": "demo_private_party",
     "title": "2016 Toyota RAV4 LE",
@@ -698,10 +714,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-009-toyota-rav4-2016.jpg"
+      "/assets/suv1.webp"
     ],
+    "imageAlt": "Demo SUV vehicle",
+    "demoImageCategory": "suv",
     "imageUploads": [],
-    "description": "2016 Toyota RAV4 LE offered as a Kerodex demonstration listing in Phoenix. It has been used mainly for commuting and highway trips. The demo record shows excellent condition, routine maintenance notes, and minor accident disclosed. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2016 Toyota RAV4 LE shown as a Kerodex sample listing in Phoenix. It has been used mainly for commuting and highway trips. The sample record shows excellent condition, routine maintenance notes, and minor accident disclosed. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -730,11 +748,11 @@
   },
   {
     "id": "demo_ga_010",
-    "demoSeedId": "kerodex-us-demo-v3:listing:10",
+    "demoSeedId": "kerodex-us-demo-v4:listing:10",
     "externalDemoId": "us-toyota-rav4-2019-1",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_04",
     "sellerType": "demo_private_party",
     "title": "2019 Toyota RAV4 XLE",
@@ -779,10 +797,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-010-toyota-rav4-2019.jpg"
+      "/assets/suv1.webp"
     ],
+    "imageAlt": "Demo SUV vehicle",
+    "demoImageCategory": "suv",
     "imageUploads": [],
-    "description": "2019 Toyota RAV4 XLE offered as a Kerodex demonstration listing in Denver. It has been used as a daily driver with a mix of city and highway miles. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2019 Toyota RAV4 XLE shown as a Kerodex sample listing in Denver. It has been used as a daily driver with a mix of city and highway miles. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -811,11 +831,11 @@
   },
   {
     "id": "demo_ga_011",
-    "demoSeedId": "kerodex-us-demo-v3:listing:11",
+    "demoSeedId": "kerodex-us-demo-v4:listing:11",
     "externalDemoId": "us-toyota-rav4-2021-2",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_05",
     "sellerType": "demo_private_party",
     "title": "2021 Toyota RAV4 Adventure",
@@ -860,10 +880,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-011-toyota-rav4-2021.jpg"
+      "/assets/suv1.webp"
     ],
+    "imageAlt": "Demo SUV vehicle",
+    "demoImageCategory": "suv",
     "imageUploads": [],
-    "description": "2021 Toyota RAV4 Adventure offered as a Kerodex demonstration listing in Los Angeles. It has been used as a daily driver with a mix of city and highway miles. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2021 Toyota RAV4 Adventure shown as a Kerodex sample listing in Los Angeles. It has been used as a daily driver with a mix of city and highway miles. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -892,11 +914,11 @@
   },
   {
     "id": "demo_ga_012",
-    "demoSeedId": "kerodex-us-demo-v3:listing:12",
+    "demoSeedId": "kerodex-us-demo-v4:listing:12",
     "externalDemoId": "us-toyota-rav4-2023-3",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_06",
     "sellerType": "demo_private_party",
     "title": "2023 Toyota RAV4 LE",
@@ -941,10 +963,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-012-toyota-rav4-2023.jpg"
+      "/assets/suv1.webp"
     ],
+    "imageAlt": "Demo SUV vehicle",
+    "demoImageCategory": "suv",
     "imageUploads": [],
-    "description": "2023 Toyota RAV4 LE offered as a Kerodex demonstration listing in San Diego. It has been used as a daily driver with a mix of city and highway miles. The demo record shows very good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2023 Toyota RAV4 LE shown as a Kerodex sample listing in San Diego. It has been used as a daily driver with a mix of city and highway miles. The sample record shows very good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -973,11 +997,11 @@
   },
   {
     "id": "demo_ga_013",
-    "demoSeedId": "kerodex-us-demo-v3:listing:13",
+    "demoSeedId": "kerodex-us-demo-v4:listing:13",
     "externalDemoId": "us-toyota-prius-2016-0",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_04",
     "sellerType": "demo_private_party",
     "title": "2016 Toyota Prius Two",
@@ -1022,10 +1046,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-013-toyota-prius-2016.jpg"
+      "/assets/hatchback1.webp"
     ],
+    "imageAlt": "Demo hatchback vehicle",
+    "demoImageCategory": "hatchback",
     "imageUploads": [],
-    "description": "2016 Toyota Prius Two offered as a Kerodex demonstration listing in San Francisco. It has been used mainly for commuting and highway trips. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2016 Toyota Prius Two shown as a Kerodex sample listing in San Francisco. It has been used mainly for commuting and highway trips. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -1054,11 +1080,11 @@
   },
   {
     "id": "demo_ga_014",
-    "demoSeedId": "kerodex-us-demo-v3:listing:14",
+    "demoSeedId": "kerodex-us-demo-v4:listing:14",
     "externalDemoId": "us-toyota-prius-2018-1",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_05",
     "sellerType": "demo_private_party",
     "title": "2018 Toyota Prius LE",
@@ -1103,10 +1129,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-014-toyota-prius-2018.jpg"
+      "/assets/hatchback1.webp"
     ],
+    "imageAlt": "Demo hatchback vehicle",
+    "demoImageCategory": "hatchback",
     "imageUploads": [],
-    "description": "2018 Toyota Prius LE offered as a Kerodex demonstration listing in Seattle. It has been used as a daily driver with a mix of city and highway miles. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2018 Toyota Prius LE shown as a Kerodex sample listing in Seattle. It has been used as a daily driver with a mix of city and highway miles. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -1135,11 +1163,11 @@
   },
   {
     "id": "demo_ga_015",
-    "demoSeedId": "kerodex-us-demo-v3:listing:15",
+    "demoSeedId": "kerodex-us-demo-v4:listing:15",
     "externalDemoId": "us-toyota-prius-2020-2",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_06",
     "sellerType": "demo_private_party",
     "title": "2020 Toyota Prius XLE",
@@ -1184,10 +1212,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-015-toyota-prius-2020.jpg"
+      "/assets/hatchback1.webp"
     ],
+    "imageAlt": "Demo hatchback vehicle",
+    "demoImageCategory": "hatchback",
     "imageUploads": [],
-    "description": "2020 Toyota Prius XLE offered as a Kerodex demonstration listing in Portland. It has been used as a daily driver with a mix of city and highway miles. The demo record shows very good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2020 Toyota Prius XLE shown as a Kerodex sample listing in Portland. It has been used as a daily driver with a mix of city and highway miles. The sample record shows very good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -1216,11 +1246,11 @@
   },
   {
     "id": "demo_ga_016",
-    "demoSeedId": "kerodex-us-demo-v3:listing:16",
+    "demoSeedId": "kerodex-us-demo-v4:listing:16",
     "externalDemoId": "us-toyota-prius-2022-3",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_07",
     "sellerType": "demo_private_party",
     "title": "2022 Toyota Prius Two",
@@ -1265,10 +1295,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-016-toyota-prius-2022.jpg"
+      "/assets/hatchback1.webp"
     ],
+    "imageAlt": "Demo hatchback vehicle",
+    "demoImageCategory": "hatchback",
     "imageUploads": [],
-    "description": "2022 Toyota Prius Two offered as a Kerodex demonstration listing in Chicago. It has been used as a daily driver with a mix of city and highway miles. The demo record shows excellent condition, routine maintenance notes, and minor accident disclosed. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2022 Toyota Prius Two shown as a Kerodex sample listing in Chicago. It has been used as a daily driver with a mix of city and highway miles. The sample record shows excellent condition, routine maintenance notes, and minor accident disclosed. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -1297,11 +1329,11 @@
   },
   {
     "id": "demo_ga_017",
-    "demoSeedId": "kerodex-us-demo-v3:listing:17",
+    "demoSeedId": "kerodex-us-demo-v4:listing:17",
     "externalDemoId": "us-honda-civic-2016-0",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_05",
     "sellerType": "demo_private_party",
     "title": "2016 Honda Civic LX",
@@ -1346,10 +1378,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-017-honda-civic-2016.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2016 Honda Civic LX offered as a Kerodex demonstration listing in Detroit. It has been used mainly for commuting and highway trips. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2016 Honda Civic LX shown as a Kerodex sample listing in Detroit. It has been used mainly for commuting and highway trips. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -1378,11 +1412,11 @@
   },
   {
     "id": "demo_ga_018",
-    "demoSeedId": "kerodex-us-demo-v3:listing:18",
+    "demoSeedId": "kerodex-us-demo-v4:listing:18",
     "externalDemoId": "us-honda-civic-2019-1",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_06",
     "sellerType": "demo_private_party",
     "title": "2019 Honda Civic Sport",
@@ -1427,10 +1461,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-018-honda-civic-2019.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2019 Honda Civic Sport offered as a Kerodex demonstration listing in New York. It has been used as a daily driver with a mix of city and highway miles. The demo record shows very good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2019 Honda Civic Sport shown as a Kerodex sample listing in New York. It has been used as a daily driver with a mix of city and highway miles. The sample record shows very good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -1459,11 +1495,11 @@
   },
   {
     "id": "demo_ga_019",
-    "demoSeedId": "kerodex-us-demo-v3:listing:19",
+    "demoSeedId": "kerodex-us-demo-v4:listing:19",
     "externalDemoId": "us-honda-civic-2021-2",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_07",
     "sellerType": "demo_private_party",
     "title": "2021 Honda Civic EX",
@@ -1508,10 +1544,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-019-honda-civic-2021.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2021 Honda Civic EX offered as a Kerodex demonstration listing in Boston. It has been used as a daily driver with a mix of city and highway miles. The demo record shows excellent condition, routine maintenance notes, and minor accident disclosed. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2021 Honda Civic EX shown as a Kerodex sample listing in Boston. It has been used as a daily driver with a mix of city and highway miles. The sample record shows excellent condition, routine maintenance notes, and minor accident disclosed. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -1540,11 +1578,11 @@
   },
   {
     "id": "demo_ga_020",
-    "demoSeedId": "kerodex-us-demo-v3:listing:20",
+    "demoSeedId": "kerodex-us-demo-v4:listing:20",
     "externalDemoId": "us-honda-civic-2023-3",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_08",
     "sellerType": "demo_private_party",
     "title": "2023 Honda Civic LX",
@@ -1589,10 +1627,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-020-honda-civic-2023.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2023 Honda Civic LX offered as a Kerodex demonstration listing in Philadelphia. It has been used as a daily driver with a mix of city and highway miles. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2023 Honda Civic LX shown as a Kerodex sample listing in Philadelphia. It has been used as a daily driver with a mix of city and highway miles. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -1621,11 +1661,11 @@
   },
   {
     "id": "demo_ga_021",
-    "demoSeedId": "kerodex-us-demo-v3:listing:21",
+    "demoSeedId": "kerodex-us-demo-v4:listing:21",
     "externalDemoId": "us-honda-accord-2016-0",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_06",
     "sellerType": "demo_private_party",
     "title": "2016 Honda Accord LX",
@@ -1670,10 +1710,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-021-honda-accord-2016.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2016 Honda Accord LX offered as a Kerodex demonstration listing in Washington. It has been used mainly for commuting and highway trips. The demo record shows very good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2016 Honda Accord LX shown as a Kerodex sample listing in Washington. It has been used mainly for commuting and highway trips. The sample record shows very good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -1702,11 +1744,11 @@
   },
   {
     "id": "demo_ga_022",
-    "demoSeedId": "kerodex-us-demo-v3:listing:22",
+    "demoSeedId": "kerodex-us-demo-v4:listing:22",
     "externalDemoId": "us-honda-accord-2018-1",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_07",
     "sellerType": "demo_private_party",
     "title": "2018 Honda Accord Sport",
@@ -1751,10 +1793,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-022-honda-accord-2018.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2018 Honda Accord Sport offered as a Kerodex demonstration listing in Newark. It has been used as a daily driver with a mix of city and highway miles. The demo record shows excellent condition, routine maintenance notes, and minor accident disclosed. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2018 Honda Accord Sport shown as a Kerodex sample listing in Newark. It has been used as a daily driver with a mix of city and highway miles. The sample record shows excellent condition, routine maintenance notes, and minor accident disclosed. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -1783,11 +1827,11 @@
   },
   {
     "id": "demo_ga_023",
-    "demoSeedId": "kerodex-us-demo-v3:listing:23",
+    "demoSeedId": "kerodex-us-demo-v4:listing:23",
     "externalDemoId": "us-honda-accord-2020-2",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_08",
     "sellerType": "demo_private_party",
     "title": "2020 Honda Accord EX-L",
@@ -1832,10 +1876,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-023-honda-accord-2020.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2020 Honda Accord EX-L offered as a Kerodex demonstration listing in Las Vegas. It has been used as a daily driver with a mix of city and highway miles. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2020 Honda Accord EX-L shown as a Kerodex sample listing in Las Vegas. It has been used as a daily driver with a mix of city and highway miles. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -1864,11 +1910,11 @@
   },
   {
     "id": "demo_ga_024",
-    "demoSeedId": "kerodex-us-demo-v3:listing:24",
+    "demoSeedId": "kerodex-us-demo-v4:listing:24",
     "externalDemoId": "us-honda-accord-2022-3",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_09",
     "sellerType": "demo_private_party",
     "title": "2022 Honda Accord LX",
@@ -1913,10 +1959,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-024-honda-accord-2022.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2022 Honda Accord LX offered as a Kerodex demonstration listing in Atlanta. It has been used as a daily driver with a mix of city and highway miles. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2022 Honda Accord LX shown as a Kerodex sample listing in Atlanta. It has been used as a daily driver with a mix of city and highway miles. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -1945,11 +1993,11 @@
   },
   {
     "id": "demo_ga_025",
-    "demoSeedId": "kerodex-us-demo-v3:listing:25",
+    "demoSeedId": "kerodex-us-demo-v4:listing:25",
     "externalDemoId": "us-honda-cr-v-2016-0",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_07",
     "sellerType": "demo_private_party",
     "title": "2016 Honda CR-V LX",
@@ -1994,10 +2042,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-025-honda-cr-v-2016.jpg"
+      "/assets/suv1.webp"
     ],
+    "imageAlt": "Demo SUV vehicle",
+    "demoImageCategory": "suv",
     "imageUploads": [],
-    "description": "2016 Honda CR-V LX offered as a Kerodex demonstration listing in Miami. It has been used mainly for commuting and highway trips. The demo record shows excellent condition, routine maintenance notes, and minor accident disclosed. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2016 Honda CR-V LX shown as a Kerodex sample listing in Miami. It has been used mainly for commuting and highway trips. The sample record shows excellent condition, routine maintenance notes, and minor accident disclosed. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -2026,11 +2076,11 @@
   },
   {
     "id": "demo_ga_026",
-    "demoSeedId": "kerodex-us-demo-v3:listing:26",
+    "demoSeedId": "kerodex-us-demo-v4:listing:26",
     "externalDemoId": "us-honda-cr-v-2019-1",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_08",
     "sellerType": "demo_private_party",
     "title": "2019 Honda CR-V EX",
@@ -2075,10 +2125,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-026-honda-cr-v-2019.jpg"
+      "/assets/suv1.webp"
     ],
+    "imageAlt": "Demo SUV vehicle",
+    "demoImageCategory": "suv",
     "imageUploads": [],
-    "description": "2019 Honda CR-V EX offered as a Kerodex demonstration listing in Orlando. It has been used as a daily driver with a mix of city and highway miles. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2019 Honda CR-V EX shown as a Kerodex sample listing in Orlando. It has been used as a daily driver with a mix of city and highway miles. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -2107,11 +2159,11 @@
   },
   {
     "id": "demo_ga_027",
-    "demoSeedId": "kerodex-us-demo-v3:listing:27",
+    "demoSeedId": "kerodex-us-demo-v4:listing:27",
     "externalDemoId": "us-honda-cr-v-2021-2",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_09",
     "sellerType": "demo_private_party",
     "title": "2021 Honda CR-V EX-L",
@@ -2156,10 +2208,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-027-honda-cr-v-2021.jpg"
+      "/assets/suv1.webp"
     ],
+    "imageAlt": "Demo SUV vehicle",
+    "demoImageCategory": "suv",
     "imageUploads": [],
-    "description": "2021 Honda CR-V EX-L offered as a Kerodex demonstration listing in Charlotte. It has been used as a daily driver with a mix of city and highway miles. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2021 Honda CR-V EX-L shown as a Kerodex sample listing in Charlotte. It has been used as a daily driver with a mix of city and highway miles. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -2188,11 +2242,11 @@
   },
   {
     "id": "demo_ga_028",
-    "demoSeedId": "kerodex-us-demo-v3:listing:28",
+    "demoSeedId": "kerodex-us-demo-v4:listing:28",
     "externalDemoId": "us-mazda-mazda3-2017-0",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_08",
     "sellerType": "demo_private_party",
     "title": "2017 Mazda Mazda3 Sport",
@@ -2237,10 +2291,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-028-mazda-mazda3-2017.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2017 Mazda Mazda3 Sport offered as a Kerodex demonstration listing in Nashville. It has been used as a daily driver with a mix of city and highway miles. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2017 Mazda Mazda3 Sport shown as a Kerodex sample listing in Nashville. It has been used as a daily driver with a mix of city and highway miles. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -2269,11 +2325,11 @@
   },
   {
     "id": "demo_ga_029",
-    "demoSeedId": "kerodex-us-demo-v3:listing:29",
+    "demoSeedId": "kerodex-us-demo-v4:listing:29",
     "externalDemoId": "us-mazda-mazda3-2019-1",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_09",
     "sellerType": "demo_private_party",
     "title": "2019 Mazda Mazda3 Select",
@@ -2318,10 +2374,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-029-mazda-mazda3-2019.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2019 Mazda Mazda3 Select offered as a Kerodex demonstration listing in Dallas. It has been used as a daily driver with a mix of city and highway miles. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2019 Mazda Mazda3 Select shown as a Kerodex sample listing in Dallas. It has been used as a daily driver with a mix of city and highway miles. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -2350,11 +2408,11 @@
   },
   {
     "id": "demo_ga_030",
-    "demoSeedId": "kerodex-us-demo-v3:listing:30",
+    "demoSeedId": "kerodex-us-demo-v4:listing:30",
     "externalDemoId": "us-mazda-mazda3-2021-2",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_10",
     "sellerType": "demo_private_party",
     "title": "2021 Mazda Mazda3 Preferred",
@@ -2399,10 +2457,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-030-mazda-mazda3-2021.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2021 Mazda Mazda3 Preferred offered as a Kerodex demonstration listing in Houston. It has been used as a daily driver with a mix of city and highway miles. The demo record shows very good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2021 Mazda Mazda3 Preferred shown as a Kerodex sample listing in Houston. It has been used as a daily driver with a mix of city and highway miles. The sample record shows very good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -2431,11 +2491,11 @@
   },
   {
     "id": "demo_ga_031",
-    "demoSeedId": "kerodex-us-demo-v3:listing:31",
+    "demoSeedId": "kerodex-us-demo-v4:listing:31",
     "externalDemoId": "us-mazda-cx-5-2017-0",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_09",
     "sellerType": "demo_private_party",
     "title": "2017 Mazda CX-5 Sport",
@@ -2480,10 +2540,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-031-mazda-cx-5-2017.jpg"
+      "/assets/suv1.webp"
     ],
+    "imageAlt": "Demo SUV vehicle",
+    "demoImageCategory": "suv",
     "imageUploads": [],
-    "description": "2017 Mazda CX-5 Sport offered as a Kerodex demonstration listing in Austin. It has been used as a daily driver with a mix of city and highway miles. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2017 Mazda CX-5 Sport shown as a Kerodex sample listing in Austin. It has been used as a daily driver with a mix of city and highway miles. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -2512,11 +2574,11 @@
   },
   {
     "id": "demo_ga_032",
-    "demoSeedId": "kerodex-us-demo-v3:listing:32",
+    "demoSeedId": "kerodex-us-demo-v4:listing:32",
     "externalDemoId": "us-mazda-cx-5-2019-1",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_10",
     "sellerType": "demo_private_party",
     "title": "2019 Mazda CX-5 Touring",
@@ -2561,10 +2623,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-032-mazda-cx-5-2019.jpg"
+      "/assets/suv1.webp"
     ],
+    "imageAlt": "Demo SUV vehicle",
+    "demoImageCategory": "suv",
     "imageUploads": [],
-    "description": "2019 Mazda CX-5 Touring offered as a Kerodex demonstration listing in Phoenix. It has been used as a daily driver with a mix of city and highway miles. The demo record shows very good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2019 Mazda CX-5 Touring shown as a Kerodex sample listing in Phoenix. It has been used as a daily driver with a mix of city and highway miles. The sample record shows very good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -2593,11 +2657,11 @@
   },
   {
     "id": "demo_ga_033",
-    "demoSeedId": "kerodex-us-demo-v3:listing:33",
+    "demoSeedId": "kerodex-us-demo-v4:listing:33",
     "externalDemoId": "us-mazda-cx-5-2021-2",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_11",
     "sellerType": "demo_private_party",
     "title": "2021 Mazda CX-5 Grand Touring",
@@ -2642,10 +2706,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-033-mazda-cx-5-2021.jpg"
+      "/assets/suv1.webp"
     ],
+    "imageAlt": "Demo SUV vehicle",
+    "demoImageCategory": "suv",
     "imageUploads": [],
-    "description": "2021 Mazda CX-5 Grand Touring offered as a Kerodex demonstration listing in Denver. It has been used as a daily driver with a mix of city and highway miles. The demo record shows excellent condition, routine maintenance notes, and minor accident disclosed. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2021 Mazda CX-5 Grand Touring shown as a Kerodex sample listing in Denver. It has been used as a daily driver with a mix of city and highway miles. The sample record shows excellent condition, routine maintenance notes, and minor accident disclosed. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -2674,11 +2740,11 @@
   },
   {
     "id": "demo_ga_034",
-    "demoSeedId": "kerodex-us-demo-v3:listing:34",
+    "demoSeedId": "kerodex-us-demo-v4:listing:34",
     "externalDemoId": "us-hyundai-elantra-2017-0",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_10",
     "sellerType": "demo_private_party",
     "title": "2017 Hyundai Elantra SE",
@@ -2723,10 +2789,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-034-hyundai-elantra-2017.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2017 Hyundai Elantra SE offered as a Kerodex demonstration listing in Los Angeles. It has been used mainly for commuting and highway trips. The demo record shows very good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2017 Hyundai Elantra SE shown as a Kerodex sample listing in Los Angeles. It has been used mainly for commuting and highway trips. The sample record shows very good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -2755,11 +2823,11 @@
   },
   {
     "id": "demo_ga_035",
-    "demoSeedId": "kerodex-us-demo-v3:listing:35",
+    "demoSeedId": "kerodex-us-demo-v4:listing:35",
     "externalDemoId": "us-hyundai-elantra-2020-1",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_11",
     "sellerType": "demo_private_party",
     "title": "2020 Hyundai Elantra SEL",
@@ -2804,10 +2872,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-035-hyundai-elantra-2020.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2020 Hyundai Elantra SEL offered as a Kerodex demonstration listing in San Diego. It has been used as a daily driver with a mix of city and highway miles. The demo record shows excellent condition, routine maintenance notes, and minor accident disclosed. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2020 Hyundai Elantra SEL shown as a Kerodex sample listing in San Diego. It has been used as a daily driver with a mix of city and highway miles. The sample record shows excellent condition, routine maintenance notes, and minor accident disclosed. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -2836,11 +2906,11 @@
   },
   {
     "id": "demo_ga_036",
-    "demoSeedId": "kerodex-us-demo-v3:listing:36",
+    "demoSeedId": "kerodex-us-demo-v4:listing:36",
     "externalDemoId": "us-hyundai-elantra-2022-2",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_12",
     "sellerType": "demo_private_party",
     "title": "2022 Hyundai Elantra Limited",
@@ -2885,10 +2955,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-036-hyundai-elantra-2022.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2022 Hyundai Elantra Limited offered as a Kerodex demonstration listing in San Francisco. It has been used as a daily driver with a mix of city and highway miles. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2022 Hyundai Elantra Limited shown as a Kerodex sample listing in San Francisco. It has been used as a daily driver with a mix of city and highway miles. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -2917,11 +2989,11 @@
   },
   {
     "id": "demo_ga_037",
-    "demoSeedId": "kerodex-us-demo-v3:listing:37",
+    "demoSeedId": "kerodex-us-demo-v4:listing:37",
     "externalDemoId": "us-hyundai-sonata-2016-0",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_11",
     "sellerType": "demo_private_party",
     "title": "2016 Hyundai Sonata SE",
@@ -2966,10 +3038,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-037-hyundai-sonata-2016.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2016 Hyundai Sonata SE offered as a Kerodex demonstration listing in Seattle. It has been used mainly for commuting and highway trips. The demo record shows excellent condition, routine maintenance notes, and minor accident disclosed. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2016 Hyundai Sonata SE shown as a Kerodex sample listing in Seattle. It has been used mainly for commuting and highway trips. The sample record shows excellent condition, routine maintenance notes, and minor accident disclosed. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -2998,11 +3072,11 @@
   },
   {
     "id": "demo_ga_038",
-    "demoSeedId": "kerodex-us-demo-v3:listing:38",
+    "demoSeedId": "kerodex-us-demo-v4:listing:38",
     "externalDemoId": "us-hyundai-sonata-2019-1",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_12",
     "sellerType": "demo_private_party",
     "title": "2019 Hyundai Sonata SEL",
@@ -3047,10 +3121,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-038-hyundai-sonata-2019.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2019 Hyundai Sonata SEL offered as a Kerodex demonstration listing in Portland. It has been used as a daily driver with a mix of city and highway miles. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2019 Hyundai Sonata SEL shown as a Kerodex sample listing in Portland. It has been used as a daily driver with a mix of city and highway miles. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -3079,11 +3155,11 @@
   },
   {
     "id": "demo_ga_039",
-    "demoSeedId": "kerodex-us-demo-v3:listing:39",
+    "demoSeedId": "kerodex-us-demo-v4:listing:39",
     "externalDemoId": "us-hyundai-sonata-2021-2",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_13",
     "sellerType": "demo_private_party",
     "title": "2021 Hyundai Sonata Limited",
@@ -3128,10 +3204,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-039-hyundai-sonata-2021.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2021 Hyundai Sonata Limited offered as a Kerodex demonstration listing in Chicago. It has been used as a daily driver with a mix of city and highway miles. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2021 Hyundai Sonata Limited shown as a Kerodex sample listing in Chicago. It has been used as a daily driver with a mix of city and highway miles. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -3160,11 +3238,11 @@
   },
   {
     "id": "demo_ga_040",
-    "demoSeedId": "kerodex-us-demo-v3:listing:40",
+    "demoSeedId": "kerodex-us-demo-v4:listing:40",
     "externalDemoId": "us-kia-forte-2017-0",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_12",
     "sellerType": "demo_private_party",
     "title": "2017 Kia Forte LX",
@@ -3209,10 +3287,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-040-kia-forte-2017.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2017 Kia Forte LX offered as a Kerodex demonstration listing in Detroit. It has been used as a daily driver with a mix of city and highway miles. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2017 Kia Forte LX shown as a Kerodex sample listing in Detroit. It has been used as a daily driver with a mix of city and highway miles. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -3241,11 +3321,11 @@
   },
   {
     "id": "demo_ga_041",
-    "demoSeedId": "kerodex-us-demo-v3:listing:41",
+    "demoSeedId": "kerodex-us-demo-v4:listing:41",
     "externalDemoId": "us-kia-forte-2020-1",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_13",
     "sellerType": "demo_private_party",
     "title": "2020 Kia Forte LXS",
@@ -3290,10 +3370,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-041-kia-forte-2020.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2020 Kia Forte LXS offered as a Kerodex demonstration listing in New York. It has been used as a daily driver with a mix of city and highway miles. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2020 Kia Forte LXS shown as a Kerodex sample listing in New York. It has been used as a daily driver with a mix of city and highway miles. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -3322,11 +3404,11 @@
   },
   {
     "id": "demo_ga_042",
-    "demoSeedId": "kerodex-us-demo-v3:listing:42",
+    "demoSeedId": "kerodex-us-demo-v4:listing:42",
     "externalDemoId": "us-kia-forte-2022-2",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_14",
     "sellerType": "demo_private_party",
     "title": "2022 Kia Forte GT-Line",
@@ -3371,10 +3453,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-042-kia-forte-2022.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2022 Kia Forte GT-Line offered as a Kerodex demonstration listing in Boston. It has been used as a daily driver with a mix of city and highway miles. The demo record shows very good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2022 Kia Forte GT-Line shown as a Kerodex sample listing in Boston. It has been used as a daily driver with a mix of city and highway miles. The sample record shows very good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -3403,11 +3487,11 @@
   },
   {
     "id": "demo_ga_043",
-    "demoSeedId": "kerodex-us-demo-v3:listing:43",
+    "demoSeedId": "kerodex-us-demo-v4:listing:43",
     "externalDemoId": "us-kia-optima-2016-0",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_13",
     "sellerType": "demo_private_party",
     "title": "2016 Kia Optima LX",
@@ -3452,10 +3536,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-043-kia-optima-2016.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2016 Kia Optima LX offered as a Kerodex demonstration listing in Philadelphia. It has been used mainly for commuting and highway trips. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2016 Kia Optima LX shown as a Kerodex sample listing in Philadelphia. It has been used mainly for commuting and highway trips. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -3484,11 +3570,11 @@
   },
   {
     "id": "demo_ga_044",
-    "demoSeedId": "kerodex-us-demo-v3:listing:44",
+    "demoSeedId": "kerodex-us-demo-v4:listing:44",
     "externalDemoId": "us-kia-optima-2018-1",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_14",
     "sellerType": "demo_private_party",
     "title": "2018 Kia Optima S",
@@ -3533,10 +3619,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-044-kia-optima-2018.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2018 Kia Optima S offered as a Kerodex demonstration listing in Washington. It has been used as a daily driver with a mix of city and highway miles. The demo record shows very good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2018 Kia Optima S shown as a Kerodex sample listing in Washington. It has been used as a daily driver with a mix of city and highway miles. The sample record shows very good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -3565,11 +3653,11 @@
   },
   {
     "id": "demo_ga_045",
-    "demoSeedId": "kerodex-us-demo-v3:listing:45",
+    "demoSeedId": "kerodex-us-demo-v4:listing:45",
     "externalDemoId": "us-kia-optima-2020-2",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_15",
     "sellerType": "demo_private_party",
     "title": "2020 Kia Optima EX",
@@ -3614,10 +3702,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-045-kia-optima-2020.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2020 Kia Optima EX offered as a Kerodex demonstration listing in Newark. It has been used as a daily driver with a mix of city and highway miles. The demo record shows excellent condition, routine maintenance notes, and minor accident disclosed. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2020 Kia Optima EX shown as a Kerodex sample listing in Newark. It has been used as a daily driver with a mix of city and highway miles. The sample record shows excellent condition, routine maintenance notes, and minor accident disclosed. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -3646,11 +3736,11 @@
   },
   {
     "id": "demo_ga_046",
-    "demoSeedId": "kerodex-us-demo-v3:listing:46",
+    "demoSeedId": "kerodex-us-demo-v4:listing:46",
     "externalDemoId": "us-kia-k5-2021-0",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_14",
     "sellerType": "demo_private_party",
     "title": "2021 Kia K5 LXS",
@@ -3695,10 +3785,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-046-kia-k5-2021.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2021 Kia K5 LXS offered as a Kerodex demonstration listing in Las Vegas. It has been used as a daily driver with a mix of city and highway miles. The demo record shows very good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2021 Kia K5 LXS shown as a Kerodex sample listing in Las Vegas. It has been used as a daily driver with a mix of city and highway miles. The sample record shows very good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -3727,11 +3819,11 @@
   },
   {
     "id": "demo_ga_047",
-    "demoSeedId": "kerodex-us-demo-v3:listing:47",
+    "demoSeedId": "kerodex-us-demo-v4:listing:47",
     "externalDemoId": "us-kia-k5-2022-1",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_15",
     "sellerType": "demo_private_party",
     "title": "2022 Kia K5 GT-Line",
@@ -3776,10 +3868,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-047-kia-k5-2022.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2022 Kia K5 GT-Line offered as a Kerodex demonstration listing in Atlanta. It has been used as a daily driver with a mix of city and highway miles. The demo record shows excellent condition, routine maintenance notes, and minor accident disclosed. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2022 Kia K5 GT-Line shown as a Kerodex sample listing in Atlanta. It has been used as a daily driver with a mix of city and highway miles. The sample record shows excellent condition, routine maintenance notes, and minor accident disclosed. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -3808,11 +3902,11 @@
   },
   {
     "id": "demo_ga_048",
-    "demoSeedId": "kerodex-us-demo-v3:listing:48",
+    "demoSeedId": "kerodex-us-demo-v4:listing:48",
     "externalDemoId": "us-kia-k5-2023-2",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_01",
     "sellerType": "demo_private_party",
     "title": "2023 Kia K5 EX",
@@ -3857,10 +3951,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-048-kia-k5-2023.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2023 Kia K5 EX offered as a Kerodex demonstration listing in Miami. It has been used as a daily driver with a mix of city and highway miles. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2023 Kia K5 EX shown as a Kerodex sample listing in Miami. It has been used as a daily driver with a mix of city and highway miles. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -3889,11 +3985,11 @@
   },
   {
     "id": "demo_ga_049",
-    "demoSeedId": "kerodex-us-demo-v3:listing:49",
+    "demoSeedId": "kerodex-us-demo-v4:listing:49",
     "externalDemoId": "us-nissan-altima-2017-0",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_15",
     "sellerType": "demo_private_party",
     "title": "2017 Nissan Altima S",
@@ -3938,10 +4034,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-049-nissan-altima-2017.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2017 Nissan Altima S offered as a Kerodex demonstration listing in Orlando. It has been used mainly for commuting and highway trips. The demo record shows excellent condition, routine maintenance notes, and minor accident disclosed. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2017 Nissan Altima S shown as a Kerodex sample listing in Orlando. It has been used mainly for commuting and highway trips. The sample record shows excellent condition, routine maintenance notes, and minor accident disclosed. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -3970,11 +4068,11 @@
   },
   {
     "id": "demo_ga_050",
-    "demoSeedId": "kerodex-us-demo-v3:listing:50",
+    "demoSeedId": "kerodex-us-demo-v4:listing:50",
     "externalDemoId": "us-nissan-altima-2020-1",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_01",
     "sellerType": "demo_private_party",
     "title": "2020 Nissan Altima SV",
@@ -4019,10 +4117,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-050-nissan-altima-2020.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2020 Nissan Altima SV offered as a Kerodex demonstration listing in Charlotte. It has been used as a daily driver with a mix of city and highway miles. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2020 Nissan Altima SV shown as a Kerodex sample listing in Charlotte. It has been used as a daily driver with a mix of city and highway miles. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -4051,11 +4151,11 @@
   },
   {
     "id": "demo_ga_051",
-    "demoSeedId": "kerodex-us-demo-v3:listing:51",
+    "demoSeedId": "kerodex-us-demo-v4:listing:51",
     "externalDemoId": "us-nissan-altima-2022-2",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_02",
     "sellerType": "demo_private_party",
     "title": "2022 Nissan Altima SR",
@@ -4100,10 +4200,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-051-nissan-altima-2022.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2022 Nissan Altima SR offered as a Kerodex demonstration listing in Nashville. It has been used as a daily driver with a mix of city and highway miles. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2022 Nissan Altima SR shown as a Kerodex sample listing in Nashville. It has been used as a daily driver with a mix of city and highway miles. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -4132,11 +4234,11 @@
   },
   {
     "id": "demo_ga_052",
-    "demoSeedId": "kerodex-us-demo-v3:listing:52",
+    "demoSeedId": "kerodex-us-demo-v4:listing:52",
     "externalDemoId": "us-nissan-rogue-2017-0",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_01",
     "sellerType": "demo_private_party",
     "title": "2017 Nissan Rogue S",
@@ -4181,10 +4283,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-052-nissan-rogue-2017.jpg"
+      "/assets/suv1.webp"
     ],
+    "imageAlt": "Demo SUV vehicle",
+    "demoImageCategory": "suv",
     "imageUploads": [],
-    "description": "2017 Nissan Rogue S offered as a Kerodex demonstration listing in Dallas. It has been used mainly for commuting and highway trips. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2017 Nissan Rogue S shown as a Kerodex sample listing in Dallas. It has been used mainly for commuting and highway trips. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -4213,11 +4317,11 @@
   },
   {
     "id": "demo_ga_053",
-    "demoSeedId": "kerodex-us-demo-v3:listing:53",
+    "demoSeedId": "kerodex-us-demo-v4:listing:53",
     "externalDemoId": "us-nissan-rogue-2020-1",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_02",
     "sellerType": "demo_private_party",
     "title": "2020 Nissan Rogue SV",
@@ -4262,10 +4366,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-053-nissan-rogue-2020.jpg"
+      "/assets/suv1.webp"
     ],
+    "imageAlt": "Demo SUV vehicle",
+    "demoImageCategory": "suv",
     "imageUploads": [],
-    "description": "2020 Nissan Rogue SV offered as a Kerodex demonstration listing in Houston. It has been used as a daily driver with a mix of city and highway miles. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2020 Nissan Rogue SV shown as a Kerodex sample listing in Houston. It has been used as a daily driver with a mix of city and highway miles. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -4294,11 +4400,11 @@
   },
   {
     "id": "demo_ga_054",
-    "demoSeedId": "kerodex-us-demo-v3:listing:54",
+    "demoSeedId": "kerodex-us-demo-v4:listing:54",
     "externalDemoId": "us-nissan-rogue-2022-2",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_03",
     "sellerType": "demo_private_party",
     "title": "2022 Nissan Rogue SL",
@@ -4343,10 +4449,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-054-nissan-rogue-2022.jpg"
+      "/assets/suv1.webp"
     ],
+    "imageAlt": "Demo SUV vehicle",
+    "demoImageCategory": "suv",
     "imageUploads": [],
-    "description": "2022 Nissan Rogue SL offered as a Kerodex demonstration listing in Austin. It has been used as a daily driver with a mix of city and highway miles. The demo record shows very good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2022 Nissan Rogue SL shown as a Kerodex sample listing in Austin. It has been used as a daily driver with a mix of city and highway miles. The sample record shows very good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -4375,11 +4483,11 @@
   },
   {
     "id": "demo_ga_055",
-    "demoSeedId": "kerodex-us-demo-v3:listing:55",
+    "demoSeedId": "kerodex-us-demo-v4:listing:55",
     "externalDemoId": "us-ford-f-150-2016-0",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_02",
     "sellerType": "demo_private_party",
     "title": "2016 Ford F-150 XL",
@@ -4424,10 +4532,12 @@
       "Cruise control"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-055-ford-f-150-2016.jpg"
+      "/assets/truck1.webp"
     ],
+    "imageAlt": "Demo truck vehicle",
+    "demoImageCategory": "truck",
     "imageUploads": [],
-    "description": "2016 Ford F-150 XL offered as a Kerodex demonstration listing in Phoenix. It has been used mainly for commuting and highway trips. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2016 Ford F-150 XL shown as a Kerodex sample listing in Phoenix. It has been used mainly for commuting and highway trips. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -4456,11 +4566,11 @@
   },
   {
     "id": "demo_ga_056",
-    "demoSeedId": "kerodex-us-demo-v3:listing:56",
+    "demoSeedId": "kerodex-us-demo-v4:listing:56",
     "externalDemoId": "us-ford-f-150-2019-1",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_03",
     "sellerType": "demo_private_party",
     "title": "2019 Ford F-150 XLT",
@@ -4505,10 +4615,12 @@
       "Cruise control"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-056-ford-f-150-2019.jpg"
+      "/assets/truck1.webp"
     ],
+    "imageAlt": "Demo truck vehicle",
+    "demoImageCategory": "truck",
     "imageUploads": [],
-    "description": "2019 Ford F-150 XLT offered as a Kerodex demonstration listing in Denver. It has been used as a daily driver with a mix of city and highway miles. The demo record shows very good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2019 Ford F-150 XLT shown as a Kerodex sample listing in Denver. It has been used as a daily driver with a mix of city and highway miles. The sample record shows very good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -4537,11 +4649,11 @@
   },
   {
     "id": "demo_ga_057",
-    "demoSeedId": "kerodex-us-demo-v3:listing:57",
+    "demoSeedId": "kerodex-us-demo-v4:listing:57",
     "externalDemoId": "us-ford-f-150-2021-2",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_04",
     "sellerType": "demo_private_party",
     "title": "2021 Ford F-150 Lariat",
@@ -4586,10 +4698,12 @@
       "Cruise control"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-057-ford-f-150-2021.png"
+      "/assets/truck1.webp"
     ],
+    "imageAlt": "Demo truck vehicle",
+    "demoImageCategory": "truck",
     "imageUploads": [],
-    "description": "2021 Ford F-150 Lariat offered as a Kerodex demonstration listing in Los Angeles. It has been used as a daily driver with a mix of city and highway miles. The demo record shows excellent condition, routine maintenance notes, and minor accident disclosed. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2021 Ford F-150 Lariat shown as a Kerodex sample listing in Los Angeles. It has been used as a daily driver with a mix of city and highway miles. The sample record shows excellent condition, routine maintenance notes, and minor accident disclosed. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -4618,11 +4732,11 @@
   },
   {
     "id": "demo_ga_058",
-    "demoSeedId": "kerodex-us-demo-v3:listing:58",
+    "demoSeedId": "kerodex-us-demo-v4:listing:58",
     "externalDemoId": "us-toyota-tacoma-2016-0",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_03",
     "sellerType": "demo_private_party",
     "title": "2016 Toyota Tacoma SR5",
@@ -4667,10 +4781,12 @@
       "Cruise control"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-058-toyota-tacoma-2016.jpg"
+      "/assets/truck1.webp"
     ],
+    "imageAlt": "Demo truck vehicle",
+    "demoImageCategory": "truck",
     "imageUploads": [],
-    "description": "2016 Toyota Tacoma SR5 offered as a Kerodex demonstration listing in San Diego. It has been used mainly for commuting and highway trips. The demo record shows very good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2016 Toyota Tacoma SR5 shown as a Kerodex sample listing in San Diego. It has been used mainly for commuting and highway trips. The sample record shows very good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -4699,11 +4815,11 @@
   },
   {
     "id": "demo_ga_059",
-    "demoSeedId": "kerodex-us-demo-v3:listing:59",
+    "demoSeedId": "kerodex-us-demo-v4:listing:59",
     "externalDemoId": "us-toyota-tacoma-2019-1",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_04",
     "sellerType": "demo_private_party",
     "title": "2019 Toyota Tacoma TRD Sport",
@@ -4748,10 +4864,12 @@
       "Cruise control"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-059-toyota-tacoma-2019.jpg"
+      "/assets/truck1.webp"
     ],
+    "imageAlt": "Demo truck vehicle",
+    "demoImageCategory": "truck",
     "imageUploads": [],
-    "description": "2019 Toyota Tacoma TRD Sport offered as a Kerodex demonstration listing in San Francisco. It has been used as a daily driver with a mix of city and highway miles. The demo record shows excellent condition, routine maintenance notes, and minor accident disclosed. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2019 Toyota Tacoma TRD Sport shown as a Kerodex sample listing in San Francisco. It has been used as a daily driver with a mix of city and highway miles. The sample record shows excellent condition, routine maintenance notes, and minor accident disclosed. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -4780,11 +4898,11 @@
   },
   {
     "id": "demo_ga_060",
-    "demoSeedId": "kerodex-us-demo-v3:listing:60",
+    "demoSeedId": "kerodex-us-demo-v4:listing:60",
     "externalDemoId": "us-toyota-tacoma-2021-2",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_05",
     "sellerType": "demo_private_party",
     "title": "2021 Toyota Tacoma TRD Off-Road",
@@ -4829,10 +4947,12 @@
       "Cruise control"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-060-toyota-tacoma-2021.jpg"
+      "/assets/truck1.webp"
     ],
+    "imageAlt": "Demo truck vehicle",
+    "demoImageCategory": "truck",
     "imageUploads": [],
-    "description": "2021 Toyota Tacoma TRD Off-Road offered as a Kerodex demonstration listing in Seattle. It has been used as a daily driver with a mix of city and highway miles. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2021 Toyota Tacoma TRD Off-Road shown as a Kerodex sample listing in Seattle. It has been used as a daily driver with a mix of city and highway miles. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -4861,11 +4981,11 @@
   },
   {
     "id": "demo_ga_061",
-    "demoSeedId": "kerodex-us-demo-v3:listing:61",
+    "demoSeedId": "kerodex-us-demo-v4:listing:61",
     "externalDemoId": "us-chevrolet-malibu-2017-0",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_04",
     "sellerType": "demo_private_party",
     "title": "2017 Chevrolet Malibu LS",
@@ -4910,10 +5030,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-061-chevrolet-malibu-2017.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2017 Chevrolet Malibu LS offered as a Kerodex demonstration listing in Portland. It has been used as a daily driver with a mix of city and highway miles. The demo record shows excellent condition, routine maintenance notes, and minor accident disclosed. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2017 Chevrolet Malibu LS shown as a Kerodex sample listing in Portland. It has been used as a daily driver with a mix of city and highway miles. The sample record shows excellent condition, routine maintenance notes, and minor accident disclosed. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -4942,11 +5064,11 @@
   },
   {
     "id": "demo_ga_062",
-    "demoSeedId": "kerodex-us-demo-v3:listing:62",
+    "demoSeedId": "kerodex-us-demo-v4:listing:62",
     "externalDemoId": "us-chevrolet-malibu-2019-1",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_05",
     "sellerType": "demo_private_party",
     "title": "2019 Chevrolet Malibu LT",
@@ -4991,10 +5113,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-062-chevrolet-malibu-2019.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2019 Chevrolet Malibu LT offered as a Kerodex demonstration listing in Chicago. It has been used as a daily driver with a mix of city and highway miles. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2019 Chevrolet Malibu LT shown as a Kerodex sample listing in Chicago. It has been used as a daily driver with a mix of city and highway miles. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -5023,11 +5147,11 @@
   },
   {
     "id": "demo_ga_063",
-    "demoSeedId": "kerodex-us-demo-v3:listing:63",
+    "demoSeedId": "kerodex-us-demo-v4:listing:63",
     "externalDemoId": "us-chevrolet-malibu-2021-2",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_06",
     "sellerType": "demo_private_party",
     "title": "2021 Chevrolet Malibu Premier",
@@ -5072,10 +5196,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-063-chevrolet-malibu-2021.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2021 Chevrolet Malibu Premier offered as a Kerodex demonstration listing in Detroit. It has been used as a daily driver with a mix of city and highway miles. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2021 Chevrolet Malibu Premier shown as a Kerodex sample listing in Detroit. It has been used as a daily driver with a mix of city and highway miles. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -5104,11 +5230,11 @@
   },
   {
     "id": "demo_ga_064",
-    "demoSeedId": "kerodex-us-demo-v3:listing:64",
+    "demoSeedId": "kerodex-us-demo-v4:listing:64",
     "externalDemoId": "us-lexus-es-2016-0",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_05",
     "sellerType": "demo_private_party",
     "title": "2016 Lexus ES 350",
@@ -5153,10 +5279,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-064-lexus-es-2016.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2016 Lexus ES 350 offered as a Kerodex demonstration listing in New York. It has been used mainly for commuting and highway trips. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2016 Lexus ES 350 shown as a Kerodex sample listing in New York. It has been used mainly for commuting and highway trips. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -5185,11 +5313,11 @@
   },
   {
     "id": "demo_ga_065",
-    "demoSeedId": "kerodex-us-demo-v3:listing:65",
+    "demoSeedId": "kerodex-us-demo-v4:listing:65",
     "externalDemoId": "us-lexus-es-2019-1",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_06",
     "sellerType": "demo_private_party",
     "title": "2019 Lexus ES 350 Luxury",
@@ -5234,10 +5362,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-065-lexus-es-2019.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2019 Lexus ES 350 Luxury offered as a Kerodex demonstration listing in Boston. It has been used as a daily driver with a mix of city and highway miles. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2019 Lexus ES 350 Luxury shown as a Kerodex sample listing in Boston. It has been used as a daily driver with a mix of city and highway miles. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -5266,11 +5396,11 @@
   },
   {
     "id": "demo_ga_066",
-    "demoSeedId": "kerodex-us-demo-v3:listing:66",
+    "demoSeedId": "kerodex-us-demo-v4:listing:66",
     "externalDemoId": "us-lexus-es-2021-2",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_07",
     "sellerType": "demo_private_party",
     "title": "2021 Lexus ES 300h",
@@ -5315,10 +5445,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-066-lexus-es-2021.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2021 Lexus ES 300h offered as a Kerodex demonstration listing in Philadelphia. It has been used as a daily driver with a mix of city and highway miles. The demo record shows very good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2021 Lexus ES 300h shown as a Kerodex sample listing in Philadelphia. It has been used as a daily driver with a mix of city and highway miles. The sample record shows very good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -5347,11 +5479,11 @@
   },
   {
     "id": "demo_ga_067",
-    "demoSeedId": "kerodex-us-demo-v3:listing:67",
+    "demoSeedId": "kerodex-us-demo-v4:listing:67",
     "externalDemoId": "us-acura-tlx-2017-0",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_06",
     "sellerType": "demo_private_party",
     "title": "2017 Acura TLX Base",
@@ -5396,10 +5528,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-067-acura-tlx-2017.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2017 Acura TLX Base offered as a Kerodex demonstration listing in Washington. It has been used mainly for commuting and highway trips. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2017 Acura TLX Base shown as a Kerodex sample listing in Washington. It has been used mainly for commuting and highway trips. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -5428,11 +5562,11 @@
   },
   {
     "id": "demo_ga_068",
-    "demoSeedId": "kerodex-us-demo-v3:listing:68",
+    "demoSeedId": "kerodex-us-demo-v4:listing:68",
     "externalDemoId": "us-acura-tlx-2020-1",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_07",
     "sellerType": "demo_private_party",
     "title": "2020 Acura TLX Technology",
@@ -5477,10 +5611,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-068-acura-tlx-2020.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2020 Acura TLX Technology offered as a Kerodex demonstration listing in Newark. It has been used as a daily driver with a mix of city and highway miles. The demo record shows very good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2020 Acura TLX Technology shown as a Kerodex sample listing in Newark. It has been used as a daily driver with a mix of city and highway miles. The sample record shows very good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -5509,11 +5645,11 @@
   },
   {
     "id": "demo_ga_069",
-    "demoSeedId": "kerodex-us-demo-v3:listing:69",
+    "demoSeedId": "kerodex-us-demo-v4:listing:69",
     "externalDemoId": "us-acura-tlx-2022-2",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_08",
     "sellerType": "demo_private_party",
     "title": "2022 Acura TLX A-Spec",
@@ -5558,10 +5694,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-069-acura-tlx-2022.jpg"
+      "/assets/sedan1.webp"
     ],
+    "imageAlt": "Demo sedan vehicle",
+    "demoImageCategory": "sedan",
     "imageUploads": [],
-    "description": "2022 Acura TLX A-Spec offered as a Kerodex demonstration listing in Las Vegas. It has been used as a daily driver with a mix of city and highway miles. The demo record shows excellent condition, routine maintenance notes, and minor accident disclosed. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2022 Acura TLX A-Spec shown as a Kerodex sample listing in Las Vegas. It has been used as a daily driver with a mix of city and highway miles. The sample record shows excellent condition, routine maintenance notes, and minor accident disclosed. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -5590,11 +5728,11 @@
   },
   {
     "id": "demo_ga_070",
-    "demoSeedId": "kerodex-us-demo-v3:listing:70",
+    "demoSeedId": "kerodex-us-demo-v4:listing:70",
     "externalDemoId": "us-subaru-outback-2017-0",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_07",
     "sellerType": "demo_private_party",
     "title": "2017 Subaru Outback Premium",
@@ -5639,10 +5777,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-070-subaru-outback-2017.jpg"
+      "/assets/suv1.webp"
     ],
+    "imageAlt": "Demo SUV vehicle",
+    "demoImageCategory": "suv",
     "imageUploads": [],
-    "description": "2017 Subaru Outback Premium offered as a Kerodex demonstration listing in Atlanta. It has been used as a daily driver with a mix of city and highway miles. The demo record shows very good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2017 Subaru Outback Premium shown as a Kerodex sample listing in Atlanta. It has been used as a daily driver with a mix of city and highway miles. The sample record shows very good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -5671,11 +5811,11 @@
   },
   {
     "id": "demo_ga_071",
-    "demoSeedId": "kerodex-us-demo-v3:listing:71",
+    "demoSeedId": "kerodex-us-demo-v4:listing:71",
     "externalDemoId": "us-subaru-outback-2020-1",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_08",
     "sellerType": "demo_private_party",
     "title": "2020 Subaru Outback Limited",
@@ -5720,10 +5860,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-071-subaru-outback-2020.jpg"
+      "/assets/suv1.webp"
     ],
+    "imageAlt": "Demo SUV vehicle",
+    "demoImageCategory": "suv",
     "imageUploads": [],
-    "description": "2020 Subaru Outback Limited offered as a Kerodex demonstration listing in Miami. It has been used as a daily driver with a mix of city and highway miles. The demo record shows excellent condition, routine maintenance notes, and minor accident disclosed. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2020 Subaru Outback Limited shown as a Kerodex sample listing in Miami. It has been used as a daily driver with a mix of city and highway miles. The sample record shows excellent condition, routine maintenance notes, and minor accident disclosed. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -5752,11 +5894,11 @@
   },
   {
     "id": "demo_ga_072",
-    "demoSeedId": "kerodex-us-demo-v3:listing:72",
+    "demoSeedId": "kerodex-us-demo-v4:listing:72",
     "externalDemoId": "us-subaru-outback-2022-2",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_09",
     "sellerType": "demo_private_party",
     "title": "2022 Subaru Outback Onyx Edition",
@@ -5801,10 +5943,12 @@
       "USB audio"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-072-subaru-outback-2022.png"
+      "/assets/suv1.webp"
     ],
+    "imageAlt": "Demo SUV vehicle",
+    "demoImageCategory": "suv",
     "imageUploads": [],
-    "description": "2022 Subaru Outback Onyx Edition offered as a Kerodex demonstration listing in Orlando. It has been used as a daily driver with a mix of city and highway miles. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2022 Subaru Outback Onyx Edition shown as a Kerodex sample listing in Orlando. It has been used as a daily driver with a mix of city and highway miles. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -5833,11 +5977,11 @@
   },
   {
     "id": "demo_ga_073",
-    "demoSeedId": "kerodex-us-demo-v3:listing:73",
+    "demoSeedId": "kerodex-us-demo-v4:listing:73",
     "externalDemoId": "us-tesla-model-3-2019-0",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_08",
     "sellerType": "demo_private_party",
     "title": "2019 Tesla Model 3 Standard Range Plus",
@@ -5882,10 +6026,12 @@
       "Driver assistance"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-073-tesla-model-3-2019.jpg"
+      "/assets/ev1.webp"
     ],
+    "imageAlt": "Demo electric vehicle",
+    "demoImageCategory": "ev",
     "imageUploads": [],
-    "description": "2019 Tesla Model 3 Standard Range Plus offered as a Kerodex demonstration listing in Charlotte. It has been used as a daily driver with a mix of city and highway miles. The demo record shows excellent condition, routine maintenance notes, and minor accident disclosed. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2019 Tesla Model 3 Standard Range Plus shown as a Kerodex sample listing in Charlotte. It has been used as a daily driver with a mix of city and highway miles. The sample record shows excellent condition, routine maintenance notes, and minor accident disclosed. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -5914,11 +6060,11 @@
   },
   {
     "id": "demo_ga_074",
-    "demoSeedId": "kerodex-us-demo-v3:listing:74",
+    "demoSeedId": "kerodex-us-demo-v4:listing:74",
     "externalDemoId": "us-tesla-model-3-2021-1",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_09",
     "sellerType": "demo_private_party",
     "title": "2021 Tesla Model 3 Long Range",
@@ -5963,10 +6109,12 @@
       "Driver assistance"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-074-tesla-model-3-2021.jpg"
+      "/assets/ev1.webp"
     ],
+    "imageAlt": "Demo electric vehicle",
+    "demoImageCategory": "ev",
     "imageUploads": [],
-    "description": "2021 Tesla Model 3 Long Range offered as a Kerodex demonstration listing in Nashville. It has been used as a daily driver with a mix of city and highway miles. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2021 Tesla Model 3 Long Range shown as a Kerodex sample listing in Nashville. It has been used as a daily driver with a mix of city and highway miles. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
@@ -5995,11 +6143,11 @@
   },
   {
     "id": "demo_ga_075",
-    "demoSeedId": "kerodex-us-demo-v3:listing:75",
+    "demoSeedId": "kerodex-us-demo-v4:listing:75",
     "externalDemoId": "us-tesla-model-3-2023-2",
     "isDemo": true,
     "is_demo": true,
-    "demoNotice": "This listing is for demonstration/testing only.",
+    "demoNotice": "This is a sample listing and is not available for purchase.",
     "userId": "demo_seller_10",
     "sellerType": "demo_private_party",
     "title": "2023 Tesla Model 3 Performance",
@@ -6044,10 +6192,12 @@
       "Driver assistance"
     ],
     "images": [
-      "/demo-assets/vehicles/models/demo-ga-075-tesla-model-3-2023.jpg"
+      "/assets/ev1.webp"
     ],
+    "imageAlt": "Demo electric vehicle",
+    "demoImageCategory": "ev",
     "imageUploads": [],
-    "description": "2023 Tesla Model 3 Performance offered as a Kerodex demonstration listing in Dallas. It has been used as a daily driver with a mix of city and highway miles. The demo record shows good condition, routine maintenance notes, and no accidents reported. This listing is for demonstration/testing only and the vehicle is not actually for sale.",
+    "description": "2023 Tesla Model 3 Performance shown as a Kerodex sample listing in Dallas. It has been used as a daily driver with a mix of city and highway miles. The sample record shows good condition, routine maintenance notes, and no accidents reported. This vehicle is not available for purchase.",
     "maintenanceNames": [
       "Oil and filter service",
       "Tire rotation"
