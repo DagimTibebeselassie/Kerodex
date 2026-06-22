@@ -153,12 +153,16 @@ requiredFiles.forEach((file) => {
 
   const complianceSource = fs.readFileSync(path.join(root, "apps/web-react/src/pages/CompliancePages.tsx"), "utf8");
   const layoutSource = fs.readFileSync(path.join(root, "apps/web-react/src/components/Layout.tsx"), "utf8");
+  const loadingShellSource = fs.readFileSync(path.join(root, "apps/web-react/src/components/RouteLoadingShell.tsx"), "utf8");
   assert(appSource.includes("path: '/accessibility'") && appSource.includes("path: '/report'"), "Accessibility and report routes must exist.");
   ["/terms", "/privacy", "/accessibility", "/safety", "/contact", "/report"].forEach((route) => {
     assert(layoutSource.includes(`to="${route}"`), `Footer must link to ${route}.`);
   });
   assert(layoutSource.includes("Skip to main content") && layoutSource.includes('id="main-content"'), "Public layout must provide skip navigation.");
-  assert(complianceSource.includes("WCAG 2.1 Level AA"), "Accessibility statement must identify the WCAG target.");
+  assert(complianceSource.includes("WCAG 2.1 AA"), "Accessibility statement must identify the WCAG target.");
+  assert(complianceSource.includes("Kerodex strives to meet WCAG 2.1 AA accessibility standards."), "Accessibility statement must accurately describe Kerodex's WCAG 2.1 AA goal.");
+  assert(complianceSource.includes("support@kerodexofficial.com"), "Accessibility statement must provide the public support email.");
+  assert(complianceSource.includes("Browser/device used"), "Accessibility reports must request useful reproduction details.");
   assert(complianceSource.includes("protected admin review queue"), "Support forms must accurately describe backend delivery.");
   assert(complianceSource.includes('aria-live="polite"'), "Support forms must announce validation and submission status.");
 
@@ -238,11 +242,19 @@ requiredFiles.forEach((file) => {
 
   const vehicleCardSource = fs.readFileSync(path.join(root, "apps/web-react/src/components/VehicleCard.tsx"), "utf8");
   assert(vehicleCardSource.includes("Demo Listing"), "Listing cards must display the Demo Listing badge.");
-  assert(vehicleCardSource.includes("useSavedVehicles"), "Listing cards must use backend-backed saved state.");
+  assert(
+    vehicleCardSource.includes("setVehicleSaved") &&
+    vehicleCardSource.includes("onSave") &&
+    searchSource.includes("useSavedVehicles"),
+    "Listing cards must use one shared backend-backed saved state controller per page."
+  );
   const profileSource = fs.readFileSync(path.join(root, "apps/web-react/src/pages/Profile.tsx"), "utf8");
   assert(!profileSource.includes("Member since 2026"), "Profile membership date must not be hardcoded.");
   assert(!profileSource.includes('label="Views" value="-"'), "Profile listing views must be dynamic.");
   assert(!profileSource.includes('label="Messages" value={0}'), "Profile message count must be dynamic.");
+  const messagesSource = fs.readFileSync(path.join(root, "apps/web-react/src/pages/Messages.tsx"), "utf8");
+  assert(!messagesSource.includes(".scrollIntoView("), "Messaging must not scroll page ancestors when new messages arrive.");
+  assert(messagesSource.includes("messagesScrollRef") && messagesSource.includes("stayAtLatestRef"), "Messaging must keep scrolling scoped to the conversation pane.");
   const vehicleDetailSource = fs.readFileSync(path.join(root, "apps/web-react/src/pages/VehicleDetail.tsx"), "utf8");
   assert(vehicleDetailSource.includes("This is a sample listing"), "Listing detail must display a customer-facing sample-listing notice.");
   assert(!searchSource.includes('placeholder="Search make, model..."'), "Search results page must not duplicate the global header search bar.");
@@ -253,6 +265,11 @@ requiredFiles.forEach((file) => {
   assert(searchSource.includes("locationFocusRequest"), "Map location control must support reliable repeated recentering.");
   assert(serverSource.includes("darkmodeNonTransparent.png"), "Email templates must use the non-transparent black Kerodex logo.");
   assert(vehicleDetailSource.includes("Vehicle information is provided by the seller"), "Listing detail must include the buyer legal and safety disclaimer.");
+  assert(vehicleDetailSource.includes("fetchPriority=\"high\""), "The listing-detail LCP image must receive high fetch priority.");
+  assert(vehicleDetailSource.includes("VehicleDetailSkeleton"), "Listing detail must reserve its final layout while data loads.");
+  assert(searchSource.includes("ListingGridSkeleton") && searchSource.includes("vehiclesLoading"), "Search must reserve grid space while listings load.");
+  assert(layoutSource.includes("min-h-[calc(100dvh-3.5rem)]") && layoutSource.includes("RouteLoadingShell"), "The public shell must keep the footer below a stable route area.");
+  assert(loadingShellSource.includes("SellFormSkeleton") && loadingShellSource.includes("min-h-[1680px]"), "Sell route loading must reserve the form layout.");
   const buyerGuideFlowSource = fs.readFileSync(path.join(root, "apps/web-react/src/pages/BuyerGuideFlow.tsx"), "utf8");
   assert(buyerGuideFlowSource.includes("consider an independent inspection"), "Buyer Guide must show the safety reminder.");
   assert(serverSource.includes("background:#ffffff;color:#000000"), "Email templates must use a minimal white and black visual style.");

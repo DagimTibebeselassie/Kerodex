@@ -1,7 +1,9 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
-import { Button, Input, toast } from '@blinkdotnew/ui';
+import { BasicButton as Button } from '@/components/BasicButton';
+import { BasicInput as Input } from '@/components/BasicInput';
+import { toast } from 'sonner';
 import {
   adminApplyAction,
   adminActivity,

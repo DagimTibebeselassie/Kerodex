@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react';
 import { useRouterState } from '@tanstack/react-router';
-import { Button, Input } from '@blinkdotnew/ui';
+import { BasicButton as Button } from '@/components/BasicButton';
+import { BasicInput as Input } from '@/components/BasicInput';
 import { Accessibility, CheckCircle2, FileWarning, Mail, ShieldCheck } from 'lucide-react';
 import { createReport } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 
 const updated = 'June 21, 2026';
-const supportEmail = 'founder@kerodexofficial.com';
+const supportEmail = 'support@kerodexofficial.com';
 
 const reportCategories = [
   ['fake_listing', 'Fake or misleading listing'],
@@ -210,7 +211,7 @@ export function AccessibilityStatementPage() {
       <div className="space-y-8 text-[13px] md:text-[14px] leading-relaxed text-muted-foreground">
         <section>
           <h2 className="mb-3 text-[13px] font-black uppercase tracking-[0.15em] text-foreground">Our goal</h2>
-          <p>Kerodex aims to provide an inclusive marketplace experience and to follow WCAG 2.1 Level AA where reasonably possible.</p>
+          <p>Kerodex strives to meet WCAG 2.1 AA accessibility standards.</p>
         </section>
         <section>
           <h2 className="mb-3 text-[13px] font-black uppercase tracking-[0.15em] text-foreground">Ongoing work</h2>
@@ -218,10 +219,16 @@ export function AccessibilityStatementPage() {
         </section>
         <section>
           <h2 className="mb-3 text-[13px] font-black uppercase tracking-[0.15em] text-foreground">Report an accessibility barrier</h2>
-          <p>If you cannot use part of Kerodex, please tell us the page URL, what you were trying to do, what happened, your browser and device, and any assistive technology you were using.</p>
+          <p>If you encounter an accessibility issue, contact:</p>
           <a href={`mailto:${supportEmail}`} className="mt-3 inline-flex items-center gap-2 text-foreground underline underline-offset-4">
             <Mail className="h-4 w-4" /> {supportEmail}
           </a>
+          <p className="mt-4 font-semibold text-foreground">Please include:</p>
+          <ul className="mt-2 list-disc space-y-1 pl-5">
+            <li>Page URL</li>
+            <li>Description of the issue</li>
+            <li>Browser/device used</li>
+          </ul>
         </section>
       </div>
 

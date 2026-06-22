@@ -1,9 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { lazy, Suspense, useState, useEffect, useRef } from 'react';
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
-import { Button, Input } from '@blinkdotnew/ui';
-import { listConversations, type ConversationRecord } from '@/lib/api';
 import { defaultProfileIconForUser } from '@/lib/profile-icons';
 import { KERODEX_VERSION } from '@/version';
 import {
@@ -21,7 +19,10 @@ import {
   LayoutDashboard,
   Car,
 } from 'lucide-react';
-import { AuthModal } from './AuthModal';
+import { RouteLoadingShell } from './RouteLoadingShell';
+import { BasicButton } from './BasicButton';
+
+const AuthModal = lazy(() => import('./AuthModal').then((module) => ({ default: module.AuthModal })));
 
 function useDarkMode() {
   const [isDark, setIsDark] = useState(() =>
@@ -60,21 +61,13 @@ function useDarkMode() {
 export function Layout() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const isSearchWorkspace = ['/search', '/cars', '/search.html'].includes(pathname);
-  const { user, isLoading, logout } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { isDark, toggle: toggleDark } = useDarkMode();
   const firstName = (user?.name || user?.email || '').trim().split(/\s|@/)[0] || 'there';
   const userInitial = firstName.charAt(0).toUpperCase() || 'U';
   const defaultAvatarUrl = defaultProfileIconForUser(user);
-  const { data: conversations = [] } = useQuery<ConversationRecord[]>({
-    queryKey: ['nav-unread-conversations', user?.id],
-    queryFn: async () => user ? listConversations() : [],
-    enabled: !!user,
-    refetchInterval: 20000,
-  });
-  const unreadCount = conversations.reduce((sum, conversation) => sum + Number(conversation.unread || 0), 0);
-
   const [authOpen, setAuthOpen] = useState(false);
   const [authTab, setAuthTab] = useState<'login' | 'signup'>('login');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -148,7 +141,7 @@ export function Layout() {
       <header
         id="main-header"
         data-auth-state={user ? 'signed-in' : 'signed-out'}
-        className="h-14 border-b border-border sticky top-0 bg-background z-50 flex items-center px-4 md:px-6 gap-3"
+        className="grid h-14 grid-cols-[auto_1fr_auto] items-center gap-3 border-b border-border sticky top-0 bg-background z-50 px-4 md:px-6"
       >
         {/* Logo */}
         <Link
@@ -161,19 +154,19 @@ export function Layout() {
         {/* Desktop center search */}
         <form
           onSubmit={handleHeaderSearch}
-          className="hidden md:flex flex-1 max-w-md mx-auto relative"
+          className="relative mx-auto hidden h-9 w-full max-w-md md:flex"
           role="search"
           aria-label="Search Kerodex listings"
         >
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-          <Input
+          <input
             id="header-search-bar"
             type="search"
             aria-label="Search by make, model, or city"
             placeholder="Search make, model, city..."
             value={headerSearch}
             onChange={(e) => setHeaderSearch(e.target.value)}
-            className="pl-9 h-9 text-[12px] w-full"
+            className="h-9 w-full border border-input bg-background pl-9 pr-3 text-[12px] text-foreground outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
           />
         </form>
 
@@ -181,7 +174,7 @@ export function Layout() {
         <div className="flex-1 md:hidden" />
 
         {/* Right side actions */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center justify-end gap-1 md:min-w-[272px] lg:min-w-[340px]">
           {/* Dark mode toggle */}
           <button
             id="dark-mode-toggle"
@@ -192,20 +185,14 @@ export function Layout() {
             {isDark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
           </button>
 
-          {!isLoading && (
-            <>
+          <>
               {user ? (
                 <>
                   <Link to="/saved" aria-label="Saved cars" className="hidden md:flex h-9 w-9 items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
                     <Heart className="h-4 w-4" aria-hidden="true" />
                   </Link>
-                  <Link to="/messages" aria-label={unreadCount > 0 ? `Messages, ${unreadCount} unread` : 'Messages'} className="relative hidden md:flex h-9 w-9 items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
+                  <Link to="/messages" aria-label="Messages" className="relative hidden md:flex h-9 w-9 items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors">
                     <MessageSquare className="h-4 w-4" aria-hidden="true" />
-                    {unreadCount > 0 && (
-                      <span aria-hidden="true" className="absolute right-1 top-1 min-w-[16px] h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold leading-4 text-center">
-                        {unreadCount > 9 ? '9+' : unreadCount}
-                      </span>
-                    )}
                   </Link>
 
                   {/* User menu */}
@@ -280,9 +267,9 @@ export function Layout() {
                   </div>
 
                   <Link to="/sell" className="hidden md:block">
-                    <Button className="h-8 px-4 text-[11px] font-bold uppercase tracking-wider ml-1">
+                    <BasicButton className="h-8 px-4 text-[11px] font-bold uppercase tracking-wider ml-1">
                       List Car
-                    </Button>
+                    </BasicButton>
                   </Link>
                 </>
               ) : (
@@ -293,19 +280,18 @@ export function Layout() {
                     </button>
                   </Link>
                   <Link to="/sell" className="hidden md:block">
-                    <Button variant="outline" className="h-8 px-3 text-[11px] font-bold uppercase tracking-wider">
+                    <BasicButton variant="outline" className="h-8 px-3 text-[11px] font-bold uppercase tracking-wider">
                       Become a Seller
-                    </Button>
+                    </BasicButton>
                   </Link>
                   <Link to="/signin">
-                    <Button className="h-8 px-4 text-[11px] font-bold uppercase tracking-wider">
+                    <BasicButton className="h-8 px-4 text-[11px] font-bold uppercase tracking-wider">
                       Sign In
-                    </Button>
+                    </BasicButton>
                   </Link>
                 </>
               )}
             </>
-          )}
 
           {/* Mobile hamburger */}
           <button
@@ -340,13 +326,13 @@ export function Layout() {
         {/* Mobile search */}
         <form onSubmit={handleHeaderSearch} className="p-4 border-b border-border relative" role="search" aria-label="Search Kerodex listings">
           <Search className="absolute left-7 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
-          <Input
+          <input
             type="search"
             aria-label="Search by make, model, or city"
             placeholder="Search make, model, city..."
             value={headerSearch}
             onChange={(e) => setHeaderSearch(e.target.value)}
-            className="pl-9 h-9 text-[12px] w-full"
+            className="h-9 w-full border border-input bg-background pl-9 pr-3 text-[12px] text-foreground outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
           />
         </form>
 
@@ -381,14 +367,7 @@ export function Layout() {
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center gap-3 px-3 py-2.5 text-[13px] font-medium hover:bg-muted transition-colors"
               >
-                <span className="relative">
-                  <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                  {unreadCount > 0 && (
-                    <span className="absolute -right-2 -top-2 min-w-[16px] h-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold leading-4 text-center">
-                      {unreadCount > 9 ? '9+' : unreadCount}
-                    </span>
-                  )}
-                </span>
+                <MessageSquare className="h-4 w-4 text-muted-foreground" />
                 Messages
               </Link>
               <Link
@@ -434,8 +413,10 @@ export function Layout() {
         </nav>
       </div>
 
-      <main id="main-content" tabIndex={-1} className="flex-1 outline-none">
-        <Outlet />
+      <main id="main-content" tabIndex={-1} className="min-h-[calc(100dvh-3.5rem)] flex-1 outline-none">
+        <Suspense fallback={<RouteLoadingShell pathname={pathname} />}>
+          <Outlet />
+        </Suspense>
       </main>
 
       <footer className={`py-12 px-4 md:px-6 border-t border-border ${isSearchWorkspace ? 'mt-0' : 'mt-20'}`}>
@@ -542,7 +523,7 @@ export function Layout() {
                 </Link>
               </li>
               <li>
-                <a href="mailto:founder@kerodexofficial.com" className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">
+                <a href="mailto:support@kerodexofficial.com" className="text-[12px] text-muted-foreground hover:text-foreground transition-colors">
                   Email Kerodex Support
                 </a>
               </li>
@@ -562,11 +543,15 @@ export function Layout() {
         </div>
       </footer>
 
-      <AuthModal
-        isOpen={authOpen}
-        onClose={() => setAuthOpen(false)}
-        defaultTab={authTab}
-      />
+      {authOpen && (
+        <Suspense fallback={null}>
+          <AuthModal
+            isOpen={authOpen}
+            onClose={() => setAuthOpen(false)}
+            defaultTab={authTab}
+          />
+        </Suspense>
+      )}
     </div>
   );
 }

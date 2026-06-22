@@ -7,24 +7,12 @@ import { Vehicle } from '@/types';
 import { VehicleCard } from '@/components/VehicleCard';
 import { defaultProfileIconForUser } from '@/lib/profile-icons';
 import { vehicleImageAlt } from '@/lib/vehicleImage';
-import {
-  Button,
-  Input,
-  Select,
-  SelectTrigger,
-  SelectContent,
-  SelectItem,
-  SelectValue,
-  Badge,
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  Separator,
-  toast,
-} from '@blinkdotnew/ui';
+import { BasicButton as Button } from '@/components/BasicButton';
+import { BasicInput as Input } from '@/components/BasicInput';
+import { toast } from 'sonner';
 import { VERIFIED_SELLER_EXPLANATION } from '@/components/VerifiedSellerTrust';
 import { useAccessibleDialog } from '@/hooks/useAccessibleDialog';
+import { VehicleDetailSkeleton } from '@/components/RouteLoadingShell';
 import {
   MapPin, Gauge, Calendar, Shield, MessageSquare, Heart, Share2, ArrowLeft,
   CheckCircle2, ChevronDown, ChevronUp, ZoomIn, Car, User, AlertTriangle, X,
@@ -61,7 +49,16 @@ function Gallery({ images, activeIdx, setActiveIdx, setLightboxOpen, make, model
         aria-label={hasImages ? `Open photo ${activeIdx + 1} of ${images.length} for ${year} ${make} ${model}` : 'No vehicle photos available'}
       >
         {hasImages ? (
-          <img src={mainImage} alt={imageAlt || `${year} ${make} ${model}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]" />
+          <img
+            src={mainImage}
+            alt={imageAlt || `${year} ${make} ${model}`}
+            width={1600}
+            height={900}
+            loading="eager"
+            fetchPriority="high"
+            decoding="async"
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+          />
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground gap-3">
             <Camera className="h-8 w-8" />
@@ -215,7 +212,7 @@ function HistoryTab({ vehicle }: { vehicle: Vehicle }) {
             </div>
           </div>
         </div>
-        <Separator {...({} as any)} />
+        <div className="h-px bg-border" />
         <div className="flex items-center gap-3">
           <Shield className="h-4 w-4 text-muted-foreground shrink-0" />
           <p className="text-[12px] text-muted-foreground" title={DOCUMENT_CHECK_TOOLTIP}>
@@ -345,14 +342,14 @@ function SellerCard({ vehicle }: { vehicle: any }) {
           </div>
           <div className="flex flex-wrap gap-1.5 pt-1">
             {badges.map((v) => (
-              <Badge key={v} className="bg-background border border-foreground text-foreground text-[10px] uppercase tracking-widest font-bold gap-1 py-1 px-2">
+              <span key={v} className="inline-flex items-center bg-background border border-foreground text-foreground text-[10px] uppercase tracking-widest font-bold gap-1 py-1 px-2">
                 <CheckCircle2 className="h-3 w-3" /> {v}
-              </Badge>
+              </span>
             ))}
             {!badges.length && (
-              <Badge className="bg-background border border-border text-muted-foreground text-[10px] uppercase tracking-widest font-bold py-1 px-2">
+              <span className="inline-flex items-center bg-background border border-border text-muted-foreground text-[10px] uppercase tracking-widest font-bold py-1 px-2">
                 Verification pending
-              </Badge>
+              </span>
             )}
           </div>
           <div className="flex items-center gap-6 text-[12px] text-muted-foreground pt-1">
@@ -361,7 +358,7 @@ function SellerCard({ vehicle }: { vehicle: any }) {
           </div>
         </div>
       </div>
-      <Separator {...({} as any)} />
+      <div className="h-px bg-border" />
       {seller.id ? (
         <Link to="/seller/$id" params={{ id: seller.id }}>
           <Button variant="outline" size="sm" className="text-[11px] font-bold uppercase tracking-widest">
@@ -655,7 +652,7 @@ function ScamWarnings({ vehicle }: { vehicle: Vehicle }) {
             </div>
           ))}
           {analysisNotices.length > 0 && analysisPositives.length > 0 && (
-            <Separator {...({} as any)} className="border-amber-200 dark:border-amber-900/50" />
+            <div className="h-px bg-amber-200 dark:bg-amber-900/50" />
           )}
           {analysisPositives.map((text, i) => (
             <div key={i} className="flex gap-2.5 text-[13px] text-emerald-700 dark:text-emerald-400">
@@ -877,17 +874,19 @@ function PaymentEstimator({ price }: { price: number }) {
       </div>
       <div className="space-y-2">
         <span className="text-[12px] text-muted-foreground">Credit Score</span>
-        <Select value={creditScore} onValueChange={setCreditScore}>
-          <SelectTrigger {...({} as any)} className="text-[12px] h-10"><SelectValue /></SelectTrigger>
-          <SelectContent {...({} as any)}>
-            <SelectItem {...({} as any)} value="excellent">Excellent (750+)</SelectItem>
-            <SelectItem {...({} as any)} value="good">Good (700-749)</SelectItem>
-            <SelectItem {...({} as any)} value="fair">Fair (650-699)</SelectItem>
-            <SelectItem {...({} as any)} value="poor">Poor (&lt;650)</SelectItem>
-          </SelectContent>
-        </Select>
+        <select
+          aria-label="Credit score range"
+          value={creditScore}
+          onChange={(event) => setCreditScore(event.target.value)}
+          className="h-10 w-full border border-input bg-background px-3 text-[12px] text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          <option value="excellent">Excellent (750+)</option>
+          <option value="good">Good (700-749)</option>
+          <option value="fair">Fair (650-699)</option>
+          <option value="poor">Poor (&lt;650)</option>
+        </select>
       </div>
-      <Separator {...({} as any)} />
+      <div className="h-px bg-border" />
       <div className="space-y-2">
         <div className="flex justify-between items-baseline">
           <span className="text-[12px] text-muted-foreground">Est. Monthly Payment</span>
@@ -963,14 +962,19 @@ function similarVehicleScore(current: Vehicle, candidate: Vehicle) {
   return score;
 }
 
-function SimilarVehiclesRail({ current, vehicles }: { current: Vehicle; vehicles: Vehicle[] }) {
+function SimilarVehiclesRail({ current, vehicles, savedIds, onSave }: {
+  current: Vehicle;
+  vehicles: Vehicle[];
+  savedIds: Set<string>;
+  onSave: (id: string, saved: boolean) => unknown | Promise<unknown>;
+}) {
   const similarVehicles = useMemo(() => {
     return vehicles
       .map((candidate) => ({ candidate, score: similarVehicleScore(current, candidate) }))
       .filter((item) => item.score > 0)
       .sort((a, b) => b.score - a.score)
       .map((item) => item.candidate)
-      .slice(0, 12);
+      .slice(0, 4);
   }, [current, vehicles]);
 
   if (!similarVehicles.length) return null;
@@ -998,7 +1002,7 @@ function SimilarVehiclesRail({ current, vehicles }: { current: Vehicle; vehicles
       <div className="kerodex-vehicle-rail flex gap-4 md:gap-6 overflow-x-auto pb-4 px-1 sm:px-0 snap-x snap-mandatory">
         {similarVehicles.map((item) => (
           <div key={item.id} className="w-[260px] sm:w-[286px] lg:w-[300px] shrink-0 snap-start">
-            <VehicleCard vehicle={item} />
+            <VehicleCard vehicle={item} savedIds={savedIds} onSave={onSave} />
           </div>
         ))}
       </div>
@@ -1052,26 +1056,51 @@ export function VehicleDetailPage() {
 
   useEffect(() => {
     let alive = true;
-    listVehicles()
-      .then((vehicles) => {
-        if (alive) setRelatedVehicles(vehicles);
-      })
-      .catch(() => {
-        if (alive) setRelatedVehicles([]);
-      });
-    return () => { alive = false; };
+    const loadRelated = () => {
+      listVehicles()
+        .then((vehicles) => {
+          if (alive) setRelatedVehicles(vehicles);
+        })
+        .catch(() => {
+          if (alive) setRelatedVehicles([]);
+        });
+    };
+    const idleWindow = window as any;
+    const idleId = typeof idleWindow.requestIdleCallback === 'function'
+      ? idleWindow.requestIdleCallback(loadRelated, { timeout: 2500 })
+      : window.setTimeout(loadRelated, 1000);
+    return () => {
+      alive = false;
+      if (typeof idleWindow.requestIdleCallback === 'function') idleWindow.cancelIdleCallback?.(idleId);
+      else window.clearTimeout(idleId);
+    };
   }, []);
 
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setLightboxOpen(false);
+    };
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [lightboxOpen]);
+
   if (!vehicle) {
+    if (!vehicleError) return <VehicleDetailSkeleton />;
     return (
-      <div className="px-6 py-24 max-w-screen-xl mx-auto">
+      <div className="min-h-[calc(100dvh-3.5rem)] px-6 py-24 max-w-screen-xl mx-auto">
         <button onClick={() => navigate({ to: '/search' })} className="flex items-center gap-2 text-[12px] text-muted-foreground hover:text-foreground mb-8 transition-colors">
           <ArrowLeft className="h-4 w-4" /> Back to search
         </button>
         <div className="border border-border bg-background p-10 text-center">
           <Car className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
-          <h1 className="text-xl font-bold mb-2">{vehicleError ? 'Listing unavailable' : 'Loading listing...'}</h1>
-          <p className="text-[13px] text-muted-foreground">{vehicleError || 'Fetching listing data from Kerodex.'}</p>
+          <h1 className="text-xl font-bold mb-2">Listing unavailable</h1>
+          <p className="text-[13px] text-muted-foreground">{vehicleError}</p>
         </div>
       </div>
     );
@@ -1424,7 +1453,12 @@ export function VehicleDetailPage() {
         </div>
       </div>
 
-      <SimilarVehiclesRail current={vehicle} vehicles={relatedVehicles} />
+      <SimilarVehiclesRail
+        current={vehicle}
+        vehicles={relatedVehicles}
+        savedIds={savedVehicles.savedIds}
+        onSave={savedVehicles.setSaved}
+      />
 
       {/* MOBILE STICKY CTA BAR */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 bg-background border-t border-border px-4 py-3 z-50 flex items-center gap-3">
@@ -1443,18 +1477,38 @@ export function VehicleDetailPage() {
       </div>
 
       {/* LIGHTBOX */}
-      <Dialog open={lightboxOpen} onOpenChange={setLightboxOpen}>
-        <DialogContent {...({} as any)} className="max-w-5xl w-full p-0 bg-background border border-border">
-          <DialogHeader className="px-6 py-4 border-b border-border flex-row items-center justify-between">
-            <DialogTitle {...({} as any)} className="text-[12px] font-bold uppercase tracking-widest">
+      {lightboxOpen && (
+        <div
+          className="fixed inset-0 z-[1200] flex items-center justify-center bg-black/75 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Photo ${activeIdx + 1} of ${images.length}`}
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setLightboxOpen(false);
+          }}
+        >
+          <div className="relative max-h-[94vh] w-full max-w-5xl overflow-auto border border-border bg-background">
+            <div className="flex items-center justify-between border-b border-border px-6 py-4">
+              <h2 className="text-[12px] font-bold uppercase tracking-widest">
               Photo {activeIdx + 1} of {images.length}
-            </DialogTitle>
-            <button onClick={() => setLightboxOpen(false)} aria-label="Close photo viewer" className="p-2 hover:bg-muted transition-colors">
-              <X className="h-4 w-4" />
-            </button>
-          </DialogHeader>
+              </h2>
+              <button
+                type="button"
+                onClick={() => setLightboxOpen(false)}
+                aria-label="Close photo viewer"
+                className="flex h-9 w-9 items-center justify-center text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
           <div className="relative">
-            <img src={mainImage} alt={vehicleImageAlt(vehicle, `photo ${activeIdx + 1}`)} className="w-full max-h-[80vh] object-contain bg-muted" />
+            <img
+              src={mainImage}
+              alt={vehicleImageAlt(vehicle, `photo ${activeIdx + 1}`)}
+              width={1600}
+              height={900}
+              className="w-full max-h-[80vh] object-contain bg-muted"
+            />
             {images.length > 1 && (
               <div className="flex gap-2 p-4 border-t border-border overflow-x-auto">
                 {images.map((img, i) => (
@@ -1468,8 +1522,9 @@ export function VehicleDetailPage() {
               </div>
             )}
           </div>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

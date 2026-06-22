@@ -1,5 +1,5 @@
 import { Link, useNavigate } from '@tanstack/react-router';
-import { Button } from '@blinkdotnew/ui';
+import { BasicButton as Button } from '@/components/BasicButton';
 import { AlertTriangle, ArrowRight, BadgeCheck, Ban, Building2, Car, HelpCircle, Mail, MessageSquare, Search, ShieldCheck } from 'lucide-react';
 import { useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
@@ -115,7 +115,7 @@ export function ContactPage() {
             <p className="text-[13px] text-muted-foreground">Kerodex Support</p>
           </div>
         </div>
-        <a href="mailto:founder@kerodexofficial.com" aria-label="Email Kerodex Support">
+        <a href="mailto:support@kerodexofficial.com" aria-label="Email Kerodex Support">
           <Button className="h-10 px-5 text-[12px] font-bold uppercase tracking-wider">Email Kerodex</Button>
         </a>
       </div>
@@ -151,7 +151,7 @@ export function SupportPage() {
           </section>
         ))}
       </div>
-      <a href="mailto:founder@kerodexofficial.com" aria-label="Email Kerodex Support">
+      <a href="mailto:support@kerodexofficial.com" aria-label="Email Kerodex Support">
         <Button className="h-11 px-6 text-[12px] font-bold uppercase tracking-wider">Email Support</Button>
       </a>
     </div>

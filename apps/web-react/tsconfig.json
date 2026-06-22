@@ -29,7 +29,6 @@
     "allowUnreachableCode": true,
     "allowUnusedLabels": true,
     "paths": {
-      "@blinkdotnew/ui": ["./src/types/blink-ui-shim.d.ts"],
       "@/*": ["./src/*"]
     }
   },

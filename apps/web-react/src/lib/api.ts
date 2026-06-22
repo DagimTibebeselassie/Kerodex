@@ -202,6 +202,15 @@ export interface BuyerGuideListingMatch {
 
 type ListingPayload = Record<string, any>;
 
+declare global {
+  interface Window {
+    __KERODEX_LISTING_PREFETCH__?: {
+      id: string;
+      promise: Promise<ListingPayload>;
+    };
+  }
+}
+
 export class ApiRequestError extends Error {
   status: number;
   retryAfterSeconds?: number;
@@ -641,6 +650,14 @@ export async function listVehicles(params: Record<string, string | number | bool
 }
 
 export async function getVehicle(id: string) {
+  const prefetched = typeof window !== 'undefined' ? window.__KERODEX_LISTING_PREFETCH__ : undefined;
+  if (prefetched?.id === id) {
+    try {
+      return toVehicle(await prefetched.promise);
+    } finally {
+      delete window.__KERODEX_LISTING_PREFETCH__;
+    }
+  }
   const listing = await request<ListingPayload>(`/api/listings/${encodeURIComponent(id)}`, {
     headers: authHeaders(),
   });
@@ -744,6 +761,13 @@ export async function listConversations() {
     headers: authHeaders(),
   });
   return body.conversations;
+}
+
+export async function getConversationCount() {
+  const body = await request<{ count: number }>('/api/conversations/count', {
+    headers: authHeaders(),
+  });
+  return Number(body.count || 0);
 }
 
 export async function listMyVehicles() {

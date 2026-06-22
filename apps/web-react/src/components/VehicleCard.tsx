@@ -1,47 +1,48 @@
-import { useEffect, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { Vehicle } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
-import { useSavedVehicles } from '@/hooks/useSavedVehicles';
+import { setVehicleSaved } from '@/lib/api';
 import { Heart, MapPin, Gauge, Star } from 'lucide-react';
-import { toast } from '@blinkdotnew/ui';
+import { toast } from 'sonner';
 import { VerifiedSellerBadge, VERIFIED_SELLER_ENABLED } from './VerifiedSellerTrust';
 import { LOCAL_VEHICLE_FALLBACK, vehicleImageAlt } from '@/lib/vehicleImage';
 
 interface VehicleCardProps {
   vehicle: Vehicle;
-  onSave?: (id: string, saved: boolean) => void;
+  onSave?: (id: string, saved: boolean) => unknown | Promise<unknown>;
   savedIds?: Set<string>;
   dealScore?: 'great' | 'good' | 'fair' | null;
   isVerified?: boolean;
   className?: string;
+  imagePriority?: boolean;
 }
 
-export function VehicleCard({
+function VehicleCardComponent({
   vehicle,
   onSave,
   savedIds,
   dealScore = null,
   isVerified = false,
   className = '',
+  imagePriority = false,
 }: VehicleCardProps) {
   const { user, login } = useAuth();
-  const savedVehicles = useSavedVehicles(user?.id);
-  const serverSaved = savedIds?.has(vehicle.id) ?? savedVehicles.savedIds.has(vehicle.id);
+  const serverSaved = savedIds?.has(vehicle.id) ?? false;
   const [saved, setSaved] = useState(serverSaved);
   const verified = VERIFIED_SELLER_ENABLED && (isVerified || Boolean(vehicle.seller?.verified));
-  const visibleBadges = (vehicle.badges || []).slice(0, 2);
+  const visibleBadges = useMemo(() => (vehicle.badges || []).slice(0, 2), [vehicle.badges]);
 
   useEffect(() => setSaved(serverSaved), [serverSaved]);
 
-  const imageUrl = (() => {
+  const imageUrl = useMemo(() => {
     try {
       const parsed = typeof vehicle.images === 'string' ? JSON.parse(vehicle.images) : vehicle.images;
       return Array.isArray(parsed) ? parsed[0] : parsed;
     } catch {
       return vehicle.images as unknown as string;
     }
-  })() || LOCAL_VEHICLE_FALLBACK;
+  }, [vehicle.images]) || LOCAL_VEHICLE_FALLBACK;
 
   const handleSave = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -54,8 +55,8 @@ export function VehicleCard({
     const next = !saved;
     setSaved(next);
     try {
-      await savedVehicles.setSaved(vehicle.id, next);
-      onSave?.(vehicle.id, next);
+      if (onSave) await onSave(vehicle.id, next);
+      else await setVehicleSaved(vehicle.id, next);
     } catch (error: any) {
       setSaved(!next);
       toast.error(error?.message || 'Unable to update saved vehicles.');
@@ -79,9 +80,14 @@ export function VehicleCard({
       <div className="relative aspect-[4/3] overflow-hidden bg-muted">
         <img
           src={imageUrl}
+          sizes="(max-width: 639px) calc(100vw - 2rem), (max-width: 1279px) calc(50vw - 2.5rem), 33vw"
           alt={vehicleImageAlt(vehicle)}
+          width={1200}
+          height={900}
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-          loading="lazy"
+          loading={imagePriority ? 'eager' : 'lazy'}
+          fetchPriority={imagePriority ? 'high' : 'auto'}
+          decoding="async"
         />
 
         {/* Save Button */}
@@ -163,3 +169,5 @@ export function VehicleCard({
     </Link>
   );
 }
+
+export const VehicleCard = memo(VehicleCardComponent);

@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Button, Input, toast } from '@blinkdotnew/ui';
+import { BasicButton as Button } from '@/components/BasicButton';
+import { BasicInput as Input } from '@/components/BasicInput';
+import { toast } from 'sonner';
 import { ArrowLeft, ArrowRight, Loader2, LogIn, RotateCcw, ShieldCheck, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import {
@@ -206,6 +208,17 @@ export function BuyerGuideFlowPage() {
   }, [answers, questionIndex]);
 
   useEffect(() => {
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+    };
+  }, []);
+
+  useEffect(() => {
     if (!user || !session || session.buyerId || session.buyer_id) return;
     updateBuyerGuideSession(session.id, {
       buyerAnswers: answers,
@@ -336,7 +349,7 @@ export function BuyerGuideFlowPage() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-background text-foreground">
+    <div className="buyer-guide-scroll fixed inset-0 z-50 overflow-y-auto bg-background text-foreground">
       <header className="sticky top-0 z-20 border-b border-border bg-background/95 backdrop-blur">
         <div className="max-w-6xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between gap-4">
           <button onClick={() => navigate({ to: '/' })} className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest">

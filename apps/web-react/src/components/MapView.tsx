@@ -4,7 +4,7 @@ import { Heart, X, MapPin, Gauge, CheckCircle2 } from 'lucide-react';
 import { Vehicle } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
 import { useSavedVehicles } from '@/hooks/useSavedVehicles';
-import { toast } from '@blinkdotnew/ui';
+import { toast } from 'sonner';
 import { VerifiedSellerBadge } from './VerifiedSellerTrust';
 import { vehicleImageAlt } from '@/lib/vehicleImage';
 

@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { Link } from '@tanstack/react-router';
 import { vehicleImageAlt } from '@/lib/vehicleImage';
-import { Button } from '@blinkdotnew/ui';
+import { BasicButton as Button } from '@/components/BasicButton';
 import {
   AlertTriangle,
   ArrowRight,

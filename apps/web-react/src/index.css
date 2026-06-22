@@ -1,9 +1,33 @@
-/* Blink UI theme bridge. */
-@import '@blinkdotnew/ui/styles';
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('/assets/fonts/inter-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Plus Jakarta Sans';
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url('/assets/fonts/plus-jakarta-sans-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'IBM Plex Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/assets/fonts/ibm-plex-mono-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
 
 @media (pointer: coarse) {
   button,
@@ -49,8 +73,24 @@
     min-height: 100%;
     min-height: 100dvh;
     @apply bg-background text-foreground;
-    font-family: var(--font-sans), 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-    letter-spacing: var(--tracking-normal);
+    font-family: var(--font-sans);
+    font-size: var(--font-size-base);
+    line-height: var(--line-height-normal);
+    letter-spacing: var(--letter-spacing-body);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-heading);
+    font-weight: var(--font-weight-heading);
+    line-height: var(--line-height-heading);
+    letter-spacing: var(--letter-spacing-heading);
   }
 
   :focus-visible {
@@ -146,10 +186,29 @@
   --sidebar-border: 220 13.0435% 90.9804%;
   --sidebar-ring: 0 0% 20%;
 
-  /* Fonts */
-  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  /* Preserve the exact typography produced by the former Blink cascade:
+     Inter body text, Plus Jakarta Sans headings, and Blink Minimal rhythm. */
+  --font-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-heading: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-serif: Georgia, 'Times New Roman', serif;
-  --font-mono: 'IBM Plex Mono', monospace;
+  --font-mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.3125rem;
+  --font-size-2xl: 1.625rem;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-heading: 700;
+  --line-height-tight: 1.35;
+  --line-height-normal: 1.65;
+  --line-height-relaxed: 1.8;
+  --line-height-heading: 1.3;
+  --letter-spacing-tight: -0.01em;
+  --letter-spacing-body: 0.005em;
+  --letter-spacing-heading: -0.01em;
 
   /* Shadows */
   --shadow-2xs: 0px 4px 8px -1px hsl(0 0% 0% / 0.05);
@@ -209,6 +268,25 @@
 
 .animate-fade-in {
   animation: fadeIn 0.3s ease-in-out;
+}
+
+.buyer-guide-scroll {
+  scrollbar-color: hsl(var(--muted-foreground)) hsl(var(--background));
+  scrollbar-width: thin;
+}
+
+.buyer-guide-scroll::-webkit-scrollbar {
+  width: 10px;
+}
+
+.buyer-guide-scroll::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+}
+
+.buyer-guide-scroll::-webkit-scrollbar-thumb {
+  border: 3px solid hsl(var(--background));
+  border-radius: 9999px;
+  background: hsl(var(--muted-foreground));
 }
 
 .leaflet-container {

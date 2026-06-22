@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Button, toast } from '@blinkdotnew/ui';
+import { BasicButton as Button } from '@/components/BasicButton';
+import { toast } from 'sonner';
 import { ArrowLeft, CheckCircle2, Circle, Loader2, MessageSquare, ShieldCheck, XCircle } from 'lucide-react';
 import { BUYER_GUIDE_DISCLAIMER, BUYER_GUIDE_STEPS } from '@/data/buyer-guide-steps';
 import { getBuyerGuide, startConversation, toVehicle, updateBuyerGuide } from '@/lib/api';

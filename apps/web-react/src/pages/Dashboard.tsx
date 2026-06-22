@@ -1,11 +1,40 @@
 import { useQuery } from '@tanstack/react-query';
 import { Vehicle } from '@/types';
 import { useAuth } from '@/hooks/useAuth';
-import { listBuyerGuides, listConversations, listMyVehicles, toVehicle } from '@/lib/api';
-import { Button, Stat, StatGroup, DataTable, EmptyState } from '@blinkdotnew/ui';
+import { listBuyerGuides, listMyVehicles, toVehicle } from '@/lib/api';
+import { BasicButton as Button } from '@/components/BasicButton';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { Plus, BarChart3, MessageSquare, Car, ExternalLink, BookOpenCheck } from 'lucide-react';
 import { vehicleImageAlt } from '@/lib/vehicleImage';
+
+function DashboardStat({ label, value, icon }: { label: string; value: string; icon?: React.ReactNode }) {
+  return (
+    <div className="border border-border bg-background p-6">
+      <div className="flex items-center justify-between gap-3 text-muted-foreground">
+        <span className="text-[11px] font-bold uppercase tracking-widest">{label}</span>
+        {icon}
+      </div>
+      <div className="mt-3 text-2xl font-black tracking-tight">{value}</div>
+    </div>
+  );
+}
+
+function DashboardEmpty({ title, description, actionLabel, onAction, icon }: {
+  title: string;
+  description: string;
+  actionLabel: string;
+  onAction: () => void;
+  icon: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col items-center border border-border px-6 py-14 text-center">
+      {icon}
+      <h3 className="mt-4 text-[15px] font-bold">{title}</h3>
+      <p className="mt-2 max-w-md text-[13px] text-muted-foreground">{description}</p>
+      <Button onClick={onAction} className="mt-6 h-10 px-5 text-[11px] font-bold uppercase tracking-wider">{actionLabel}</Button>
+    </div>
+  );
+}
 
 export function DashboardPage() {
   const { user, isLoading: authLoading } = useAuth();
@@ -20,12 +49,6 @@ export function DashboardPage() {
     enabled: !!user,
   });
 
-  const { data: conversations = [] } = useQuery({
-    queryKey: ['dashboard-conversations', user?.id],
-    queryFn: async () => user ? listConversations() : [],
-    enabled: !!user,
-  });
-
   const { data: buyerGuides = [], isLoading: guidesLoading } = useQuery({
     queryKey: ['buyer-guides', user?.id],
     queryFn: async () => user ? listBuyerGuides() : [],
@@ -37,51 +60,7 @@ export function DashboardPage() {
     <div className="grid grid-cols-4 gap-6"><div className="h-24 bg-muted" /></div>
   </div>;
 
-  const columns = [
-    {
-      accessorKey: 'make',
-      header: 'Vehicle',
-      cell: ({ row }: any) => (
-        <div className="flex items-center gap-3">
-          <div className="h-10 w-14 bg-muted overflow-hidden shrink-0">
-            <img src={row.original.images[0]} alt={vehicleImageAlt(row.original)} className="w-full h-full object-cover" />
-          </div>
-          <div className="text-[13px] font-bold">
-            {row.original.year} {row.original.make} {row.original.model}
-          </div>
-        </div>
-      ),
-    },
-    {
-      accessorKey: 'price',
-      header: 'Price',
-      cell: ({ row }: any) => <span className="text-[13px] font-medium">${row.original.price.toLocaleString()}</span>,
-    },
-    {
-      accessorKey: 'status',
-      header: 'Status',
-      cell: ({ row }: any) => (
-        <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-1 bg-green-50 text-green-700 border border-green-100">
-          {row.original.status}
-        </span>
-      ),
-    },
-    {
-      accessorKey: 'id',
-      header: '',
-      cell: ({ row }: any) => (
-        <div className="flex justify-end gap-2">
-          <Link to="/vehicle/$id" params={{ id: row.original.id }}>
-            <Button variant="ghost" size="icon" className="h-8 w-8">
-              <ExternalLink className="h-4 w-4" />
-            </Button>
-          </Link>
-        </div>
-      ),
-    },
-  ];
   const totalViews = (myVehicles || []).reduce((sum, vehicle: any) => sum + Number(vehicle.views || 0), 0);
-  const totalMessages = conversations.length;
   const totalSaves = (myVehicles || []).reduce((sum, vehicle: any) => sum + Number(vehicle.favorites || vehicle.saves || 0), 0);
 
   return (
@@ -98,31 +77,12 @@ export function DashboardPage() {
         </Link>
       </div>
 
-      <StatGroup className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Stat
-          label="Total Views"
-          value={totalViews.toLocaleString()}
-          icon={<BarChart3 className="h-4 w-4" />}
-          className="bg-background border border-border p-6 shadow-none"
-        />
-        <Stat
-          label="Active Listings"
-          value={myVehicles?.length.toString() || '0'}
-          icon={<Car className="h-4 w-4" />}
-          className="bg-background border border-border p-6 shadow-none"
-        />
-        <Stat
-          label="Messages"
-          value={totalMessages.toString()}
-          icon={<MessageSquare className="h-4 w-4" />}
-          className="bg-background border border-border p-6 shadow-none"
-        />
-        <Stat
-          label="Saved By Buyers"
-          value={totalSaves.toString()}
-          className="bg-background border border-border p-6 shadow-none"
-        />
-      </StatGroup>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <DashboardStat label="Total Views" value={totalViews.toLocaleString()} icon={<BarChart3 className="h-4 w-4" />} />
+        <DashboardStat label="Active Listings" value={myVehicles?.length.toString() || '0'} icon={<Car className="h-4 w-4" />} />
+        <DashboardStat label="Messages" value="Open" icon={<MessageSquare className="h-4 w-4" />} />
+        <DashboardStat label="Saved By Buyers" value={totalSaves.toString()} />
+      </div>
 
       <div className="space-y-6">
         <div className="flex items-end justify-between gap-4">
@@ -135,12 +95,12 @@ export function DashboardPage() {
           </Link>
         </div>
         {buyerGuides.length === 0 ? (
-          <EmptyState
+          <DashboardEmpty
             title="No buying guides yet"
             description="Start a guide from a vehicle listing when you are interested in buying."
             icon={<BookOpenCheck className="h-8 w-8 text-muted-foreground" />}
-            action={{ label: 'Browse Listings', onClick: () => navigate({ to: '/cars' }) }}
-            className="border border-border py-14"
+            actionLabel="Browse Listings"
+            onAction={() => navigate({ to: '/cars' })}
           />
         ) : (
           <div className="grid md:grid-cols-2 gap-4">
@@ -183,20 +143,48 @@ export function DashboardPage() {
       <div className="space-y-6">
         <h2 className="text-[12px] font-bold uppercase tracking-widest text-muted-foreground">Your Active Listings</h2>
         {myVehicles?.length === 0 ? (
-          <EmptyState 
+          <DashboardEmpty
             title="No listings yet"
             description="Start selling your vehicles on Kerodex today."
             icon={<Car className="h-8 w-8 text-muted-foreground" />}
-            action={{ label: 'Create Listing', onClick: () => navigate({ to: '/sell' }) }}
-            className="border border-border py-20"
+            actionLabel="Create Listing"
+            onAction={() => navigate({ to: '/sell' })}
           />
         ) : (
-          <div className="border border-border bg-background">
-            <DataTable 
-              columns={columns} 
-              data={myVehicles || []} 
-              className="border-none"
-            />
+          <div className="overflow-x-auto border border-border bg-background">
+            <table className="w-full min-w-[620px] border-collapse text-left">
+              <thead>
+                <tr className="border-b border-border text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+                  <th className="px-4 py-3">Vehicle</th>
+                  <th className="px-4 py-3">Price</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3"><span className="sr-only">Open</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                {(myVehicles || []).map((vehicle) => (
+                  <tr key={vehicle.id} className="border-b border-border last:border-b-0">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-14 shrink-0 overflow-hidden bg-muted">
+                          <img src={vehicle.images[0]} alt={vehicleImageAlt(vehicle)} width={56} height={40} loading="lazy" className="h-full w-full object-cover" />
+                        </div>
+                        <span className="text-[13px] font-bold">{vehicle.year} {vehicle.make} {vehicle.model}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-[13px] font-medium">${vehicle.price.toLocaleString()}</td>
+                    <td className="px-4 py-3">
+                      <span className="border border-green-100 bg-green-50 px-2 py-1 text-[11px] font-bold uppercase tracking-wider text-green-700">{vehicle.status}</span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <Link to="/vehicle/$id" params={{ id: vehicle.id }} aria-label={`Open ${vehicle.year} ${vehicle.make} ${vehicle.model}`}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8"><ExternalLink className="h-4 w-4" /></Button>
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

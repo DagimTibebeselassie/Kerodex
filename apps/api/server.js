@@ -2,6 +2,7 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+const zlib = require("zlib");
 const { URL } = require("url");
 
 function loadLocalEnvFile(filePath) {
@@ -187,11 +188,41 @@ function sendJson(res, status, body) {
   const payload = IS_PRODUCTION && body && typeof body === "object"
     ? Object.fromEntries(Object.entries(body).filter(([key]) => !["detail", "stack"].includes(key)))
     : body;
-  res.writeHead(status, responseHeaders(res, {
+  const bodyBuffer = Buffer.from(JSON.stringify(payload));
+  const headers = responseHeaders(res, {
     "content-type": "application/json; charset=utf-8",
-    "cache-control": "no-store"
-  }));
-  res.end(JSON.stringify(payload));
+    "cache-control": "no-store",
+    vary: res._kerodexCorsHeaders?.vary ? "Origin, Accept-Encoding" : "Accept-Encoding"
+  });
+  const accepts = String(res._kerodexAcceptEncoding || "");
+  if (bodyBuffer.length >= 1024 && accepts.includes("br")) {
+    zlib.brotliCompress(bodyBuffer, {
+      params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 4 }
+    }, (error, compressed) => {
+      if (error) {
+        res.writeHead(status, headers);
+        res.end(bodyBuffer);
+        return;
+      }
+      res.writeHead(status, { ...headers, "content-encoding": "br" });
+      res.end(compressed);
+    });
+    return;
+  }
+  if (bodyBuffer.length >= 1024 && accepts.includes("gzip")) {
+    zlib.gzip(bodyBuffer, { level: 5 }, (error, compressed) => {
+      if (error) {
+        res.writeHead(status, headers);
+        res.end(bodyBuffer);
+        return;
+      }
+      res.writeHead(status, { ...headers, "content-encoding": "gzip" });
+      res.end(compressed);
+    });
+    return;
+  }
+  res.writeHead(status, headers);
+  res.end(bodyBuffer);
 }
 
 function redirect(res, location) {
@@ -1704,7 +1735,7 @@ async function sendTransactionalEmail({ to, subject, heading, body, actionUrl = 
         <p style="font-size:15px;line-height:1.65;color:#262626;margin:0;">${body}</p>
         ${button}
       </div>
-      <p style="margin:24px 0 0;font-size:12px;line-height:1.6;color:#737373;text-align:left;">Kerodex marketplace notification. If this was unexpected, contact founder@kerodexofficial.com.</p>
+      <p style="margin:24px 0 0;font-size:12px;line-height:1.6;color:#737373;text-align:left;">Kerodex marketplace notification. If this was unexpected, contact support@kerodexofficial.com.</p>
     </div>
   </body></html>`;
   try {
@@ -2860,11 +2891,12 @@ function serveStatic(req, res, pathname) {
           sendJson(res, 404, { error: "Not found" });
           return;
         }
-        res.writeHead(200, responseHeaders(res, {
+        const headers = responseHeaders(res, {
           "content-type": mimeTypes[".html"],
-          "cache-control": "no-store, max-age=0"
-        }));
-        res.end(fallback);
+          "cache-control": "no-store, max-age=0",
+          vary: res._kerodexCorsHeaders?.vary ? "Origin, Accept-Encoding" : "Accept-Encoding"
+        });
+        sendCompressedStatic(req, res, 200, fallback, ".html", headers);
       });
       return;
     }
@@ -2881,12 +2913,51 @@ function serveStatic(req, res, pathname) {
         : isImage
           ? "public, max-age=2592000, stale-while-revalidate=86400"
           : "public, max-age=3600";
-    res.writeHead(200, responseHeaders(res, {
+    const headers = responseHeaders(res, {
       "content-type": mimeTypes[ext] || "application/octet-stream",
-      "cache-control": cacheControl
-    }));
-    res.end(file);
+      "cache-control": cacheControl,
+      vary: res._kerodexCorsHeaders?.vary ? "Origin, Accept-Encoding" : "Accept-Encoding"
+    });
+    sendCompressedStatic(req, res, 200, file, ext, headers);
   });
+}
+
+function sendCompressedStatic(req, res, status, file, ext, headers) {
+  const accepts = String(req.headers["accept-encoding"] || "");
+  const compressible = [".html", ".js", ".css", ".json", ".svg"].includes(ext) && file.length >= 1024;
+  if (!compressible) {
+    res.writeHead(status, headers);
+    res.end(file);
+    return;
+  }
+  if (accepts.includes("br")) {
+    zlib.brotliCompress(file, {
+      params: { [zlib.constants.BROTLI_PARAM_QUALITY]: 5 }
+    }, (error, compressed) => {
+      if (error) {
+        res.writeHead(status, headers);
+        res.end(file);
+        return;
+      }
+      res.writeHead(status, { ...headers, "content-encoding": "br" });
+      res.end(compressed);
+    });
+    return;
+  }
+  if (accepts.includes("gzip")) {
+    zlib.gzip(file, { level: 6 }, (error, compressed) => {
+      if (error) {
+        res.writeHead(status, headers);
+        res.end(file);
+        return;
+      }
+      res.writeHead(status, { ...headers, "content-encoding": "gzip" });
+      res.end(compressed);
+    });
+    return;
+  }
+  res.writeHead(status, headers);
+  res.end(file);
 }
 
 function handleEvents(req, res) {
@@ -2915,6 +2986,7 @@ const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   const origin = String(req.headers.origin || "");
   res._kerodexCorsHeaders = corsHeaders(req);
+  res._kerodexAcceptEncoding = req.headers["accept-encoding"] || "";
 
   if (origin && !isAllowedCorsOrigin(origin)) {
     console.warn(`[Kerodex security] blocked_cors origin=${origin} path=${url.pathname}`);
@@ -5179,6 +5251,22 @@ const server = http.createServer((req, res) => {
     store.getSellerById(id)
       .then(async (seller) => sendJson(res, seller ? 200 : 404, seller ? await sellerWithReadableProfile(seller, id) : { error: "Seller not found" }))
       .catch((error) => sendJson(res, 500, { error: "Unable to load seller.", detail: error.message }));
+    return;
+  }
+
+  if (url.pathname === "/api/conversations/count" && req.method === "GET") {
+    const user = getAuthUser(req);
+    if (!user) {
+      sendJson(res, 401, { error: "Sign in to view conversation count." });
+      return;
+    }
+    store.getConversations()
+      .then((conversations) => sendJson(res, 200, {
+        count: conversations.filter((conversation) =>
+          conversation.buyerId === user.id || conversation.sellerId === user.id
+        ).length
+      }))
+      .catch((error) => sendJson(res, 500, { error: "Unable to load conversation count.", detail: error.message }));
     return;
   }
 

@@ -2,7 +2,7 @@ import { Link } from '@tanstack/react-router';
 import type { ReactNode } from 'react';
 
 const updated = 'June 21, 2026';
-const contactEmail = 'founder@kerodexofficial.com';
+const contactEmail = 'support@kerodexofficial.com';
 
 const termsSections = [
   {

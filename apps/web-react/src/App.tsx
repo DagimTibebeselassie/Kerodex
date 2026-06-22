@@ -1,10 +1,8 @@
 import { createRouter, createRoute, createRootRoute, Outlet, RouterProvider, useRouterState } from '@tanstack/react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster, BlinkUIProvider, toast } from '@blinkdotnew/ui';
+import { Toaster, toast } from 'sonner';
 import { lazy, Suspense, useEffect } from 'react';
 import { Layout } from './components/Layout';
-import { HomePage } from './pages/Home';
-import { NotFoundPage } from './pages/NotFound';
 import { RouteSeo } from './components/Seo';
 import { consumeAuthRedirect, currentUser, trackAnalyticsEvent } from './lib/api';
 import { AuthProvider } from './hooks/useAuth';
@@ -14,6 +12,7 @@ function lazyNamed<T extends Record<string, any>, K extends keyof T>(loader: () 
 }
 
 const SearchPage = lazyNamed(() => import('./pages/Search'), 'SearchPage');
+const HomePage = lazyNamed(() => import('./pages/Home'), 'HomePage');
 const VehicleDetailPage = lazyNamed(() => import('./pages/VehicleDetail'), 'VehicleDetailPage');
 const DashboardPage = lazyNamed(() => import('./pages/Dashboard'), 'DashboardPage');
 const SellPage = lazyNamed(() => import('./pages/Sell'), 'SellPage');
@@ -40,6 +39,7 @@ const ReportProblemPage = lazyNamed(() => import('./pages/CompliancePages'), 'Re
 const OnboardingPage = lazyNamed(() => import('./pages/Onboarding'), 'OnboardingPage');
 const FeatureTourPage = lazyNamed(() => import('./pages/FeatureTour'), 'FeatureTourPage');
 const AdminPage = lazyNamed(() => import('./pages/Admin'), 'AdminPage');
+const NotFoundPage = lazyNamed(() => import('./pages/NotFound'), 'NotFoundPage');
 
 const queryClient = new QueryClient();
 
@@ -47,10 +47,20 @@ function RouteAnalytics() {
   const location = useRouterState({ select: (state) => state.location });
 
   useEffect(() => {
-    trackAnalyticsEvent({
+    const send = () => trackAnalyticsEvent({
       eventType: 'page_view',
       route: `${location.pathname}${location.searchStr || ''}`,
     });
+    const idleWindow = window as Window & typeof globalThis & {
+      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    };
+    if (idleWindow.requestIdleCallback) {
+      const id = idleWindow.requestIdleCallback(send, { timeout: 3000 });
+      return () => idleWindow.cancelIdleCallback?.(id);
+    }
+    const id = window.setTimeout(send, 1200);
+    return () => window.clearTimeout(id);
   }, [location.pathname, location.searchStr]);
 
   return null;
@@ -58,10 +68,10 @@ function RouteAnalytics() {
 
 function AppShell() {
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const content = pathname === '/admin' || pathname.startsWith('/admin/')
-    ? <Outlet />
-    : <Layout />;
-  return <Suspense fallback={<div className="min-h-[40vh]" aria-live="polite" aria-label="Loading page" />}>{content}</Suspense>;
+  if (pathname === '/admin' || pathname.startsWith('/admin/')) {
+    return <Suspense fallback={<div className="min-h-screen bg-background" aria-label="Loading admin" />}><Outlet /></Suspense>;
+  }
+  return <Layout />;
 }
 
 const rootRoute = createRootRoute({
@@ -362,12 +372,10 @@ function AuthRedirectHandler() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <BlinkUIProvider theme="minimal">
-        <AuthProvider>
-          <AuthRedirectHandler />
-          <RouterProvider router={router} />
-        </AuthProvider>
-      </BlinkUIProvider>
+      <AuthProvider>
+        <AuthRedirectHandler />
+        <RouterProvider router={router} />
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

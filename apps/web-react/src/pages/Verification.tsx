@@ -1,7 +1,9 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { startPhoneVerification, verifyPhoneCode } from '@/lib/api';
-import { Button, Input, toast } from '@blinkdotnew/ui';
+import { BasicButton as Button } from '@/components/BasicButton';
+import { BasicInput as Input } from '@/components/BasicInput';
+import { toast } from 'sonner';
 import {
   Shield, BadgeCheck, Phone, Mail, FileText, Camera,
   CheckCircle2, Clock, ChevronRight, Lock, AlertTriangle, Loader2, X,

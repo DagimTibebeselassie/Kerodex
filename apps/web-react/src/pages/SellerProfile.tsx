@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from '@tanstack/react-router';
-import { Button } from '@blinkdotnew/ui';
+import { BasicButton as Button } from '@/components/BasicButton';
 import { ArrowLeft, Calendar, CheckCircle2, Clock, MapPin, MessageSquare, Shield, Star, X } from 'lucide-react';
 import { VerifiedSellerBadge } from '@/components/VerifiedSellerTrust';
 import { getSellerProfile, leaveSellerReview, SellerProfileRecord } from '@/lib/api';

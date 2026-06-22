@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { Button, Input, toast } from '@blinkdotnew/ui';
+import { BasicButton as Button } from '@/components/BasicButton';
+import { BasicInput as Input } from '@/components/BasicInput';
+import { toast } from 'sonner';
 import { checkUsername, currentUser, updateAccountProfile } from '@/lib/api';
 import { MAKES } from '@/data/makes-models';
 

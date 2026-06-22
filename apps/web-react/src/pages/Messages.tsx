@@ -1,9 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import { useAuth } from '@/hooks/useAuth';
 import { answerBuyerFollowup, ConversationRecord, createReport, listBuyerFollowups, listConversations, markConversationRead, markSafetyNoticeSeen, sendConversationMessage, updateConversationOutcome } from '@/lib/api';
-import { Button, Input, toast } from '@blinkdotnew/ui';
+import { BasicButton as Button } from '@/components/BasicButton';
+import { BasicInput as Input } from '@/components/BasicInput';
+import { toast } from 'sonner';
 import {
   MessageSquare, Send, Car, ArrowLeft, Search, User, Circle, AlertTriangle, Flag, X, Copy,
 } from 'lucide-react';
@@ -166,7 +168,10 @@ export function MessagesPage() {
   const [reportCategory, setReportCategory] = useState('suspected_scam');
   const [safetyDismissed, setSafetyDismissed] = useState(Boolean(user?.safetyNoticeSeenAt || localStorage.getItem('kerodex_safety_notice_seen')));
   const [followupFeedback, setFollowupFeedback] = useState('');
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesScrollRef = useRef<HTMLDivElement>(null);
+  const activeConversationRef = useRef('');
+  const stayAtLatestRef = useRef(true);
+  const scrollAfterSendRef = useRef(false);
 
   // Fetch server-backed conversations. Polling keeps two open browsers in sync for MVP.
   const { data: conversations = [], isLoading: msgLoading } = useQuery({
@@ -236,10 +241,30 @@ export function MessagesPage() {
     return () => { cancelled = true; };
   }, [queryClient, selectedThread?.conversationId, selectedThread?.unread, user]);
 
-  // Auto-scroll to bottom on new messages
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [threadMessages.length]);
+  // Keep scrolling contained inside the message pane. `scrollIntoView` also
+  // scrolls page ancestors, which made the entire Messages route jump.
+  useLayoutEffect(() => {
+    const container = messagesScrollRef.current;
+    const conversationId = selectedThread?.conversationId || '';
+    if (!container || !conversationId) return;
+
+    const conversationChanged = activeConversationRef.current !== conversationId;
+    const shouldPinToLatest = conversationChanged || scrollAfterSendRef.current || stayAtLatestRef.current;
+    if (shouldPinToLatest) {
+      container.scrollTop = container.scrollHeight;
+      stayAtLatestRef.current = true;
+    }
+
+    activeConversationRef.current = conversationId;
+    scrollAfterSendRef.current = false;
+  }, [selectedThread?.conversationId, threadMessages.length]);
+
+  const handleMessagesScroll = () => {
+    const container = messagesScrollRef.current;
+    if (!container) return;
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    stayAtLatestRef.current = distanceFromBottom <= 80;
+  };
 
   // Send message mutation
   const sendMutation = useMutation({
@@ -248,6 +273,7 @@ export function MessagesPage() {
       return sendConversationMessage(selectedThread.conversationId, content);
     },
     onSuccess: () => {
+      scrollAfterSendRef.current = true;
       setMessageText('');
       queryClient.invalidateQueries({ queryKey: ['conversations', user?.id] });
     },
@@ -284,6 +310,7 @@ export function MessagesPage() {
   };
 
   const handleSelectThread = (thread: ThreadPreview) => {
+    stayAtLatestRef.current = true;
     setSelectedThread(thread);
     setMobileView('thread');
   };
@@ -584,7 +611,12 @@ export function MessagesPage() {
               </div>
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              <div
+                ref={messagesScrollRef}
+                onScroll={handleMessagesScroll}
+                className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-3"
+                style={{ overflowAnchor: 'none' }}
+              >
                 {selectedThread.isDemo && (
                   <div className="border border-amber-400/30 bg-amber-400/10 p-3 text-[12px] leading-relaxed text-foreground">
                     <strong>Demo conversation:</strong> messages are stored so you can test Kerodex, but no real seller is contacted and this vehicle is not for sale.
@@ -647,7 +679,6 @@ export function MessagesPage() {
                     />
                   ))
                 )}
-                <div ref={messagesEndRef} />
               </div>
 
               {/* Compose */}

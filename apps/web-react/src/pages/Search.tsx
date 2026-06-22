@@ -3,7 +3,10 @@ import { Vehicle } from '@/types';
 import { vehicleImageAlt } from '@/lib/vehicleImage';
 import { MAKES, getModelsForMake } from '@/data/makes-models';
 import { VehicleCard } from '@/components/VehicleCard';
+import { ListingGridSkeleton } from '@/components/RouteLoadingShell';
 import { listVehicles } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
+import { useSavedVehicles } from '@/hooks/useSavedVehicles';
 
 const MapView = lazy(() => import('@/components/MapView').then((module) => ({ default: module.MapView })));
 import {
@@ -60,6 +63,9 @@ const SORT_OPTIONS = [
 const DEFAULT_SEARCH_LOCATION = { lat: 33.749, lng: -84.388 };
 const LOCATION_CACHE_KEY = 'kerodex:last-map-location';
 const LOCATION_CACHE_MAX_AGE_MS = 30 * 60 * 1000;
+const INITIAL_GRID_BATCH = 6;
+const GRID_BATCH_SIZE = 12;
+const MAP_LIST_BATCH = 24;
 
 function readCachedLocation(): { lat: number; lng: number } | null {
   try {
@@ -661,6 +667,8 @@ function FilterChips({ filters, setFilters, onClearAll }: { filters: FilterState
 }
 
 export function SearchPage() {
+  const { user } = useAuth();
+  const savedVehicles = useSavedVehicles(user?.id);
   const urlParams = new URLSearchParams(window.location.search);
   const latParam = urlParams.get('lat');
   const lngParam = urlParams.get('lng');
@@ -686,7 +694,9 @@ export function SearchPage() {
   const searchText                     = urlParams.get('q') || '';
   const [sortOpen, setSortOpen]         = useState(false);
   const [remoteVehicles, setRemoteVehicles] = useState<Vehicle[]>([]);
+  const [vehiclesLoading, setVehiclesLoading] = useState(true);
   const [vehicleLoadError, setVehicleLoadError] = useState('');
+  const [visibleGridCount, setVisibleGridCount] = useState(INITIAL_GRID_BATCH);
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(
     hasInitialLocation ? { lat: initialLat, lng: initialLng } : (nearbyMode || urlParams.get('radius') ? DEFAULT_SEARCH_LOCATION : null)
   );
@@ -712,12 +722,14 @@ export function SearchPage() {
         if (alive) {
           setRemoteVehicles(items);
           setVehicleLoadError('');
+          setVehiclesLoading(false);
         }
       })
       .catch((error) => {
         if (alive) {
           setRemoteVehicles([]);
           setVehicleLoadError(error.message || 'Unable to load listings.');
+          setVehiclesLoading(false);
         }
       });
     return () => { alive = false; };
@@ -738,6 +750,18 @@ export function SearchPage() {
 
   const filterCount = countFilters(filters);
   const clearFilters = () => setFilters(DEFAULT_FILTERS);
+  const visibleGridVehicles = useMemo(
+    () => vehicles.slice(0, visibleGridCount),
+    [vehicles, visibleGridCount]
+  );
+  const visibleMapListVehicles = useMemo(
+    () => vehicles.slice(0, MAP_LIST_BATCH),
+    [vehicles]
+  );
+
+  useEffect(() => {
+    setVisibleGridCount(INITIAL_GRID_BATCH);
+  }, [filters, searchText, sortBy]);
 
   const enableLocation = () => {
     const requestId = locationRequestRef.current + 1;
@@ -947,7 +971,9 @@ export function SearchPage() {
             <div className="px-4 md:px-6 py-5">
               <FilterChips filters={filters} setFilters={setFilters} onClearAll={clearFilters} />
 
-              {vehicles.length === 0 ? (
+              {vehiclesLoading ? (
+                <ListingGridSkeleton />
+              ) : vehicles.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-24 border border-dashed border-border text-center">
                   <SearchIcon className="h-8 w-8 text-muted-foreground mb-4 opacity-30" />
                   <p className="text-[14px] font-bold mb-1.5">No results found</p>
@@ -962,11 +988,30 @@ export function SearchPage() {
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 md:gap-6">
-                  {vehicles.map((vehicle) => (
-                    <VehicleCard key={vehicle.id} vehicle={vehicle} />
-                  ))}
-                </div>
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 md:gap-6">
+                    {visibleGridVehicles.map((vehicle, index) => (
+                      <VehicleCard
+                        key={vehicle.id}
+                        vehicle={vehicle}
+                        imagePriority={index === 0}
+                        savedIds={savedVehicles.savedIds}
+                        onSave={savedVehicles.setSaved}
+                      />
+                    ))}
+                  </div>
+                  {visibleGridCount < vehicles.length && (
+                    <div className="mt-8 flex justify-center">
+                      <button
+                        type="button"
+                        onClick={() => setVisibleGridCount((count) => Math.min(count + GRID_BATCH_SIZE, vehicles.length))}
+                        className="h-11 border border-border px-6 text-[11px] font-bold uppercase tracking-wider transition-colors hover:bg-muted"
+                      >
+                        Load {Math.min(GRID_BATCH_SIZE, vehicles.length - visibleGridCount)} more
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 
@@ -1002,7 +1047,7 @@ export function SearchPage() {
                     </button>
                   </div>
                 ) : (
-                  vehicles.map((v) => (
+                  visibleMapListVehicles.map((v) => (
                     <MapListCard
                       key={v.id}
                       vehicle={v}
@@ -1010,6 +1055,11 @@ export function SearchPage() {
                       onClick={() => setSelectedMapId(v.id === selectedMapId ? null : v.id)}
                     />
                   ))
+                )}
+                {vehicles.length > MAP_LIST_BATCH && (
+                  <p className="border-t border-border px-4 py-3 text-[10px] leading-relaxed text-muted-foreground">
+                    Showing the first {MAP_LIST_BATCH} listings in the side panel. All {vehicles.length} listings remain visible on the map.
+                  </p>
                 )}
               </div>
 

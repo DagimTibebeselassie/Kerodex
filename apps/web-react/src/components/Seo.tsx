@@ -174,7 +174,7 @@ function homepageStructuredData() {
       name: SITE_NAME,
       url: SITE_URL,
       logo: DEFAULT_IMAGE,
-      email: 'founder@kerodexofficial.com',
+      email: 'support@kerodexofficial.com',
       sameAs,
     },
     {

@@ -4,9 +4,11 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import { Button, toast } from '@blinkdotnew/ui';
+import { toast } from 'sonner';
+import { BasicButton as Button } from '@/components/BasicButton';
 import { MAKES, MAKES_MODELS } from '@/data/makes-models';
 import { createUploadUrl, createVehicle, createVehiclePresenceCode, getVehicle, trackAnalyticsEvent, updateVehicle } from '@/lib/api';
+import { SellFormSkeleton } from '@/components/RouteLoadingShell';
 import {
   Camera, X, Loader2, Search, BadgeCheck, CheckCircle2,
   MapPin, ChevronDown, AlertCircle, FileText,
@@ -835,16 +837,12 @@ export function SellPage() {
   };
 
   if (authLoading || editLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
-      </div>
-    );
+    return <SellFormSkeleton />;
   }
 
   if (!user) {
     return (
-      <div className="flex flex-col items-center justify-center py-32 px-6 text-center">
+      <div className="flex min-h-[calc(100dvh-3.5rem)] flex-col items-center justify-center px-6 py-32 text-center">
         <Camera className="h-12 w-12 text-muted-foreground mb-6" />
         <h2 className="text-xl font-bold mb-2">Sign in to list your vehicle</h2>
         <p className="text-muted-foreground text-[13px] mb-8 max-w-xs">

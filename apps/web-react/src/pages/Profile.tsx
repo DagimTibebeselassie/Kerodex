@@ -2,10 +2,12 @@ import { useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { useAuth } from '@/hooks/useAuth';
-import { createUploadUrl, deleteAccountImmediately, listConversations, listMyVehicles, updateAccountPassword, updateAccountProfile, updateProfileAvatar } from '@/lib/api';
+import { createUploadUrl, deleteAccountImmediately, getConversationCount, listMyVehicles, updateAccountPassword, updateAccountProfile, updateProfileAvatar } from '@/lib/api';
 import { useSavedVehicles } from '@/hooks/useSavedVehicles';
 import { DEFAULT_PROFILE_ICONS, defaultProfileIconForUser } from '@/lib/profile-icons';
-import { Button, Input, toast } from '@blinkdotnew/ui';
+import { BasicButton as Button } from '@/components/BasicButton';
+import { BasicInput as Input } from '@/components/BasicInput';
+import { toast } from 'sonner';
 import {
   User, BadgeCheck, Shield, Bell, Lock, Car, Heart, MessageSquare,
   LayoutDashboard, ChevronRight, CheckCircle2, AlertCircle, Edit3,
@@ -84,10 +86,12 @@ export function ProfilePage() {
   });
 
   const { count: savedCount } = useSavedVehicles(user?.id);
-  const { data: conversations = [] } = useQuery({
-    queryKey: ['profile-conversations', user?.id],
-    queryFn: async () => user ? listConversations() : [],
+  const { data: messageCount = 0 } = useQuery({
+    queryKey: ['conversation-count', user?.id],
+    queryFn: getConversationCount,
     enabled: Boolean(user),
+    staleTime: 60_000,
+    initialData: 0,
   });
   const totalViews = (myVehicles || []).reduce((sum, vehicle: any) => sum + Number(vehicle.views || 0), 0);
   const trustScore =
@@ -387,7 +391,7 @@ export function ProfilePage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <StatTile icon={<Car className="h-5 w-5" />} label="Listings" value={myVehicles?.length ?? 0} href="/cockpit" />
           <StatTile icon={<Heart className="h-5 w-5" />} label="Saved" value={savedCount} href="/saved" />
-          <StatTile icon={<MessageSquare className="h-5 w-5" />} label="Messages" value={conversations.length} href="/messages" />
+          <StatTile icon={<MessageSquare className="h-5 w-5" />} label="Messages" value={messageCount} href="/messages" />
           <StatTile icon={<LayoutDashboard className="h-5 w-5" />} label="Views" value={totalViews} href="/cockpit" />
         </div>
       </section>

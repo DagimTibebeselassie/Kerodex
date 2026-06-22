@@ -2,7 +2,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useSavedVehicles } from '@/hooks/useSavedVehicles';
 import { Link } from '@tanstack/react-router';
 import { useNavigate } from '@tanstack/react-router';
-import { Button, EmptyState } from '@blinkdotnew/ui';
+import { BasicButton as Button } from '@/components/BasicButton';
 import { Heart, MapPin, Gauge, ArrowRight } from 'lucide-react';
 import { vehicleImageAlt } from '@/lib/vehicleImage';
 
@@ -42,13 +42,14 @@ export function SavedVehiclesPage() {
           ))}
         </div>
       ) : savedVehicles.length === 0 ? (
-        <EmptyState 
-          title="No saved vehicles"
-          description="Browse the marketplace and heart the listings you love."
-          icon={<Heart className="h-8 w-8 text-muted-foreground" />}
-          action={{ label: 'Explore Marketplace', onClick: () => navigate({ to: '/search' }) }}
-          className="border border-border py-20"
-        />
+        <div className="flex flex-col items-center border border-border px-6 py-20 text-center">
+          <Heart className="h-8 w-8 text-muted-foreground" />
+          <h2 className="mt-4 text-[15px] font-bold">No saved vehicles</h2>
+          <p className="mt-2 text-[13px] text-muted-foreground">Browse the marketplace and heart the listings you love.</p>
+          <Button onClick={() => navigate({ to: '/search' })} className="mt-6 h-10 px-5 text-[11px] font-bold uppercase tracking-wider">
+            Explore Marketplace
+          </Button>
+        </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {savedVehicles.map((vehicle) => (

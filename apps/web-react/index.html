@@ -12,9 +12,8 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/assets/darkmodeNonTransparent.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/assets/darkmodeNonTransparent.png" />
     <meta name="theme-color" content="#ffffff" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="preload" href="/assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/assets/fonts/plus-jakarta-sans-latin.woff2" as="font" type="font/woff2" crossorigin />
     <meta property="og:title" content="Kerodex | Private-Party Car Marketplace" />
     <meta property="og:description" content="Kerodex is a minimalist private-party car marketplace with verified listings, fair prices, and no dealer markup." />
     <meta property="og:url" content="https://kerodexofficial.com/" />
@@ -57,6 +56,37 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      (() => {
+        const prefix = '/vehicle/';
+        if (!window.location.pathname.startsWith(prefix)) return;
+        const id = decodeURIComponent(window.location.pathname.slice(prefix.length));
+        if (!id) return;
+        const token = window.localStorage.getItem('kerodex-token');
+        const promise = fetch(`/api/listings/${encodeURIComponent(id)}`, {
+          headers: token ? { authorization: `Bearer ${token}` } : {}
+        }).then(async (response) => {
+          const listing = await response.json();
+          if (!response.ok) throw new Error(listing.error || 'Unable to load listing.');
+          let images = listing.images;
+          if (typeof images === 'string') {
+            try { images = JSON.parse(images); } catch { images = [images]; }
+          }
+          const firstImage = Array.isArray(images) ? images[0] : images;
+          if (firstImage) {
+            const preload = document.createElement('link');
+            preload.rel = 'preload';
+            preload.as = 'image';
+            preload.href = firstImage;
+            preload.fetchPriority = 'high';
+            document.head.appendChild(preload);
+          }
+          return listing;
+        });
+        window.__KERODEX_LISTING_PREFETCH__ = { id, promise };
+      })();
+    </script>
+    <script type="module" src="/src/route-preload.ts"></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html> 

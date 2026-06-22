@@ -3,9 +3,9 @@ import { Link, useNavigate } from '@tanstack/react-router';
 import { Vehicle } from '@/types';
 import { MAKES, getModelsForMake } from '@/data/makes-models';
 import { VehicleCard } from '@/components/VehicleCard';
-import { BuyerGuideEntryCard } from '@/components/buyer-guide/BuyerGuideComponents';
 import { currentUser, listVehicles } from '@/lib/api';
-import { Button } from '@blinkdotnew/ui';
+import { useSavedVehicles } from '@/hooks/useSavedVehicles';
+import { BasicButton as Button } from '@/components/BasicButton';
 import {
   Search,
   X,
@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 
 const MapView = lazy(() => import('@/components/MapView').then((module) => ({ default: module.MapView })));
+const BuyerGuideEntryCard = lazy(() => import('@/components/buyer-guide/BuyerGuideComponents').then((module) => ({ default: module.BuyerGuideEntryCard })));
 
 function DeferredMarketplaceMap({
   vehicles,
@@ -134,9 +135,11 @@ interface VehicleRowSectionProps {
   heading: string;
   vehicles: Vehicle[];
   viewAllHref?: string;
+  savedIds?: Set<string>;
+  onSave?: (id: string, saved: boolean) => unknown | Promise<unknown>;
 }
 
-function VehicleRowSection({ label, heading, vehicles, viewAllHref = '/cars' }: VehicleRowSectionProps) {
+function VehicleRowSection({ label, heading, vehicles, viewAllHref = '/cars', savedIds, onSave }: VehicleRowSectionProps) {
   if (!vehicles.length) return null;
 
   return (
@@ -164,7 +167,7 @@ function VehicleRowSection({ label, heading, vehicles, viewAllHref = '/cars' }: 
         <div className="kerodex-vehicle-rail flex gap-4 md:gap-6 overflow-x-auto pb-4 px-1 sm:px-0 snap-x snap-mandatory">
           {vehicles.map((vehicle) => (
             <div key={vehicle.id} className="w-[260px] sm:w-[286px] lg:w-[300px] shrink-0 snap-start">
-              <VehicleCard vehicle={vehicle} />
+              <VehicleCard vehicle={vehicle} savedIds={savedIds} onSave={onSave} />
             </div>
           ))}
         </div>
@@ -334,6 +337,7 @@ function ChatbotWidget() {
 export function HomePage() {
   const navigate = useNavigate();
   const user = currentUser();
+  const savedVehicles = useSavedVehicles(user?.id);
 
   // Hero search state
   const [heroCity, setHeroCity] = useState('');
@@ -349,15 +353,23 @@ export function HomePage() {
 
   useEffect(() => {
     let mounted = true;
-    listVehicles()
-      .then((vehicles) => {
-        if (mounted) setMarketVehicles(vehicles);
-      })
-      .catch(() => {
-        if (mounted) setMarketVehicles([]);
-      });
+    const loadListings = () => {
+      listVehicles()
+        .then((vehicles) => {
+          if (mounted) setMarketVehicles(vehicles);
+        })
+        .catch(() => {
+          if (mounted) setMarketVehicles([]);
+        });
+    };
+    const idleWindow = window as any;
+    const idleId = typeof idleWindow.requestIdleCallback === 'function'
+      ? idleWindow.requestIdleCallback(loadListings, { timeout: 1800 })
+      : window.setTimeout(loadListings, 500);
     return () => {
       mounted = false;
+      if (typeof idleWindow.requestIdleCallback === 'function') idleWindow.cancelIdleCallback?.(idleId);
+      else window.clearTimeout(idleId);
     };
   }, []);
 
@@ -434,19 +446,19 @@ export function HomePage() {
     );
   };
 
-  const latestVehicles = marketVehicles.slice(0, 12);
+  const latestVehicles = marketVehicles.slice(0, 4);
   const bestDealVehicles = marketVehicles
     .filter((vehicle) => Number((vehicle as any).fairValueDelta || 0) <= 0)
-    .slice(0, 12);
+    .slice(0, 4);
   const evHybridVehicles = marketVehicles
     .filter((vehicle) => ['electric', 'hybrid'].includes(String(vehicle.fuelType || '').toLowerCase()))
-    .slice(0, 12);
+    .slice(0, 4);
   const lowMileageVehicles = [...marketVehicles]
     .sort((a, b) => Number(a.mileage || 0) - Number(b.mileage || 0))
-    .slice(0, 12);
+    .slice(0, 4);
   const budgetVehicles = marketVehicles
     .filter((vehicle) => Number(vehicle.price || 0) <= 25000)
-    .slice(0, 12);
+    .slice(0, 4);
   const anchorLocation = userLocation || { lat: 33.749, lng: -84.388 };
   const nearbySortedVehicles = [...marketVehicles]
     .map((vehicle) => ({
@@ -459,20 +471,20 @@ export function HomePage() {
   const nearbyCity = userLocation
     ? cityName(nearbySortedVehicles[0]?.location || 'your area')
     : cityName(nearbySortedVehicles[0]?.location || 'Atlanta, GA');
-  const nearbyVehicles = nearbySortedVehicles.slice(0, 12);
+  const nearbyVehicles = nearbySortedVehicles.slice(0, 4);
   const nearbyEfficientVehicles = nearbySortedVehicles
     .filter((vehicle) => {
       const fuel = String(vehicle.fuelType || '').toLowerCase();
       return fuel.includes('hybrid') || fuel.includes('electric') || Number(vehicle.mileage || 0) <= 45000;
     })
-    .slice(0, 12);
+    .slice(0, 4);
   const nearbySearchHref = `/cars?nearby=1&radius=100&sort=closest&lat=${anchorLocation.lat}&lng=${anchorLocation.lng}`;
   const favoriteBrandRows = (user?.favoriteBrands || [])
     .slice(0, 4)
     .map((brand) => {
       const vehicles = marketVehicles
         .filter((vehicle) => vehicle.make.toLowerCase() === brand.toLowerCase())
-        .slice(0, 12);
+        .slice(0, 4);
       return {
         label: 'For You',
         heading: `${brand.replace(/_/g, ' ')} picks`,
@@ -486,7 +498,7 @@ export function HomePage() {
     .map((type) => {
       const vehicles = marketVehicles
         .filter((vehicle) => vehicleMatchesType(vehicle, type))
-        .slice(0, 12);
+        .slice(0, 4);
       return {
         label: 'Matched Preference',
         heading: `${type} listings`,
@@ -504,7 +516,7 @@ export function HomePage() {
       vehicles: uniqueVehicles([
         ...favoriteBrandRows.flatMap((row) => row.vehicles),
         ...preferredTypeRows.flatMap((row) => row.vehicles),
-      ]).slice(0, 12),
+      ]).slice(0, 4),
       viewAllHref: '/cars',
     },
   ].filter((row) => row.vehicles.length).slice(0, 4);
@@ -655,7 +667,9 @@ export function HomePage() {
           </div>
 
           <div className="mt-8 max-w-3xl">
-            <BuyerGuideEntryCard compact />
+            <Suspense fallback={<div className="min-h-48 border border-border bg-muted/20" aria-label="Loading Buyer Guide" />}>
+              <BuyerGuideEntryCard compact />
+            </Suspense>
           </div>
         </div>
       </section>
@@ -684,7 +698,7 @@ export function HomePage() {
           <div className="kerodex-vehicle-rail flex gap-4 md:gap-6 overflow-x-auto pb-4 px-1 sm:px-0 snap-x snap-mandatory">
             {latestVehicles.map((vehicle) => (
               <div key={vehicle.id} className="w-[260px] sm:w-[286px] lg:w-[300px] shrink-0 snap-start">
-                <VehicleCard vehicle={vehicle} />
+                <VehicleCard vehicle={vehicle} savedIds={savedVehicles.savedIds} onSave={savedVehicles.setSaved} />
               </div>
             ))}
           </div>
@@ -698,6 +712,8 @@ export function HomePage() {
           heading={row.heading}
           vehicles={row.vehicles}
           viewAllHref={row.viewAllHref}
+          savedIds={savedVehicles.savedIds}
+          onSave={savedVehicles.setSaved}
         />
       ))}
 
@@ -718,6 +734,8 @@ export function HomePage() {
           heading={row.heading}
           vehicles={row.vehicles}
           viewAllHref={row.viewAllHref}
+          savedIds={savedVehicles.savedIds}
+          onSave={savedVehicles.setSaved}
         />
       ))}
 
@@ -739,6 +757,8 @@ export function HomePage() {
           heading={row.heading}
           vehicles={row.vehicles}
           viewAllHref={row.viewAllHref}
+          savedIds={savedVehicles.savedIds}
+          onSave={savedVehicles.setSaved}
         />
       ))}
 
@@ -759,6 +779,8 @@ export function HomePage() {
           heading={row.heading}
           vehicles={row.vehicles}
           viewAllHref={row.viewAllHref}
+          savedIds={savedVehicles.savedIds}
+          onSave={savedVehicles.setSaved}
         />
       ))}
 

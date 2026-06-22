@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { currentUser, emailAuth, requestPasswordReset, resetPassword, socialAuth, startPhoneVerification, verifyEmail, verifyPhoneCode } from '@/lib/api';
-import { Button, Input } from '@blinkdotnew/ui';
+import { BasicButton as Button } from '@/components/BasicButton';
+import { BasicInput as Input } from '@/components/BasicInput';
 import { X, Loader2, Mail, Lock, User, Phone } from 'lucide-react';
 import { useAccessibleDialog } from '@/hooks/useAccessibleDialog';
 
