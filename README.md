@@ -87,8 +87,6 @@ http://localhost:4101
 The local demo admin login is:
 
 ```text
-Email: admin@kerodex.local
-Access code: kerodex-admin-local
 ```
 
 Set `ADMIN_ACCESS_CODE` before starting the API to change the local admin access code.
