@@ -20,7 +20,7 @@
     "test:demo-listings": "node scripts/test-demo-listings.js"
   },
   "dependencies": {
-    "pg": "^8.13.1",
+    "pg": "^8.22.0",
     "twilio": "^6.0.2"
   },
   "engines": {
